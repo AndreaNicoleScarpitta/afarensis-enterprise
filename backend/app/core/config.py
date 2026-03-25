@@ -173,6 +173,8 @@ class Settings(BaseSettings):
     @validator("ALLOWED_ORIGINS", pre=True)
     def parse_allowed_origins(cls, v):
         if isinstance(v, str):
+            if not v or v.strip() == "":
+                return ["*"]
             # Handle JSON-style list strings
             if v.startswith("["):
                 import json
@@ -180,7 +182,7 @@ class Settings(BaseSettings):
                     return json.loads(v)
                 except json.JSONDecodeError:
                     pass
-            return [origin.strip() for origin in v.split(",")]
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
     @validator("ALLOWED_HOSTS", pre=True)
