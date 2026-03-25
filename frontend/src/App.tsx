@@ -18,6 +18,7 @@ import {
 // Auth & API
 import { useAuth } from './services/hooks'
 import { apiClient } from './services/apiClient'
+import { z } from 'zod'
 
 // shadcn UI
 import { Button } from '@/components/ui/button'
@@ -929,7 +930,27 @@ function App() {
     useEffect(() => {
       if (projectId && selectedStudy?.id !== projectId) {
         const match = studies.find(s => s.id === projectId)
-        if (match) setSelectedStudy(match)
+        if (match) {
+          setSelectedStudy(match)
+        } else {
+          // Project not in hardcoded studies — fetch from API and create a temporary study object
+          apiClient.request(`/projects/${projectId}`, z.any())
+            .then((project: any) => {
+              const tempStudy: Study = {
+                id: project.id,
+                name: project.title || 'Untitled Project',
+                status: project.status || 'draft',
+                phase: '',
+                sponsor: '',
+                indication: '',
+                locked: false,
+              }
+              setSelectedStudy(tempStudy)
+            })
+            .catch(() => {
+              // Project not found — could navigate back to dashboard
+            })
+        }
       }
     }, [projectId])
 
