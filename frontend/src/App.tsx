@@ -933,30 +933,40 @@ function App() {
     const { projectId } = useParams<{ projectId: string }>()
     const navigate = useNavigate()
     const [syncError, setSyncError] = useState<string | null>(null)
+    const retryCountRef = useRef(0)
     useEffect(() => {
       if (projectId && selectedStudy?.id !== projectId) {
         setSyncError(null)
+        retryCountRef.current = 0
         const match = studies.find(s => s.id === projectId)
         if (match) {
           setSelectedStudy(match)
         } else {
-          // Project not in hardcoded studies — fetch from API and create a temporary study object
-          apiClient.request(`/projects/${projectId}`, z.any())
-            .then((project: any) => {
-              const tempStudy: Study = {
-                id: project.id,
-                name: project.title || 'Untitled Project',
-                status: project.status || 'draft',
-                phase: '',
-                sponsor: '',
-                indication: '',
-                locked: false,
-              }
-              setSelectedStudy(tempStudy)
-            })
-            .catch((err: any) => {
-              setSyncError(err?.message || 'Failed to load project')
-            })
+          const fetchProject = () => {
+            apiClient.request(`/projects/${projectId}`, z.any())
+              .then((project: any) => {
+                const tempStudy: Study = {
+                  id: project.id,
+                  name: project.title || 'Untitled Project',
+                  status: project.status || 'draft',
+                  phase: '',
+                  sponsor: '',
+                  indication: '',
+                  locked: false,
+                }
+                setSelectedStudy(tempStudy)
+              })
+              .catch((err: any) => {
+                // Retry up to 2 times with a short delay (handles race with auth init)
+                if (retryCountRef.current < 2) {
+                  retryCountRef.current += 1
+                  setTimeout(fetchProject, 500)
+                } else {
+                  setSyncError(err?.message || 'Failed to load project')
+                }
+              })
+          }
+          fetchProject()
         }
       }
     }, [projectId])
