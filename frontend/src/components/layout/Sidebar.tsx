@@ -220,6 +220,26 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {selectedStudy ? (
             <>
+              {/* Analysis DAG overview link */}
+              <Link
+                to={projectPath(selectedStudy.id, 'dag')}
+                onClick={() => { if (window.innerWidth < 1024) onToggle() }}
+                className={cn(
+                  'flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2 text-left transition-all duration-150 mb-3',
+                  location.pathname.endsWith('/dag')
+                    ? 'bg-[#2563EB]/20 text-white'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-white',
+                )}
+              >
+                <GitBranch className={cn('h-4 w-4 shrink-0', location.pathname.endsWith('/dag') ? 'text-[#2563EB]' : 'text-gray-600')} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold leading-tight">Analysis DAG</p>
+                  {location.pathname.endsWith('/dag') && (
+                    <p className="text-[10px] text-gray-500 mt-0.5">Workflow · dependencies · status</p>
+                  )}
+                </div>
+              </Link>
+
               <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest px-1 pb-2">Workflow</p>
 
               <div className="space-y-0.5">

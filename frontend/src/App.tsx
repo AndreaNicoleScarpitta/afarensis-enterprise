@@ -50,6 +50,9 @@ import AuditTrail from './pages/AuditTrail'
 import RegulatoryOutput from './pages/RegulatoryOutput'
 import LiteratureSearch from './pages/LiteratureSearch'
 
+// DAG Workflow
+import StudyDAG from './pages/StudyDAG'
+
 // Analysis Lineage pages
 import InputExplorer from './pages/InputExplorer'
 import VariableNotebook from './pages/VariableNotebook'
@@ -1035,6 +1038,7 @@ function App() {
                     <Route path="/dashboard" element={<EnhancedDashboard />} />
 
                     {/* ── Project-scoped routes ─────────────────────────── */}
+                    <Route path="/projects/:projectId/dag"               element={<ProjectRouteSync><StudyDAG           {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/study"             element={<ProjectRouteSync><StudyDefinition    {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/causal-framework"  element={<ProjectRouteSync><CausalFramework    {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/data-provenance"   element={<ProjectRouteSync><DataProvenance     {...workflowProps} /></ProjectRouteSync>} />
