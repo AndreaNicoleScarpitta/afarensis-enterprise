@@ -1037,7 +1037,7 @@ async def get_project_dag(
         "edge_type": e.edge_type,
     } for e in db_edges]
 
-    return {"nodes": nodes, "edges": edges}
+    return {"project_id": str(project_id), "nodes": nodes, "edges": edges}
 
 
 @api_router.post("/projects/{project_id}/dag/generate")

@@ -75,7 +75,7 @@ def generate_default_dag(project_id: str) -> dict:
         _edge(project_id, "regulatory_output", "evidence_package"),
     ]
 
-    return {"nodes": nodes, "edges": edges}
+    return {"project_id": project_id, "nodes": nodes, "edges": edges}
 
 
 # ---------------------------------------------------------------------------
@@ -249,7 +249,7 @@ async def generate_dag_from_specification(project_id: str, parsed_spec: dict, db
 
     await db.flush()
 
-    return {"nodes": nodes, "edges": edges}
+    return {"project_id": project_id, "nodes": nodes, "edges": edges}
 
 
 # ---------------------------------------------------------------------------
@@ -381,4 +381,4 @@ def generate_clarity_ad_dag(project_id: str) -> dict:
         _edge(project_id, "regulatory_output", "evidence_package"),
     ]
 
-    return {"nodes": nodes, "edges": edges}
+    return {"project_id": project_id, "nodes": nodes, "edges": edges}
