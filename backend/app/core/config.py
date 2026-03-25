@@ -32,11 +32,23 @@ class Settings(BaseSettings):
     ENCRYPTION_KEY: Optional[str] = Field(default=None, env="ENCRYPTION_KEY")
 
     # CORS
-    ALLOWED_ORIGINS: List[str] = Field(
-        default=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5174", "http://127.0.0.1:5174"],
+    ALLOWED_ORIGINS: str = Field(
+        default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:5174,http://127.0.0.1:5174",
         env="ALLOWED_ORIGINS"
     )
-    ALLOWED_HOSTS: Optional[List[str]] = Field(default=None, env="ALLOWED_HOSTS")
+    ALLOWED_HOSTS: Optional[str] = Field(default=None, env="ALLOWED_HOSTS")
+
+    @property
+    def allowed_origins_list(self) -> List[str]:
+        if not self.ALLOWED_ORIGINS or self.ALLOWED_ORIGINS.strip() == "":
+            return ["*"]
+        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+
+    @property
+    def allowed_hosts_list(self) -> Optional[List[str]]:
+        if not self.ALLOWED_HOSTS:
+            return None
+        return [h.strip() for h in self.ALLOWED_HOSTS.split(",") if h.strip()]
 
     # Database
     DATABASE_URL: str = Field(default="sqlite+aiosqlite:///./afarensis.db", env="DATABASE_URL")
@@ -170,28 +182,8 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: Optional[str] = Field(default=None, env="CELERY_BROKER_URL")
     CELERY_RESULT_BACKEND: Optional[str] = Field(default=None, env="CELERY_RESULT_BACKEND")
 
-    @validator("ALLOWED_ORIGINS", pre=True)
-    def parse_allowed_origins(cls, v):
-        if isinstance(v, str):
-            if not v or v.strip() == "":
-                return ["*"]
-            # Handle JSON-style list strings
-            if v.startswith("["):
-                import json
-                try:
-                    return json.loads(v)
-                except json.JSONDecodeError:
-                    pass
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return v
-
-    @validator("ALLOWED_HOSTS", pre=True)
-    def parse_allowed_hosts(cls, v):
-        if v is None:
-            return None
-        if isinstance(v, str):
-            return [host.strip() for host in v.split(",")]
-        return v
+    # ALLOWED_ORIGINS and ALLOWED_HOSTS are stored as comma-separated strings
+    # and parsed via allowed_origins_list / allowed_hosts_list properties
 
     @validator("FEDERATED_NODES", pre=True)
     def parse_federated_nodes(cls, v):
