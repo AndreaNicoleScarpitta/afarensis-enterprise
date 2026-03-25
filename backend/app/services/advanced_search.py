@@ -13,17 +13,10 @@ from dataclasses import dataclass
 from enum import Enum
 import uuid
 
+import aiohttp
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_, desc, text
 from sqlalchemy.orm import selectinload
-
-# For embeddings (would use actual embedding service in production)
-try:
-    import openai
-    from sentence_transformers import SentenceTransformer
-    EMBEDDINGS_AVAILABLE = True
-except ImportError:
-    EMBEDDINGS_AVAILABLE = False
 
 from app.models import EvidenceRecord, Project, User, SavedSearch
 # CRITICAL FIX: Remove circular imports - use lazy imports instead
@@ -31,6 +24,9 @@ from app.models import EvidenceRecord, Project, User, SavedSearch
 # from app.services.external_apis import external_api_service
 from app.core.config import settings
 from app.core.exceptions import ProcessingError
+
+# HuggingFace Inference API endpoint for sentence embeddings
+HF_EMBEDDING_URL = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
 
 logger = logging.getLogger(__name__)
 
@@ -90,14 +86,90 @@ class AdvancedSearchService:
         self.db = db
         self.current_user = current_user
         self.user_id = current_user.get("user_id") if current_user else None
-        
-        # Initialize embedding model (in production, use a dedicated service)
-        self.embedding_model = None
-        if EMBEDDINGS_AVAILABLE:
-            try:
-                self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
-            except Exception as e:
-                logger.warning(f"Failed to load embedding model: {e}")
+
+        # Embeddings are available if a HuggingFace API key is configured
+        self._hf_api_key = settings.HUGGINGFACE_API_KEY
+        self._embeddings_available = bool(self._hf_api_key)
+        if not self._embeddings_available:
+            logger.warning(
+                "HUGGINGFACE_API_KEY not set. Semantic search will fall back to keyword search. "
+                "Set HUGGINGFACE_API_KEY in your environment or .env file."
+            )
+
+    async def _get_embedding(self, text: str) -> Optional[np.ndarray]:
+        """Get embedding vector from HuggingFace Inference API."""
+        if not self._hf_api_key:
+            return None
+
+        headers = {
+            "Authorization": f"Bearer {self._hf_api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "inputs": text[:512],  # Truncate to model max length
+            "options": {"wait_for_model": True},
+        }
+        timeout = aiohttp.ClientTimeout(total=30)
+
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(HF_EMBEDDING_URL, json=payload, headers=headers) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        # The API returns a list of floats (the embedding vector)
+                        if isinstance(result, list) and len(result) > 0:
+                            # result may be [[float, ...]] or [float, ...]
+                            vec = result[0] if isinstance(result[0], list) else result
+                            return np.array(vec, dtype=np.float32)
+                    else:
+                        error_text = await response.text()
+                        logger.warning(f"HF embedding API returned {response.status}: {error_text[:200]}")
+                        return None
+        except Exception as e:
+            logger.warning(f"HF embedding API error: {e}")
+            return None
+
+    async def _get_embeddings_batch(self, texts: List[str]) -> List[Optional[np.ndarray]]:
+        """Get embeddings for multiple texts via HuggingFace Inference API."""
+        if not self._hf_api_key:
+            return [None] * len(texts)
+
+        headers = {
+            "Authorization": f"Bearer {self._hf_api_key}",
+            "Content-Type": "application/json",
+        }
+        # Truncate each text
+        truncated = [t[:512] for t in texts]
+        payload = {
+            "inputs": truncated,
+            "options": {"wait_for_model": True},
+        }
+        timeout = aiohttp.ClientTimeout(total=60)
+
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(HF_EMBEDDING_URL, json=payload, headers=headers) as response:
+                    if response.status == 200:
+                        result = await response.json()
+                        # result should be [[float, ...], [float, ...], ...]
+                        embeddings = []
+                        for vec in result:
+                            if isinstance(vec, list) and len(vec) > 0:
+                                # Handle nested list case
+                                if isinstance(vec[0], list):
+                                    embeddings.append(np.array(vec[0], dtype=np.float32))
+                                else:
+                                    embeddings.append(np.array(vec, dtype=np.float32))
+                            else:
+                                embeddings.append(None)
+                        return embeddings
+                    else:
+                        error_text = await response.text()
+                        logger.warning(f"HF embedding batch API returned {response.status}: {error_text[:200]}")
+                        return [None] * len(texts)
+        except Exception as e:
+            logger.warning(f"HF embedding batch API error: {e}")
+            return [None] * len(texts)
     
     async def semantic_search(
         self,
@@ -106,41 +178,56 @@ class AdvancedSearchService:
         filters: Optional[Dict[str, Any]] = None,
         limit: int = 20
     ) -> List[SearchResult]:
-        """Perform semantic search using embeddings"""
-        
-        if not self.embedding_model:
-            logger.warning("Embedding model not available, falling back to keyword search")
+        """Perform semantic search using HuggingFace Inference API embeddings"""
+
+        if not self._embeddings_available:
+            logger.warning("Embeddings not available (no HF API key), falling back to keyword search")
             return await self.keyword_search(query, project_id, filters, limit)
-        
+
         try:
-            # Generate query embedding
-            query_embedding = self.embedding_model.encode(query)
-            
-            # Get all evidence records with their embeddings
+            # Generate query embedding via HF API
+            query_embedding = await self._get_embedding(query)
+            if query_embedding is None:
+                logger.warning("Failed to get query embedding, falling back to keyword search")
+                return await self.keyword_search(query, project_id, filters, limit)
+
+            # Get all evidence records
             evidence_query = select(EvidenceRecord)
-            
+
             if project_id:
                 evidence_query = evidence_query.where(EvidenceRecord.project_id == project_id)
-            
+
             if filters:
                 evidence_query = self._apply_filters(evidence_query, filters)
-            
+
             result = await self.db.execute(evidence_query)
             evidence_records = result.scalars().all()
-            
+
+            if not evidence_records:
+                return []
+
+            # Build texts for batch embedding
+            evidence_texts = [
+                f"{ev.title} {ev.abstract or ''}" for ev in evidence_records
+            ]
+
+            # Get embeddings in batch for efficiency
+            evidence_embeddings = await self._get_embeddings_batch(evidence_texts)
+
             # Calculate similarity scores
             search_results = []
-            for evidence in evidence_records:
-                # Generate embedding for evidence (in production, these would be pre-computed)
-                evidence_text = f"{evidence.title} {evidence.abstract}"
-                evidence_embedding = self.embedding_model.encode(evidence_text)
-                
+            for evidence, evidence_embedding, evidence_text in zip(
+                evidence_records, evidence_embeddings, evidence_texts
+            ):
+                if evidence_embedding is None:
+                    continue
+
                 # Calculate cosine similarity
                 similarity_score = self._cosine_similarity(query_embedding, evidence_embedding)
-                
+
                 # Generate similarity explanation
                 similarity_reasons = await self._explain_similarity(query, evidence_text, similarity_score)
-                
+
                 search_results.append(SearchResult(
                     evidence_id=str(evidence.id),
                     title=evidence.title,
@@ -154,12 +241,12 @@ class AdvancedSearchService:
                     citation_count=await self._get_citation_count(evidence.id),
                     related_evidence_ids=await self._get_related_evidence(evidence.id)
                 ))
-            
+
             # Sort by relevance score
             search_results.sort(key=lambda x: x.relevance_score, reverse=True)
-            
+
             return search_results[:limit]
-            
+
         except Exception as e:
             logger.error(f"Semantic search failed: {e}")
             # Fallback to keyword search
@@ -500,10 +587,10 @@ class AdvancedSearchService:
     
     async def _get_similar_evidence(self, evidence: EvidenceRecord, limit: int) -> List[SearchResult]:
         """Get similar evidence using embeddings"""
-        
-        if not self.embedding_model:
+
+        if not self._embeddings_available:
             return []
-        
+
         # Use title + abstract as query for similarity
         query_text = f"{evidence.title} {evidence.abstract or ''}"
         return await self.semantic_search(query_text, limit=limit)

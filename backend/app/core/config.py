@@ -72,6 +72,8 @@ class Settings(BaseSettings):
     GOOGLE_AI_API_KEY: Optional[str] = Field(default=None, env="GOOGLE_AI_API_KEY")
     GOOGLE_AI_MODEL: str = Field(default="gemini-pro", env="GOOGLE_AI_MODEL")
 
+    HUGGINGFACE_API_KEY: Optional[str] = Field(default=None, env="HUGGINGFACE_API_KEY")
+
     # LLM Integration Settings
     LLM_TIMEOUT_SECONDS: int = Field(default=30, env="LLM_TIMEOUT_SECONDS")
     LLM_RETRY_ATTEMPTS: int = Field(default=3, env="LLM_RETRY_ATTEMPTS")

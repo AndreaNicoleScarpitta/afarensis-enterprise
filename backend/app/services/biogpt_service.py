@@ -1,8 +1,8 @@
 """
-BioGPT Service — Microsoft's biomedical language model.
+BioGPT Service — Microsoft's biomedical language model via Hugging Face Inference API.
 
-Runs locally via Hugging Face transformers (no API key needed).
-Model: microsoft/biogpt (347M parameters, fits in ~1.5GB RAM).
+Uses the hosted Inference API so no local model download is required.
+Model: microsoft/BioGPT-Large (or microsoft/biogpt as fallback).
 
 Capabilities:
   - Biomedical text generation (clinical summaries, mechanism descriptions)
@@ -21,59 +21,138 @@ import logging
 import asyncio
 from typing import Optional, Dict, Any, List
 
+import aiohttp
+
+from app.core.config import settings
+
 logger = logging.getLogger(__name__)
 
-# Lazy-load the model to avoid slow startup
-_model = None
-_tokenizer = None
-_model_loading = False
-
-
-def _load_model():
-    """Load BioGPT model (lazy, first call only). ~1.5GB download on first run."""
-    global _model, _tokenizer, _model_loading
-
-    if _model is not None:
-        return _model, _tokenizer
-
-    if _model_loading:
-        return None, None
-
-    _model_loading = True
-    try:
-        from transformers import BioGptTokenizer, BioGptForCausalLM
-        import torch
-
-        logger.info("Loading BioGPT model (microsoft/biogpt)...")
-        _tokenizer = BioGptTokenizer.from_pretrained("microsoft/biogpt")
-        _model = BioGptForCausalLM.from_pretrained("microsoft/biogpt")
-
-        # Use GPU if available, otherwise CPU
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        _model = _model.to(device)
-        _model.eval()
-
-        logger.info(f"BioGPT loaded on {device} ({sum(p.numel() for p in _model.parameters()) / 1e6:.0f}M params)")
-        return _model, _tokenizer
-    except Exception as e:
-        logger.warning(f"BioGPT model load failed: {e}. Biomedical generation will be unavailable.")
-        _model_loading = False
-        return None, None
+# Hugging Face Inference API endpoints
+HF_INFERENCE_URL = "https://api-inference.huggingface.co/models/microsoft/BioGPT-Large"
+HF_INFERENCE_URL_FALLBACK = "https://api-inference.huggingface.co/models/microsoft/biogpt"
 
 
 class BioGPTService:
-    """Biomedical text generation using Microsoft BioGPT."""
+    """Biomedical text generation using Microsoft BioGPT via HuggingFace Inference API."""
 
     def __init__(self):
         self._available = None
 
+    def _get_api_key(self) -> Optional[str]:
+        """Get the HuggingFace API key from settings."""
+        return settings.HUGGINGFACE_API_KEY
+
     @property
     def is_available(self) -> bool:
-        """Check if BioGPT is loaded and ready."""
+        """Check if the HuggingFace API key is configured."""
         if self._available is None:
-            model, tokenizer = _load_model()
-            self._available = model is not None
+            self._available = bool(self._get_api_key())
+            if not self._available:
+                logger.warning(
+                    "HUGGINGFACE_API_KEY not set. BioGPT service will return fallback responses. "
+                    "Set HUGGINGFACE_API_KEY in your environment or .env file."
+                )
         return self._available
+
+    async def _call_inference_api(
+        self,
+        prompt: str,
+        max_new_tokens: int = 256,
+        temperature: float = 0.7,
+        top_p: float = 0.9,
+    ) -> Dict[str, Any]:
+        """Call the HuggingFace Inference API for text generation.
+
+        Tries BioGPT-Large first, then falls back to biogpt.
+        """
+        api_key = self._get_api_key()
+        if not api_key:
+            return {
+                "text": f"[BioGPT unavailable] {prompt}",
+                "model": "biogpt-unavailable",
+                "tokens_generated": 0,
+                "error": "HUGGINGFACE_API_KEY not configured. Set it in your .env file.",
+            }
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        payload = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": max_new_tokens,
+                "temperature": max(temperature, 0.01),
+                "top_p": top_p,
+                "do_sample": temperature > 0.01,
+                "return_full_text": True,
+            },
+            "options": {
+                "wait_for_model": True,
+            },
+        }
+
+        timeout = aiohttp.ClientTimeout(total=120)
+
+        # Try primary model, then fallback
+        for url in [HF_INFERENCE_URL, HF_INFERENCE_URL_FALLBACK]:
+            try:
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.post(url, json=payload, headers=headers) as response:
+                        if response.status == 200:
+                            result = await response.json()
+
+                            # HF Inference API returns a list of generated texts
+                            if isinstance(result, list) and len(result) > 0:
+                                generated_text = result[0].get("generated_text", "")
+                            elif isinstance(result, dict):
+                                generated_text = result.get("generated_text", "")
+                            else:
+                                generated_text = str(result)
+
+                            model_name = url.split("/")[-1]
+                            tokens_est = max(
+                                len(generated_text.split()) - len(prompt.split()), 0
+                            )
+
+                            return {
+                                "text": generated_text,
+                                "model": f"microsoft/{model_name}",
+                                "tokens_generated": tokens_est,
+                                "prompt_length": len(prompt),
+                            }
+
+                        elif response.status == 503:
+                            # Model is loading, try the other endpoint
+                            body = await response.json()
+                            logger.info(
+                                f"Model at {url} is loading: {body.get('error', 'loading')}. "
+                                "Trying fallback..."
+                            )
+                            continue
+
+                        else:
+                            error_text = await response.text()
+                            logger.warning(
+                                f"HF Inference API returned {response.status} for {url}: {error_text}"
+                            )
+                            continue
+
+            except asyncio.TimeoutError:
+                logger.warning(f"HF Inference API timed out for {url}")
+                continue
+            except Exception as e:
+                logger.warning(f"HF Inference API error for {url}: {e}")
+                continue
+
+        # Both endpoints failed
+        return {
+            "text": f"[BioGPT unavailable] {prompt}",
+            "model": "biogpt-unavailable",
+            "tokens_generated": 0,
+            "error": "HuggingFace Inference API is temporarily unavailable. Please try again later.",
+        }
 
     async def generate(
         self,
@@ -90,56 +169,23 @@ class BioGPTService:
             max_new_tokens: Maximum tokens to generate.
             temperature: Sampling temperature (0.0 = deterministic, 1.0 = creative).
             top_p: Nucleus sampling threshold.
+            num_return_sequences: Number of sequences (currently only 1 supported via API).
 
         Returns:
             Dict with 'text' (generated text), 'model', 'tokens_generated'.
         """
-        model, tokenizer = _load_model()
-        if model is None:
-            return {
-                "text": f"[BioGPT unavailable] {prompt}",
-                "model": "biogpt-unavailable",
-                "tokens_generated": 0,
-                "error": "Model not loaded. Install: pip install transformers torch",
-            }
-
-        def _run():
-            import torch
-            device = next(model.parameters()).device
-
-            inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=512)
-            inputs = {k: v.to(device) for k, v in inputs.items()}
-
-            with torch.no_grad():
-                outputs = model.generate(
-                    **inputs,
-                    max_new_tokens=max_new_tokens,
-                    temperature=max(temperature, 0.01),
-                    top_p=top_p,
-                    num_return_sequences=num_return_sequences,
-                    do_sample=temperature > 0.01,
-                    pad_token_id=tokenizer.eos_token_id,
-                )
-
-            generated = tokenizer.decode(outputs[0], skip_special_tokens=True)
-            tokens_gen = outputs.shape[1] - inputs["input_ids"].shape[1]
-            return generated, tokens_gen
-
-        loop = asyncio.get_event_loop()
-        generated_text, tokens = await loop.run_in_executor(None, _run)
-
-        return {
-            "text": generated_text,
-            "model": "microsoft/biogpt",
-            "tokens_generated": tokens,
-            "prompt_length": len(prompt),
-        }
+        return await self._call_inference_api(
+            prompt=prompt,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+        )
 
     async def summarize_clinical_evidence(
         self, title: str, abstract: str
     ) -> Dict[str, Any]:
         """Generate a biomedical summary of a clinical paper."""
-        prompt = f"The study titled \"{title}\" found that {abstract[:300]}"
+        prompt = f'The study titled "{title}" found that {abstract[:300]}'
         result = await self.generate(prompt, max_new_tokens=200, temperature=0.5)
         return {
             "summary": result["text"],
@@ -170,24 +216,49 @@ class BioGPTService:
 
     async def status(self) -> Dict[str, Any]:
         """Get BioGPT service status."""
-        model, tokenizer = _load_model()
-        if model is None:
+        api_key = self._get_api_key()
+        if not api_key:
             return {
                 "status": "unavailable",
-                "model": "microsoft/biogpt",
-                "error": "Model not loaded",
+                "model": "microsoft/BioGPT-Large",
+                "error": "HUGGINGFACE_API_KEY not configured",
+                "backend": "huggingface_inference_api",
             }
 
-        import torch
-        device = str(next(model.parameters()).device)
-        params = sum(p.numel() for p in model.parameters()) / 1e6
-        return {
-            "status": "ready",
-            "model": "microsoft/biogpt",
-            "parameters_millions": round(params),
-            "device": device,
-            "vocab_size": tokenizer.vocab_size,
+        # Quick health check against the API
+        headers = {
+            "Authorization": f"Bearer {api_key}",
         }
+        timeout = aiohttp.ClientTimeout(total=10)
+
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(HF_INFERENCE_URL, headers=headers) as response:
+                    if response.status == 200:
+                        return {
+                            "status": "ready",
+                            "model": "microsoft/BioGPT-Large",
+                            "backend": "huggingface_inference_api",
+                            "api_key_configured": True,
+                        }
+                    else:
+                        body = await response.text()
+                        return {
+                            "status": "loading" if response.status == 503 else "error",
+                            "model": "microsoft/BioGPT-Large",
+                            "backend": "huggingface_inference_api",
+                            "api_key_configured": True,
+                            "http_status": response.status,
+                            "detail": body[:200],
+                        }
+        except Exception as e:
+            return {
+                "status": "error",
+                "model": "microsoft/BioGPT-Large",
+                "backend": "huggingface_inference_api",
+                "api_key_configured": True,
+                "error": str(e),
+            }
 
 
 # Singleton
