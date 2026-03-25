@@ -1068,6 +1068,7 @@ function App() {
                   <Routes>
                     {/* Default → dashboard */}
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/login" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<EnhancedDashboard />} />
 
                     {/* ── Project-scoped routes ─────────────────────────── */}
