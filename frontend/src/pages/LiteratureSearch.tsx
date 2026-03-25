@@ -1,14 +1,17 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import {
   Search, BookOpen, Beaker, Globe, Layers,
-  ExternalLink, Loader2, ChevronDown, Filter,
-  BookMarked, Users, Calendar, Quote, AlertCircle, X,
+  ExternalLink, Loader2, Filter,
+  BookMarked, Users, Calendar, Quote, AlertCircle,
+  SlidersHorizontal, ArrowUpDown, Link2, ChevronDown,
 } from 'lucide-react'
 import PaperViewer from '../components/ui/PaperViewer'
 import { apiClient } from '../services/apiClient'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Source = 'pubmed' | 'clinicaltrials' | 'openalex' | 'semanticscholar'
+type SortMode = 'relevance' | 'date' | 'citations'
+type ResultType = 'paper' | 'trial' | 'preprint' | 'review' | 'dataset'
 
 interface Paper {
   id?: string
@@ -35,15 +38,42 @@ interface Paper {
   meshTerms?: string[]
   concepts?: string[]
   metadataJson?: Record<string, unknown>
+  _resultType?: ResultType
+  _dedupeKey?: string
+  _sources?: Source[]
 }
 
 // ── Source config ─────────────────────────────────────────────────────────────
-const SOURCES: { id: Source; label: string; icon: React.ElementType; color: string; desc: string }[] = [
-  { id: 'pubmed',         label: 'PubMed',          icon: BookMarked, color: 'text-blue-600',   desc: 'MEDLINE · NLM · peer-reviewed' },
-  { id: 'clinicaltrials', label: 'ClinicalTrials',   icon: Beaker,     color: 'text-emerald-600', desc: 'NIH ClinicalTrials.gov · trials' },
-  { id: 'openalex',       label: 'OpenAlex',         icon: Globe,      color: 'text-violet-600',  desc: 'Open access · 250M+ works' },
-  { id: 'semanticscholar',label: 'Semantic Scholar',  icon: Layers,     color: 'text-orange-600',  desc: 'Semantic indexing · citation graph' },
+const SOURCES: { id: Source; label: string; icon: React.ElementType; color: string; bgColor: string; desc: string }[] = [
+  { id: 'pubmed',          label: 'PubMed',           icon: BookMarked, color: 'text-blue-500',    bgColor: 'bg-blue-500/10 border-blue-500/20',    desc: 'MEDLINE peer-reviewed literature' },
+  { id: 'clinicaltrials',  label: 'ClinicalTrials',   icon: Beaker,     color: 'text-emerald-500', bgColor: 'bg-emerald-500/10 border-emerald-500/20', desc: 'NIH clinical trial registry' },
+  { id: 'openalex',        label: 'OpenAlex',         icon: Globe,      color: 'text-violet-500',  bgColor: 'bg-violet-500/10 border-violet-500/20',  desc: 'Open scholarly works index' },
+  { id: 'semanticscholar', label: 'Semantic Scholar',  icon: Layers,     color: 'text-orange-500',  bgColor: 'bg-orange-500/10 border-orange-500/20',  desc: 'AI-powered citation graph' },
 ]
+
+const SOURCE_MAP = Object.fromEntries(SOURCES.map(s => [s.id, s])) as Record<Source, typeof SOURCES[0]>
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function inferResultType(paper: Paper): ResultType {
+  if (paper.source === 'clinicaltrials' || paper.nctId) return 'trial'
+  if (paper.journal?.toLowerCase().includes('preprint') || paper.journal?.toLowerCase().includes('arxiv') || paper.journal?.toLowerCase().includes('biorxiv') || paper.journal?.toLowerCase().includes('medrxiv')) return 'preprint'
+  if (paper.title?.toLowerCase().includes('systematic review') || paper.title?.toLowerCase().includes('meta-analysis')) return 'review'
+  return 'paper'
+}
+
+function dedupeKey(paper: Paper): string {
+  if (paper.doi) return `doi:${paper.doi.toLowerCase().trim()}`
+  const normalized = paper.title.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 80)
+  return `title:${normalized}`
+}
+
+const TYPE_CONFIG: Record<ResultType, { label: string; color: string }> = {
+  paper:    { label: 'Paper',    color: 'text-blue-400 bg-blue-500/10 border-blue-500/20' },
+  trial:    { label: 'Trial',    color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' },
+  preprint: { label: 'Preprint', color: 'text-amber-400 bg-amber-500/10 border-amber-500/20' },
+  review:   { label: 'Review',   color: 'text-purple-400 bg-purple-500/10 border-purple-500/20' },
+  dataset:  { label: 'Dataset',  color: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20' },
+}
 
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
 async function fetchSource(source: Source, query: string, maxResults = 20): Promise<Paper[]> {
@@ -55,106 +85,116 @@ async function fetchSource(source: Source, query: string, maxResults = 20): Prom
     return h
   }
 
+  let raw: any[] = []
+
   if (source === 'pubmed') {
     const r = await fetch(`${base}/pubmed`, {
-      method: 'POST',
-      headers: authHeaders(),
+      method: 'POST', headers: authHeaders(),
       body: JSON.stringify({ query, max_results: maxResults }),
     })
     if (!r.ok) throw new Error(`PubMed: ${r.statusText}`)
-    return r.json()
-  }
-
-  if (source === 'clinicaltrials') {
+    raw = await r.json()
+  } else if (source === 'clinicaltrials') {
     const r = await fetch(`${base}/clinical-trials`, {
-      method: 'POST',
-      headers: authHeaders(),
+      method: 'POST', headers: authHeaders(),
       body: JSON.stringify({ query, max_results: maxResults }),
     })
     if (!r.ok) throw new Error(`ClinicalTrials: ${r.statusText}`)
-    return r.json()
-  }
-
-  if (source === 'openalex') {
+    raw = await r.json()
+  } else if (source === 'openalex') {
     const r = await fetch(`${base}/openalex`, {
-      method: 'POST',
-      headers: authHeaders(),
+      method: 'POST', headers: authHeaders(),
       body: JSON.stringify({ query, max_results: maxResults }),
     })
     if (!r.ok) throw new Error(`OpenAlex: ${r.statusText}`)
     const data = await r.json()
-    return data.results ?? data
-  }
-
-  if (source === 'semanticscholar') {
+    raw = data.results ?? data
+  } else if (source === 'semanticscholar') {
     const params = new URLSearchParams({ query, limit: String(maxResults) })
-    const r = await fetch(`${base}/semantic-scholar?${params}`, {
-      headers: authHeaders(),
-    })
+    const r = await fetch(`${base}/semantic-scholar?${params}`, { headers: authHeaders() })
     if (!r.ok) throw new Error(`Semantic Scholar: ${r.statusText}`)
     const data = await r.json()
-    return data.results ?? data
+    raw = data.results ?? data
   }
 
-  return []
+  return (Array.isArray(raw) ? raw : []).map(p => ({ ...p, source }))
 }
 
 // ── Components ────────────────────────────────────────────────────────────────
-function SourceBadge({ source }: { source: Source }) {
-  const s = SOURCES.find(x => x.id === source)
+
+function SourcePill({ source, showLabel = true }: { source: Source; showLabel?: boolean }) {
+  const s = SOURCE_MAP[source]
   if (!s) return null
+  const Icon = s.icon
   return (
-    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-current/30 bg-current/5 ${s.color}`}>
-      {s.label}
+    <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${s.bgColor} ${s.color}`}>
+      <Icon className="h-2.5 w-2.5" />
+      {showLabel && s.label}
+    </span>
+  )
+}
+
+function TypeBadge({ type }: { type: ResultType }) {
+  const cfg = TYPE_CONFIG[type]
+  return (
+    <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${cfg.color}`}>
+      {cfg.label}
     </span>
   )
 }
 
 function PaperCard({ paper, onClick }: { paper: Paper; onClick: () => void }) {
-  const truncateAbstract = (text?: string | null, n = 200) =>
-    text ? (text.length > n ? text.slice(0, n) + '…' : text) : null
-
-  const displayText = paper.tldr ?? truncateAbstract(paper.abstract)
-
-  const handleOpenClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (paper.url) window.open(paper.url, '_blank')
-  }
+  const truncate = (text?: string | null, n = 200) =>
+    text ? (text.length > n ? text.slice(0, n) + '...' : text) : null
+  const displayText = paper.tldr ?? truncate(paper.abstract)
+  const resultType = paper._resultType ?? inferResultType(paper)
+  const sources = paper._sources ?? [paper.source]
 
   return (
     <div
       onClick={onClick}
-      className="relative bg-white dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 hover:border-[#2563EB]/40 hover:shadow-md dark:hover:bg-white/6 transition-all cursor-pointer group"
+      className="relative bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/8 rounded-xl p-5 hover:border-[#2563EB]/40 hover:shadow-md dark:hover:bg-white/[0.05] transition-all cursor-pointer group"
     >
-      {/* Open in new tab button */}
       {paper.url && (
         <button
-          onClick={handleOpenClick}
+          onClick={e => { e.stopPropagation(); window.open(paper.url, '_blank') }}
           className="absolute top-3 right-3 p-1.5 text-gray-400 dark:text-gray-600 hover:text-[#2563EB] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-          title="Open paper in new tab"
+          title="Open in new tab"
         >
           <ExternalLink className="h-4 w-4" />
         </button>
       )}
 
-      <div className="flex items-start justify-between gap-4 mb-2 pr-10">
-        <div className="flex items-center gap-2 flex-wrap">
-          <SourceBadge source={paper.source} />
-          {paper.journal && (
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate max-w-[200px]">{paper.journal}</span>
-          )}
-          {paper.trialStatus && (
-            <span className="text-[9px] font-bold px-2 py-0.5 rounded border text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-700/40 bg-emerald-50 dark:bg-emerald-900/20">
-              {paper.trialStatus}
-            </span>
-          )}
-        </div>
+      {/* Badges row */}
+      <div className="flex items-center gap-1.5 mb-2.5 pr-10 flex-wrap">
+        {sources.map(src => <SourcePill key={src} source={src} />)}
+        <TypeBadge type={resultType} />
+        {paper.phase && paper.phase.length > 0 && (
+          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border text-teal-400 bg-teal-500/10 border-teal-500/20">
+            {paper.phase.join(' / ')}
+          </span>
+        )}
+        {paper.trialStatus && (
+          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border text-emerald-400 bg-emerald-500/10 border-emerald-500/20">
+            {paper.trialStatus}
+          </span>
+        )}
+        {sources.length > 1 && (
+          <span className="text-[9px] font-semibold text-amber-400 flex items-center gap-0.5 ml-1">
+            <Link2 className="h-2.5 w-2.5" /> Found in {sources.length} sources
+          </span>
+        )}
+        {paper.journal && (
+          <span className="text-[10px] text-gray-500 dark:text-gray-500 truncate max-w-[200px] ml-auto">{paper.journal}</span>
+        )}
       </div>
 
+      {/* Title */}
       <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 leading-snug group-hover:text-[#2563EB] transition-colors">
         {paper.title}
       </h3>
 
+      {/* Abstract/TLDR */}
       {displayText && (
         <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
           {paper.tldr && <span className="font-semibold text-gray-600 dark:text-gray-300">TL;DR: </span>}
@@ -162,7 +202,8 @@ function PaperCard({ paper, onClick }: { paper: Paper; onClick: () => void }) {
         </p>
       )}
 
-      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-400 dark:text-gray-600">
+      {/* Metadata row */}
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-400 dark:text-gray-500">
         {paper.authors.length > 0 && (
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
@@ -190,17 +231,18 @@ function PaperCard({ paper, onClick }: { paper: Paper; onClick: () => void }) {
         )}
       </div>
 
+      {/* Tags */}
       {paper.meshTerms && paper.meshTerms.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
           {paper.meshTerms.slice(0, 5).map(t => (
-            <span key={t} className="text-[9px] bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700/30 px-2 py-0.5 rounded">{t}</span>
+            <span key={t} className="text-[9px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded">{t}</span>
           ))}
         </div>
       )}
       {paper.concepts && paper.concepts.length > 0 && (
         <div className="flex flex-wrap gap-1 mt-3">
           {paper.concepts.slice(0, 5).map(c => (
-            <span key={c} className="text-[9px] bg-violet-50 dark:bg-violet-900/20 text-violet-600 dark:text-violet-400 border border-violet-200 dark:border-violet-700/30 px-2 py-0.5 rounded">{c}</span>
+            <span key={c} className="text-[9px] bg-violet-500/10 text-violet-400 border border-violet-500/20 px-2 py-0.5 rounded">{c}</span>
           ))}
         </div>
       )}
@@ -211,7 +253,6 @@ function PaperCard({ paper, onClick }: { paper: Paper; onClick: () => void }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function LiteratureSearch() {
   const [query, setQuery] = useState('')
-  const [activeSource, setActiveSource] = useState<Source>('pubmed')
   const [results, setResults] = useState<Record<Source, Paper[]>>({
     pubmed: [], clinicaltrials: [], openalex: [], semanticscholar: [],
   })
@@ -225,178 +266,327 @@ export default function LiteratureSearch() {
   const [searched, setSearched] = useState(false)
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null)
 
-  const search = useCallback(async (src?: Source) => {
+  // Filters
+  const [enabledSources, setEnabledSources] = useState<Set<Source>>(new Set(['pubmed', 'clinicaltrials', 'openalex', 'semanticscholar']))
+  const [sortMode, setSortMode] = useState<SortMode>('relevance')
+  const [showFilters, setShowFilters] = useState(false)
+
+  // Search all sources in parallel
+  const search = useCallback(async () => {
     if (!query.trim()) return
     setSearched(true)
-    const targets = src ? [src] : (Object.keys(results) as Source[])
 
-    for (const s of targets) {
-      setLoading(prev => ({ ...prev, [s]: true }))
-      setErrors(prev => ({ ...prev, [s]: null }))
+    const sources: Source[] = ['pubmed', 'clinicaltrials', 'openalex', 'semanticscholar']
+
+    // Fire all searches in parallel
+    sources.forEach(async (src) => {
+      setLoading(prev => ({ ...prev, [src]: true }))
+      setErrors(prev => ({ ...prev, [src]: null }))
       try {
-        const data = await fetchSource(s, query, maxResults)
-        setResults(prev => ({ ...prev, [s]: data }))
+        const data = await fetchSource(src, query, maxResults)
+        setResults(prev => ({ ...prev, [src]: data }))
       } catch (e: any) {
-        setErrors(prev => ({ ...prev, [s]: e.message ?? 'Search failed' }))
+        setErrors(prev => ({ ...prev, [src]: e.message ?? 'Search failed' }))
       } finally {
-        setLoading(prev => ({ ...prev, [s]: false }))
+        setLoading(prev => ({ ...prev, [src]: false }))
+      }
+    })
+  }, [query, maxResults])
+
+  const anyLoading = Object.values(loading).some(Boolean)
+  const loadingSources = (Object.entries(loading) as [Source, boolean][]).filter(([, v]) => v).map(([k]) => k)
+
+  // Deduplicate + merge across sources
+  const mergedResults = useMemo(() => {
+    const dedupeMap = new Map<string, Paper>()
+
+    for (const src of SOURCES) {
+      if (!enabledSources.has(src.id)) continue
+      for (const paper of results[src.id]) {
+        const key = dedupeKey(paper)
+        const existing = dedupeMap.get(key)
+        if (existing) {
+          // Merge: add source, keep richer data
+          const existingSources = existing._sources ?? [existing.source]
+          if (!existingSources.includes(paper.source)) {
+            existing._sources = [...existingSources, paper.source]
+          }
+          // Prefer the version with more data
+          if (!existing.abstract && paper.abstract) existing.abstract = paper.abstract
+          if (!existing.tldr && paper.tldr) existing.tldr = paper.tldr
+          if (!existing.doi && paper.doi) existing.doi = paper.doi
+          if (!existing.citationCount && paper.citationCount) existing.citationCount = paper.citationCount
+          if (paper.authors.length > existing.authors.length) existing.authors = paper.authors
+        } else {
+          dedupeMap.set(key, {
+            ...paper,
+            _resultType: inferResultType(paper),
+            _dedupeKey: key,
+            _sources: [paper.source],
+          })
+        }
       }
     }
-  }, [query, maxResults, results])
 
-  const totalResults = Object.values(results).reduce((sum, arr) => sum + arr.length, 0)
-  const activeResults = results[activeSource]
-  const activeLoading = loading[activeSource]
-  const activeError = errors[activeSource]
+    let merged = Array.from(dedupeMap.values())
+
+    // Sort
+    if (sortMode === 'citations') {
+      merged.sort((a, b) => (b.citationCount ?? 0) - (a.citationCount ?? 0))
+    } else if (sortMode === 'date') {
+      merged.sort((a, b) => {
+        const da = a.publicationDate ?? String(a.year ?? '0')
+        const db = b.publicationDate ?? String(b.year ?? '0')
+        return db.localeCompare(da)
+      })
+    }
+    // 'relevance' keeps original order (interleaved from sources)
+
+    return merged
+  }, [results, enabledSources, sortMode])
+
+  // Source counts (before filtering)
+  const sourceCounts = useMemo(() => {
+    const counts: Record<Source, number> = { pubmed: 0, clinicaltrials: 0, openalex: 0, semanticscholar: 0 }
+    for (const src of SOURCES) counts[src.id] = results[src.id].length
+    return counts
+  }, [results])
+
+  const totalBeforeFilter = Object.values(sourceCounts).reduce((s, n) => s + n, 0)
+  const dedupeCount = totalBeforeFilter - mergedResults.length
+  const activeErrors = (Object.entries(errors) as [Source, string | null][]).filter(([, v]) => v !== null)
+
+  const toggleSource = (src: Source) => {
+    setEnabledSources(prev => {
+      const next = new Set(prev)
+      if (next.has(src)) next.delete(src)
+      else next.add(src)
+      return next
+    })
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] text-gray-900 dark:text-white">
 
-      {/* Paper Viewer overlay */}
       {selectedPaper && (
         <PaperViewer paper={selectedPaper} onClose={() => setSelectedPaper(null)} />
       )}
 
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-white/8 bg-white dark:bg-transparent px-8 py-5">
-        <div className="flex items-center gap-3 mb-1">
+        <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/15 border border-[#2563EB]/30 flex items-center justify-center">
             <BookOpen className="h-4 w-4 text-[#2563EB]" />
           </div>
           <div>
-            <h1 className="text-xl font-bold">Literature Search</h1>
-            <p className="text-gray-500 text-xs">PubMed · ClinicalTrials.gov · OpenAlex · Semantic Scholar</p>
+            <h1 className="text-xl font-bold">Evidence Search</h1>
+            <p className="text-gray-500 text-xs">Search your question, then explore where the truth lives</p>
           </div>
         </div>
       </div>
 
-      <div className="px-8 py-6 max-w-5xl">
+      <div className="px-8 py-6 max-w-6xl">
 
-        {/* Search bar */}
-        <div className="flex gap-3 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              className="w-full pl-10 pr-4 py-3 bg-white dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-[#2563EB]/60 shadow-sm transition-colors"
-              placeholder='e.g. "SGLT2 inhibitor heart failure" or "pediatric CNS disorder real-world evidence"'
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && search()}
-            />
-          </div>
-
-          <select
-            className="bg-white dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-[#2563EB]/60 shadow-sm"
-            value={maxResults}
-            onChange={e => setMaxResults(Number(e.target.value))}
-          >
-            {[10, 20, 50].map(n => <option key={n} value={n} className="bg-white dark:bg-[#1A1A1B]">{n} results</option>)}
-          </select>
-
-          <button
-            onClick={() => search()}
-            disabled={!query.trim() || Object.values(loading).some(Boolean)}
-            className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-semibold px-6 py-3 rounded-xl transition-colors shadow-sm"
-          >
-            {Object.values(loading).some(Boolean)
-              ? <><Loader2 className="h-4 w-4 animate-spin" /> Searching…</>
-              : <><Search className="h-4 w-4" /> Search All</>
-            }
-          </button>
-        </div>
-
-        {/* Source tabs */}
-        <div className="flex items-center gap-2 mb-6 border-b border-gray-200 dark:border-white/8 pb-0">
-          {SOURCES.map(src => (
+        {/* ── Unified search bar ────────────────────────────────────── */}
+        <div className="mb-6">
+          <div className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                className="w-full pl-12 pr-4 py-4 bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/10 rounded-2xl text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-[#2563EB]/60 focus:ring-2 focus:ring-[#2563EB]/20 shadow-sm transition-all"
+                placeholder='Search across all sources — e.g. "SGLT2 inhibitor heart failure outcomes"'
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && search()}
+              />
+            </div>
             <button
-              key={src.id}
-              onClick={() => { setActiveSource(src.id); if (!searched) search(src.id) }}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors -mb-px ${
-                activeSource === src.id
-                  ? 'border-[#2563EB] text-[#2563EB]'
-                  : 'border-transparent text-gray-500 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-              }`}
+              onClick={search}
+              disabled={!query.trim() || anyLoading}
+              className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 disabled:opacity-50 text-white text-sm font-semibold px-8 py-4 rounded-2xl transition-colors shadow-sm whitespace-nowrap"
             >
-              <src.icon className="h-4 w-4" />
-              {src.label}
-              {results[src.id].length > 0 && (
-                <span className="text-[10px] bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400 px-1.5 py-0.5 rounded-full font-bold">
-                  {results[src.id].length}
-                </span>
-              )}
-              {loading[src.id] && <Loader2 className="h-3 w-3 animate-spin text-gray-400" />}
+              {anyLoading
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Searching...</>
+                : <><Search className="h-4 w-4" /> Search All</>
+              }
             </button>
-          ))}
-
-          {searched && totalResults > 0 && (
-            <span className="ml-auto text-xs text-gray-400">{totalResults} total results</span>
-          )}
+          </div>
+          <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-2 ml-1">
+            Searches PubMed, ClinicalTrials.gov, OpenAlex, and Semantic Scholar simultaneously
+          </p>
         </div>
 
-        {/* Source description */}
+        {/* ── Pre-search: source cards ─────────────────────────────── */}
         {!searched && (
-          <div className="space-y-3 mb-8">
-            {SOURCES.map(src => (
-              <div key={src.id} className="flex items-center gap-4 bg-white dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl px-5 py-4">
-                <div className={`w-9 h-9 rounded-lg bg-gray-100 dark:bg-white/8 border border-gray-200 dark:border-white/10 flex items-center justify-center ${src.color}`}>
-                  <src.icon className="h-4 w-4" />
+          <div className="grid grid-cols-2 gap-3">
+            {SOURCES.map(src => {
+              const Icon = src.icon
+              return (
+                <div key={src.id} className="flex items-center gap-4 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/8 rounded-xl px-5 py-4">
+                  <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${src.bgColor} ${src.color}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">{src.label}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">{src.desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">{src.label}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500">{src.desc}</p>
+              )
+            })}
+          </div>
+        )}
+
+        {/* ── Loading indicator with per-source status ──────────────── */}
+        {anyLoading && (
+          <div className="mb-4 p-4 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/8 rounded-xl">
+            <div className="flex items-center gap-3 mb-3">
+              <Loader2 className="h-5 w-5 animate-spin text-[#2563EB]" />
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Searching across sources...</span>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {SOURCES.map(src => {
+                const Icon = src.icon
+                const isLoading = loading[src.id]
+                const hasResults = results[src.id].length > 0
+                const hasError = errors[src.id]
+                return (
+                  <span key={src.id} className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border ${
+                    isLoading ? 'border-blue-500/20 bg-blue-500/10 text-blue-400' :
+                    hasError ? 'border-red-500/20 bg-red-500/10 text-red-400' :
+                    hasResults ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' :
+                    'border-gray-200 dark:border-white/10 text-gray-400'
+                  }`}>
+                    {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}
+                    {src.label}
+                    {hasResults && !isLoading && <span className="font-bold">{results[src.id].length}</span>}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* ── Results toolbar ──────────────────────────────────────── */}
+        {searched && !anyLoading && totalBeforeFilter > 0 && (
+          <div className="mb-4 space-y-3">
+            {/* Source filters + sort */}
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              {/* Source filter checkboxes */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">
+                  <Filter className="h-3 w-3 inline -mt-0.5 mr-1" />Sources:
+                </span>
+                {SOURCES.map(src => {
+                  const Icon = src.icon
+                  const count = sourceCounts[src.id]
+                  const enabled = enabledSources.has(src.id)
+                  return (
+                    <button
+                      key={src.id}
+                      onClick={() => toggleSource(src.id)}
+                      className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all ${
+                        enabled
+                          ? `${src.bgColor} ${src.color} font-semibold`
+                          : 'border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-600 opacity-60'
+                      }`}
+                    >
+                      <Icon className="h-3 w-3" />
+                      {src.label}
+                      <span className={`font-bold ${enabled ? '' : 'opacity-50'}`}>({count})</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Sort + count */}
+              <div className="flex items-center gap-3">
+                {dedupeCount > 0 && (
+                  <span className="text-[11px] text-amber-400 flex items-center gap-1">
+                    <Link2 className="h-3 w-3" />
+                    {dedupeCount} duplicate{dedupeCount !== 1 ? 's' : ''} merged
+                  </span>
+                )}
+                <div className="flex items-center gap-1.5">
+                  <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                  {(['relevance', 'date', 'citations'] as SortMode[]).map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => setSortMode(mode)}
+                      className={`text-[11px] px-2 py-1 rounded-md transition-colors ${
+                        sortMode === mode
+                          ? 'bg-[#2563EB]/15 text-[#2563EB] font-semibold'
+                          : 'text-gray-400 hover:text-gray-300'
+                      }`}
+                    >
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </button>
+                  ))}
                 </div>
-                <button
-                  onClick={() => { setActiveSource(src.id); search(src.id) }}
-                  className="ml-auto text-xs text-[#2563EB] font-semibold hover:underline"
+                <select
+                  className="text-[11px] bg-transparent border border-gray-200 dark:border-white/10 rounded-md px-2 py-1 text-gray-400 focus:outline-none"
+                  value={maxResults}
+                  onChange={e => setMaxResults(Number(e.target.value))}
                 >
-                  Search only →
-                </button>
+                  {[10, 20, 50].map(n => <option key={n} value={n} className="bg-[#1A1A1B]">{n} per source</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* Results summary */}
+            <div className="text-xs text-gray-500 dark:text-gray-500">
+              Showing <span className="font-bold text-gray-300">{mergedResults.length}</span> results
+              {mergedResults.length !== totalBeforeFilter && (
+                <> from <span className="font-bold text-gray-300">{totalBeforeFilter}</span> total across all sources</>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Errors ───────────────────────────────────────────────── */}
+        {activeErrors.length > 0 && !anyLoading && (
+          <div className="mb-4 space-y-2">
+            {activeErrors.map(([src, msg]) => (
+              <div key={src} className="flex items-start gap-3 p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
+                <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-red-400">{SOURCE_MAP[src]?.label} error</p>
+                  <p className="text-[11px] text-red-400/80 mt-0.5">{msg}</p>
+                </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Error */}
-        {activeError && (
-          <div className="flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/30 rounded-xl mb-4">
-            <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-red-700 dark:text-red-400">Search error</p>
-              <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">{activeError}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                Check the backend logs for details or try again.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Loading */}
-        {activeLoading && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-[#2563EB]" />
-            <p className="text-sm text-gray-500">Searching {SOURCES.find(s => s.id === activeSource)?.label}…</p>
-          </div>
-        )}
-
-        {/* Results */}
-        {!activeLoading && activeResults.length > 0 && (
+        {/* ── Blended results list ─────────────────────────────────── */}
+        {!anyLoading && mergedResults.length > 0 && (
           <div className="space-y-3">
-            {activeResults.map((paper, i) => (
-              <PaperCard key={paper.id ?? paper.paperId ?? i} paper={paper} onClick={() => setSelectedPaper(paper)} />
+            {mergedResults.map((paper, i) => (
+              <PaperCard
+                key={paper._dedupeKey ?? paper.id ?? paper.paperId ?? i}
+                paper={paper}
+                onClick={() => setSelectedPaper(paper)}
+              />
             ))}
           </div>
         )}
 
-        {/* Empty state */}
-        {!activeLoading && searched && activeResults.length === 0 && !activeError && (
+        {/* ── Empty state ──────────────────────────────────────────── */}
+        {!anyLoading && searched && mergedResults.length === 0 && activeErrors.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
             <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center">
               <BookOpen className="h-6 w-6 text-gray-400" />
             </div>
             <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No results found</p>
             <p className="text-xs text-gray-400 dark:text-gray-600 max-w-sm">
-              Try a different query or search a different source.
+              Try a different query or adjust your search terms.
             </p>
+          </div>
+        )}
+
+        {/* ── Empty state with only errors ─────────────────────────── */}
+        {!anyLoading && searched && mergedResults.length === 0 && activeErrors.length > 0 && (
+          <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
+            <p className="text-sm text-gray-500">Some sources encountered errors. Results from other sources may still appear above.</p>
           </div>
         )}
 
