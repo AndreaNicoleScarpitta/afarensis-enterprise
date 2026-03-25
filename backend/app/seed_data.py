@@ -676,4 +676,60 @@ async def seed_database(session: AsyncSession):
             "ts": ts, "reg_sig": action in ("review_decision_submitted", "artifact_generated", "project_completed")
         })
 
-    logger.info("Database seeding completed successfully: 2 organizations, 7 users, 4 projects, 16 evidence records, 10 comparability scores, 5 bias analyses, 5 review decisions, 10 audit logs")
+    # ---------- Study DAGs ----------
+    from app.services.dag_generator import generate_clarity_ad_dag, generate_default_dag
+
+    # Clarity AD project gets the full realistic DAG
+    clarity_dag = generate_clarity_ad_dag(project2_id)
+    for n in clarity_dag["nodes"]:
+        await session.execute(text(
+            "INSERT INTO dag_nodes (id, project_id, key, label, category, description, status, order_index, config, page_route, created_at) "
+            "VALUES (:id, :project_id, :key, :label, :category, :description, :status, :order_index, :config, :page_route, :now)"
+        ), {
+            "id": n["id"], "project_id": n["project_id"], "key": n["key"],
+            "label": n["label"], "category": n["category"],
+            "description": n.get("description", ""),
+            "status": n.get("status", "pending"),
+            "order_index": n.get("order_index", 0),
+            "config": json.dumps(n.get("config", {})),
+            "page_route": n.get("page_route", ""),
+            "now": now,
+        })
+    for e in clarity_dag["edges"]:
+        await session.execute(text(
+            "INSERT INTO dag_edges (id, project_id, from_node_key, to_node_key, edge_type) "
+            "VALUES (:id, :project_id, :from_node_key, :to_node_key, :edge_type)"
+        ), {
+            "id": e["id"], "project_id": e["project_id"],
+            "from_node_key": e["from_node_key"], "to_node_key": e["to_node_key"],
+            "edge_type": e.get("edge_type", "dependency"),
+        })
+
+    # Other projects get default DAGs
+    for default_pid in [project1_id, project3_id, project4_id]:
+        default_dag = generate_default_dag(default_pid)
+        for n in default_dag["nodes"]:
+            await session.execute(text(
+                "INSERT INTO dag_nodes (id, project_id, key, label, category, description, status, order_index, config, page_route, created_at) "
+                "VALUES (:id, :project_id, :key, :label, :category, :description, :status, :order_index, :config, :page_route, :now)"
+            ), {
+                "id": n["id"], "project_id": n["project_id"], "key": n["key"],
+                "label": n["label"], "category": n["category"],
+                "description": n.get("description", ""),
+                "status": n.get("status", "pending"),
+                "order_index": n.get("order_index", 0),
+                "config": json.dumps(n.get("config", {})),
+                "page_route": n.get("page_route", ""),
+                "now": now,
+            })
+        for e in default_dag["edges"]:
+            await session.execute(text(
+                "INSERT INTO dag_edges (id, project_id, from_node_key, to_node_key, edge_type) "
+                "VALUES (:id, :project_id, :from_node_key, :to_node_key, :edge_type)"
+            ), {
+                "id": e["id"], "project_id": e["project_id"],
+                "from_node_key": e["from_node_key"], "to_node_key": e["to_node_key"],
+                "edge_type": e.get("edge_type", "dependency"),
+            })
+
+    logger.info("Database seeding completed successfully: 2 organizations, 7 users, 4 projects, 16 evidence records, 10 comparability scores, 5 bias analyses, 5 review decisions, 10 audit logs, 4 study DAGs")

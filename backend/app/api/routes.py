@@ -978,6 +978,178 @@ async def get_project(
     await cache.set(cache_key, result, ttl=120)
     return result
 
+# ── Study DAG endpoints ────────────────────────────────────────────────────
+
+@api_router.get("/projects/{project_id}/dag")
+async def get_project_dag(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Return the DAG (nodes + edges) for a project. Generates a default if none exists."""
+    from sqlalchemy import select as sa_select
+    from app.models import DAGNode, DAGEdge
+
+    await get_project_with_org_check(project_id, current_user, db)
+
+    node_result = await db.execute(
+        sa_select(DAGNode).where(DAGNode.project_id == str(project_id)).order_by(DAGNode.order_index)
+    )
+    db_nodes = node_result.scalars().all()
+
+    if not db_nodes:
+        # Auto-generate a default DAG
+        from app.services.dag_generator import generate_default_dag
+        dag = generate_default_dag(str(project_id))
+        # Persist
+        for n in dag["nodes"]:
+            db.add(DAGNode(
+                id=n["id"], project_id=n["project_id"], key=n["key"],
+                label=n["label"], category=n["category"], description=n["description"],
+                status=n["status"], order_index=n["order_index"],
+                config=n["config"], page_route=n["page_route"],
+            ))
+        for e in dag["edges"]:
+            db.add(DAGEdge(
+                id=e["id"], project_id=e["project_id"],
+                from_node_key=e["from_node_key"], to_node_key=e["to_node_key"],
+                edge_type=e["edge_type"],
+            ))
+        await db.commit()
+        return dag
+
+    edge_result = await db.execute(
+        sa_select(DAGEdge).where(DAGEdge.project_id == str(project_id))
+    )
+    db_edges = edge_result.scalars().all()
+
+    nodes = [{
+        "id": n.id, "project_id": n.project_id, "key": n.key,
+        "label": n.label, "category": n.category, "description": n.description,
+        "status": n.status, "order_index": n.order_index,
+        "config": n.config, "page_route": n.page_route,
+        "created_at": n.created_at.isoformat() if n.created_at else None,
+    } for n in db_nodes]
+
+    edges = [{
+        "id": e.id, "project_id": e.project_id,
+        "from_node_key": e.from_node_key, "to_node_key": e.to_node_key,
+        "edge_type": e.edge_type,
+    } for e in db_edges]
+
+    return {"nodes": nodes, "edges": edges}
+
+
+@api_router.post("/projects/{project_id}/dag/generate")
+async def generate_project_dag(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Generate or regenerate the DAG from the project's parsed specification."""
+    from sqlalchemy import select as sa_select
+    from app.models import ParsedSpecification
+
+    project = await get_project_with_org_check(project_id, current_user, db)
+
+    # Try to find a parsed spec
+    spec_result = await db.execute(
+        sa_select(ParsedSpecification).where(
+            ParsedSpecification.project_id == str(project_id)
+        ).limit(1)
+    )
+    spec = spec_result.scalar_one_or_none()
+
+    if spec:
+        import json as _json
+        parsed = {
+            "indication": spec.indication or "",
+            "population_definition": spec.population_definition or "",
+            "primary_endpoint": spec.primary_endpoint or "",
+            "secondary_endpoints": spec.secondary_endpoints if spec.secondary_endpoints else [],
+            "sample_size": spec.sample_size,
+            "follow_up_period": spec.follow_up_period or "",
+            "subgroups": [],
+            "sensitivity_analyses": [],
+        }
+        # Parse JSON string fields if needed
+        if isinstance(parsed["secondary_endpoints"], str):
+            try:
+                parsed["secondary_endpoints"] = _json.loads(parsed["secondary_endpoints"])
+            except Exception:
+                parsed["secondary_endpoints"] = [parsed["secondary_endpoints"]]
+
+        from app.services.dag_generator import generate_dag_from_specification
+        dag = await generate_dag_from_specification(str(project_id), parsed, db)
+        await db.commit()
+        return dag
+    else:
+        # No spec — generate default DAG
+        from sqlalchemy import delete as sa_delete
+        from app.models import DAGNode, DAGEdge
+        from app.services.dag_generator import generate_default_dag
+
+        await db.execute(sa_delete(DAGEdge).where(DAGEdge.project_id == str(project_id)))
+        await db.execute(sa_delete(DAGNode).where(DAGNode.project_id == str(project_id)))
+
+        dag = generate_default_dag(str(project_id))
+        for n in dag["nodes"]:
+            db.add(DAGNode(
+                id=n["id"], project_id=n["project_id"], key=n["key"],
+                label=n["label"], category=n["category"], description=n["description"],
+                status=n["status"], order_index=n["order_index"],
+                config=n["config"], page_route=n["page_route"],
+            ))
+        for e in dag["edges"]:
+            db.add(DAGEdge(
+                id=e["id"], project_id=e["project_id"],
+                from_node_key=e["from_node_key"], to_node_key=e["to_node_key"],
+                edge_type=e["edge_type"],
+            ))
+        await db.commit()
+        return dag
+
+
+@api_router.patch("/projects/{project_id}/dag/nodes/{node_key}/status")
+async def update_dag_node_status(
+    project_id: str,
+    node_key: str,
+    body: dict = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Update a DAG node's status (pending/in_progress/completed/blocked)."""
+    from sqlalchemy import select as sa_select
+    from app.models import DAGNode
+
+    await get_project_with_org_check(project_id, current_user, db)
+
+    new_status = body.get("status")
+    if new_status not in ("pending", "in_progress", "completed", "blocked"):
+        raise HTTPException(status_code=400, detail="Invalid status. Must be one of: pending, in_progress, completed, blocked")
+
+    result = await db.execute(
+        sa_select(DAGNode).where(
+            DAGNode.project_id == str(project_id),
+            DAGNode.key == node_key,
+        )
+    )
+    node = result.scalar_one_or_none()
+    if not node:
+        raise HTTPException(status_code=404, detail=f"DAG node '{node_key}' not found in project")
+
+    node.status = new_status
+    await db.commit()
+
+    return {
+        "id": node.id,
+        "key": node.key,
+        "label": node.label,
+        "status": node.status,
+        "updated": True,
+    }
+
+
 @api_router.post("/projects/{project_id}/upload")
 async def upload_protocol_document(
     project_id: str,

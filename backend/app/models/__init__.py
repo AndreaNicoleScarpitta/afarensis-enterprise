@@ -1064,6 +1064,52 @@ class AnalysisResult(Base):
 
 
 # ============================================================================
+# STUDY DAG MODELS
+# ============================================================================
+
+class DAGNode(Base):
+    """Individual step in a study-specific analysis workflow"""
+    __tablename__ = "dag_nodes"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    key = Column(String(100), nullable=False)  # e.g., "primary_analysis_mmse"
+    label = Column(String(255), nullable=False)  # e.g., "Primary: MMSE Change from Baseline (ANCOVA)"
+    category = Column(String(50), nullable=False)  # data_ingestion, population, primary, secondary, sensitivity, subgroup, safety, output
+    description = Column(Text)
+    status = Column(String(20), default="pending")  # pending, in_progress, completed, blocked
+    order_index = Column(Integer, default=0)
+    config = Column(JSON)  # analysis-specific config (endpoint, method, population, etc.)
+    page_route = Column(String(255))  # frontend route this node links to
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    project = relationship("Project", backref="dag_nodes")
+
+    __table_args__ = (
+        Index("idx_dag_nodes_project", "project_id"),
+        UniqueConstraint("project_id", "key", name="uq_dag_node_project_key"),
+    )
+
+
+class DAGEdge(Base):
+    """Dependency edge between DAG nodes"""
+    __tablename__ = "dag_edges"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    from_node_key = Column(String(100), nullable=False)
+    to_node_key = Column(String(100), nullable=False)
+    edge_type = Column(String(20), default="dependency")  # dependency, optional, conditional
+
+    project_rel = relationship("Project", backref="dag_edges")
+
+    __table_args__ = (
+        Index("idx_dag_edges_project", "project_id"),
+    )
+
+
+# ============================================================================
 # UPDATE EXISTING MODELS WITH NEW RELATIONSHIPS
 # ============================================================================
 
