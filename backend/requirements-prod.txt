@@ -16,6 +16,7 @@ asyncpg>=0.29.0         # PostgreSQL async driver (used when DATABASE_URL is pos
 
 # Auth & Security
 bcrypt==4.0.1
+PyJWT>=2.8.0
 python-jose[cryptography]==3.3.0
 cryptography>=41.0.0
 
