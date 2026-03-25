@@ -32,7 +32,7 @@ backend/uploads/
 
 # Old build/installer artifacts
 build/
-dist/
+/dist/
 afarensis_enterprise_setup/
 *.exe
 *.spec
