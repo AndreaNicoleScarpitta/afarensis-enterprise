@@ -7,6 +7,7 @@ import {
   Settings,
   Brain,
   AlertTriangle,
+  AlertCircle,
   Loader2,
   Lock,
   CheckCircle2,
@@ -930,8 +931,11 @@ function App() {
   // Sync selectedStudy when URL projectId changes — guard children until study is resolved
   const ProjectRouteSync = ({ children }: { children: React.ReactNode }) => {
     const { projectId } = useParams<{ projectId: string }>()
+    const navigate = useNavigate()
+    const [syncError, setSyncError] = useState<string | null>(null)
     useEffect(() => {
       if (projectId && selectedStudy?.id !== projectId) {
+        setSyncError(null)
         const match = studies.find(s => s.id === projectId)
         if (match) {
           setSelectedStudy(match)
@@ -950,12 +954,31 @@ function App() {
               }
               setSelectedStudy(tempStudy)
             })
-            .catch(() => {
-              // Project not found — could navigate back to dashboard
+            .catch((err: any) => {
+              setSyncError(err?.message || 'Failed to load project')
             })
         }
       }
     }, [projectId])
+
+    // Show error instead of infinite spinner
+    if (syncError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-4 max-w-md">
+            <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Failed to load project</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{syncError}</p>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-4 py-2 bg-[#2563EB] text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      )
+    }
 
     // Don't render children until selectedStudy matches the URL projectId
     if (!selectedStudy || selectedStudy.id !== projectId) {
