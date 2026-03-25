@@ -2905,6 +2905,60 @@ class SemanticScholarRecommendationsRequest(_BaseModel2):
     positive_paper_ids: list
     limit: int = 10
 
+@api_router.post("/search/pubmed")
+async def search_pubmed(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Search PubMed for biomedical literature"""
+    try:
+        body = await request.json()
+        query = body.get("query", "")
+        max_results = body.get("max_results", 20)
+        from app.services.external_apis import ExternalAPIService
+        service = ExternalAPIService()
+        results = await service.search_pubmed(query=query, max_results=max_results)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"PubMed search failed: {str(e)}")
+
+
+@api_router.post("/search/clinical-trials")
+async def search_clinical_trials(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Search ClinicalTrials.gov for clinical trials"""
+    try:
+        body = await request.json()
+        query = body.get("query", "")
+        max_results = body.get("max_results", 20)
+        from app.services.external_apis import ExternalAPIService
+        service = ExternalAPIService()
+        results = await service.search_clinical_trials(query=query, max_results=max_results)
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"ClinicalTrials search failed: {str(e)}")
+
+
+@api_router.post("/search/openalex")
+async def search_openalex(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+):
+    """Search OpenAlex for academic works"""
+    try:
+        body = await request.json()
+        query = body.get("query", "")
+        max_results = body.get("max_results", 20)
+        from app.services.external_apis import ExternalAPIService
+        service = ExternalAPIService()
+        results = await service.search_openalex(query=query, max_results=max_results)
+        return {"results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"OpenAlex search failed: {str(e)}")
+
+
 @api_router.get("/search/semantic-scholar")
 async def search_semantic_scholar(
     query: str = Query(..., min_length=2),

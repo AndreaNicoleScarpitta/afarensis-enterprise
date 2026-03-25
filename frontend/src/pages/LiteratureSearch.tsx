@@ -5,6 +5,7 @@ import {
   BookMarked, Users, Calendar, Quote, AlertCircle, X,
 } from 'lucide-react'
 import PaperViewer from '../components/ui/PaperViewer'
+import { apiClient } from '../services/apiClient'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Source = 'pubmed' | 'clinicaltrials' | 'openalex' | 'semanticscholar'
@@ -47,11 +48,17 @@ const SOURCES: { id: Source; label: string; icon: React.ElementType; color: stri
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
 async function fetchSource(source: Source, query: string, maxResults = 20): Promise<Paper[]> {
   const base = '/api/v1/search'
+  const authHeaders = (): Record<string, string> => {
+    const h: Record<string, string> = { 'Content-Type': 'application/json' }
+    const token = (apiClient as any).accessToken
+    if (token) h['Authorization'] = `Bearer ${token}`
+    return h
+  }
 
   if (source === 'pubmed') {
     const r = await fetch(`${base}/pubmed`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ query, max_results: maxResults }),
     })
     if (!r.ok) throw new Error(`PubMed: ${r.statusText}`)
@@ -61,7 +68,7 @@ async function fetchSource(source: Source, query: string, maxResults = 20): Prom
   if (source === 'clinicaltrials') {
     const r = await fetch(`${base}/clinical-trials`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ query, max_results: maxResults }),
     })
     if (!r.ok) throw new Error(`ClinicalTrials: ${r.statusText}`)
@@ -71,7 +78,7 @@ async function fetchSource(source: Source, query: string, maxResults = 20): Prom
   if (source === 'openalex') {
     const r = await fetch(`${base}/openalex`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ query, max_results: maxResults }),
     })
     if (!r.ok) throw new Error(`OpenAlex: ${r.statusText}`)
@@ -81,7 +88,9 @@ async function fetchSource(source: Source, query: string, maxResults = 20): Prom
 
   if (source === 'semanticscholar') {
     const params = new URLSearchParams({ query, limit: String(maxResults) })
-    const r = await fetch(`${base}/semantic-scholar?${params}`)
+    const r = await fetch(`${base}/semantic-scholar?${params}`, {
+      headers: authHeaders(),
+    })
     if (!r.ok) throw new Error(`Semantic Scholar: ${r.statusText}`)
     const data = await r.json()
     return data.results ?? data
@@ -355,7 +364,7 @@ export default function LiteratureSearch() {
               <p className="text-sm font-semibold text-red-700 dark:text-red-400">Search error</p>
               <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">{activeError}</p>
               <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                Make sure the backend is running: <code className="font-mono">python simple_backend.py</code>
+                Check the backend logs for details or try again.
               </p>
             </div>
           </div>
