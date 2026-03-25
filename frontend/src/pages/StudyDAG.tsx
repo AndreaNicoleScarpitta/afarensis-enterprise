@@ -97,10 +97,10 @@ const DAGEdgeSchema = z.object({
 })
 
 const DAGResponseSchema = z.object({
-  project_id: z.string(),
+  project_id: z.string().optional(),
   nodes: z.array(DAGNodeSchema),
   edges: z.array(DAGEdgeSchema),
-})
+}).passthrough()
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
