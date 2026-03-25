@@ -924,23 +924,25 @@ async def get_project(
     if cached_result is not None:
         return cached_result
 
-    # Eagerly load relationships to avoid MissingGreenlet errors in async context
-    stmt = sa_select(Project).where(Project.id == str(project_id)).options(
-        selectinload(Project.parsed_specifications),
-        selectinload(Project.evidence_records),
-        selectinload(Project.review_decisions),
+    project = await get_project_with_org_check(project_id, current_user, db)
+
+    # Use separate count queries to avoid lazy-loading in async context
+    ev_count_result = await db.execute(
+        sa_select(sa_func.count()).select_from(EvidenceRecord).where(EvidenceRecord.project_id == str(project_id))
     )
-    db_result = await db.execute(stmt)
-    project = db_result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    org_id = current_user.org_id if hasattr(current_user, 'org_id') else None
-    if org_id and project.organization_id and str(project.organization_id) != str(org_id):
-        raise HTTPException(status_code=403, detail="Access denied: project belongs to a different organization")
+    evidence_count = ev_count_result.scalar() or 0
+
+    rd_count_result = await db.execute(
+        sa_select(sa_func.count()).select_from(ReviewDecision).where(ReviewDecision.project_id == str(project_id))
+    )
+    review_count = rd_count_result.scalar() or 0
 
     parsed_spec = None
-    if project.parsed_specifications:
-        latest = project.parsed_specifications[0]
+    spec_result = await db.execute(
+        sa_select(ParsedSpecification).where(ParsedSpecification.project_id == str(project_id)).limit(1)
+    )
+    latest = spec_result.scalar_one_or_none()
+    if latest:
         parsed_spec = {
             "indication": latest.indication,
             "population_definition": latest.population_definition,
@@ -958,8 +960,8 @@ async def get_project(
         "created_by": project.created_by,
         "created_at": project.created_at.isoformat() if project.created_at else None,
         "updated_at": project.updated_at.isoformat() if project.updated_at else None,
-        "evidence_count": len(project.evidence_records),
-        "review_decisions_count": len(project.review_decisions),
+        "evidence_count": evidence_count,
+        "review_decisions_count": review_count,
         "parsed_specification": parsed_spec,
     }
     await cache.set(cache_key, result, ttl=120)
