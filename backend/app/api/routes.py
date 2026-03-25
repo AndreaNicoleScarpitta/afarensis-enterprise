@@ -53,7 +53,18 @@ security = HTTPBearer()
 async def get_project_with_org_check(project_id: str, current_user, db: AsyncSession) -> Project:
     """Fetch a project and verify the current user's org has access."""
     from sqlalchemy import select as sa_select
-    result = await db.execute(sa_select(Project).where(Project.id == str(project_id)))
+    from sqlalchemy.orm import selectinload
+    result = await db.execute(
+        sa_select(Project)
+        .where(Project.id == str(project_id))
+        .options(
+            selectinload(Project.parsed_specifications),
+            selectinload(Project.evidence_records),
+            selectinload(Project.review_decisions),
+            selectinload(Project.audit_logs),
+            selectinload(Project.org),
+        )
+    )
     project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
