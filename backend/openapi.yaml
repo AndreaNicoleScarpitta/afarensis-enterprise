@@ -1,0 +1,2573 @@
+openapi: "3.0.3"
+info:
+  title: Afarensis Enterprise API
+  description: >
+    Enterprise-grade clinical evidence review platform for regulatory submissions.
+    Implements a 12-layer capability model for evidence evaluation, comparability
+    analysis, bias detection, and regulatory artifact generation.
+  version: "2.0.0"
+  contact:
+    name: Synthetic Ascension
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Health
+    description: System health and status
+  - name: Authentication
+    description: User authentication and token management
+  - name: Projects
+    description: Research project management (Layer 1)
+  - name: Evidence
+    description: Evidence discovery and extraction (Layers 2-3)
+  - name: Comparability
+    description: Anchor generation and comparability scoring (Layers 4-5)
+  - name: Bias Analysis
+    description: Bias detection and fragility analysis (Layer 6)
+  - name: Review
+    description: Evidence critique and reviewer decisions (Layers 8-9)
+  - name: Artifacts
+    description: Regulatory artifact generation (Layer 10)
+  - name: Statistics
+    description: Statistical analysis endpoints
+  - name: Search
+    description: Evidence search and discovery
+  - name: Federated
+    description: Federated evidence network (Layers 11-12)
+  - name: Admin
+    description: User and system administration
+  - name: SAR Pipeline
+    description: Safety Assessment Report pipeline
+  - name: AI & Workflow
+    description: Automated analysis and workflow guidance
+
+# =============================================================================
+# PATHS
+# =============================================================================
+paths:
+
+  # ---------------------------------------------------------------------------
+  # Health
+  # ---------------------------------------------------------------------------
+  /health:
+    get:
+      operationId: getHealth
+      summary: System health check
+      tags: [Health]
+      security: []
+      responses:
+        "200":
+          description: System is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  # ---------------------------------------------------------------------------
+  # Authentication
+  # ---------------------------------------------------------------------------
+  /auth/login:
+    post:
+      operationId: login
+      summary: Authenticate user and obtain JWT tokens
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user profile
+      tags: [Authentication]
+      responses:
+        "200":
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Invalidate current session tokens
+      tags: [Authentication]
+      responses:
+        "200":
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      summary: Refresh an expired access token using refresh token cookie
+      tags: [Authentication]
+      security: []
+      responses:
+        "200":
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TokenResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Projects
+  # ---------------------------------------------------------------------------
+  /projects:
+    post:
+      operationId: createProject
+      summary: Create a new research project
+      tags: [Projects]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectCreateRequest"
+      responses:
+        "201":
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    get:
+      operationId: listProjects
+      summary: List all projects for the current user
+      tags: [Projects]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, active, completed, archived, on_hold]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedProjectResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /projects/{project_id}:
+    get:
+      operationId: getProject
+      summary: Get a single project by ID
+      tags: [Projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Project details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{project_id}/upload:
+    post:
+      operationId: uploadProjectFile
+      summary: Upload a file (PDF, CSV, RIS) to a project for evidence extraction
+      tags: [Projects]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required: [file]
+      responses:
+        "200":
+          description: File uploaded and queued for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  file_id:
+                    type: string
+                    format: uuid
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ---------------------------------------------------------------------------
+  # Evidence (Layers 2-3)
+  # ---------------------------------------------------------------------------
+  /projects/{project_id}/discover-evidence:
+    post:
+      operationId: discoverEvidence
+      summary: Trigger automated evidence discovery from configured sources
+      tags: [Evidence]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                sources:
+                  type: array
+                  items:
+                    type: string
+                    enum: [pubmed, clinicaltrials, openalex, semanticscholar]
+                max_results:
+                  type: integer
+                  default: 50
+                query_override:
+                  type: string
+      responses:
+        "200":
+          description: Evidence discovery initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                  status:
+                    type: string
+                  discovered_count:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{project_id}/evidence:
+    get:
+      operationId: listProjectEvidence
+      summary: List evidence records for a project
+      tags: [Evidence]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, screening, in_review, approved, rejected, archived]
+        - name: source
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paginated list of evidence records
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedEvidenceResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{project_id}/evidence/network:
+    get:
+      operationId: getEvidenceNetwork
+      summary: Get the citation/relationship network graph for project evidence
+      tags: [Evidence]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Evidence network graph
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      type: object
+                  edges:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /evidence-patterns:
+    get:
+      operationId: getEvidencePatterns
+      summary: Get cross-project evidence patterns and trends
+      tags: [Evidence]
+      responses:
+        "200":
+          description: Evidence pattern analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  patterns:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Comparability (Layers 4-5)
+  # ---------------------------------------------------------------------------
+  /projects/{project_id}/generate-anchors:
+    post:
+      operationId: generateAnchors
+      summary: Generate comparability anchors between evidence records
+      tags: [Comparability]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                anchor_type:
+                  type: string
+                  enum: [pico, outcome, population, intervention]
+                evidence_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Anchors generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  anchors:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{project_id}/comparability-scores:
+    get:
+      operationId: getComparabilityScores
+      summary: Retrieve computed comparability scores for project evidence
+      tags: [Comparability]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Comparability score matrix
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComparabilityScoreResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ---------------------------------------------------------------------------
+  # Bias Analysis (Layer 6)
+  # ---------------------------------------------------------------------------
+  /projects/{project_id}/analyze-bias:
+    post:
+      operationId: analyzeBias
+      summary: Run bias detection and fragility analysis on project evidence
+      tags: [Bias Analysis]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                analysis_type:
+                  type: string
+                  enum: [rob2, robins_i, fragility_index, combined]
+                  default: combined
+                evidence_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        "200":
+          description: Bias analysis initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                  status:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{project_id}/bias-analysis:
+    get:
+      operationId: getBiasAnalysis
+      summary: Retrieve bias analysis results for a project
+      tags: [Bias Analysis]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Bias analysis results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BiasAnalysisResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ---------------------------------------------------------------------------
+  # Review (Layers 8-9)
+  # ---------------------------------------------------------------------------
+  /projects/{project_id}/generate-critique:
+    post:
+      operationId: generateCritique
+      summary: Generate AI-assisted evidence critique for reviewer guidance
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                evidence_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                critique_depth:
+                  type: string
+                  enum: [summary, standard, deep]
+                  default: standard
+      responses:
+        "200":
+          description: Critique generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  critiques:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{project_id}/evidence/{evidence_id}/decision:
+    post:
+      operationId: submitEvidenceDecision
+      summary: Submit a reviewer decision on a specific evidence record
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/EvidenceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecisionRequest"
+      responses:
+        "200":
+          description: Decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewDecisionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /projects/{project_id}/decisions:
+    get:
+      operationId: listProjectDecisions
+      summary: List all reviewer decisions for a project
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: List of decisions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ReviewDecisionResponse"
+                  total:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /review/workflows:
+    post:
+      operationId: createReviewWorkflow
+      summary: Create a structured review workflow with stages and assignments
+      tags: [Review]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                workflow_type:
+                  type: string
+                  enum: [single_reviewer, dual_reviewer, consensus]
+                stages:
+                  type: array
+                  items:
+                    type: object
+              required: [project_id, workflow_type]
+      responses:
+        "201":
+          description: Workflow created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workflow_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /review/assignments:
+    post:
+      operationId: createReviewAssignment
+      summary: Assign evidence to a reviewer
+      tags: [Review]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                evidence_id:
+                  type: string
+                  format: uuid
+                reviewer_id:
+                  type: string
+                  format: uuid
+                workflow_id:
+                  type: string
+                  format: uuid
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent]
+              required: [evidence_id, reviewer_id]
+      responses:
+        "201":
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assignment_id:
+                    type: string
+                    format: uuid
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+    get:
+      operationId: listReviewAssignments
+      summary: List review assignments for the current user or project
+      tags: [Review]
+      parameters:
+        - name: project_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: reviewer_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [assigned, in_progress, completed, rejected]
+      responses:
+        "200":
+          description: List of assignments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /review/comments:
+    post:
+      operationId: createReviewComment
+      summary: Add a comment to an evidence review thread
+      tags: [Review]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                evidence_id:
+                  type: string
+                  format: uuid
+                content:
+                  type: string
+                parent_comment_id:
+                  type: string
+                  format: uuid
+              required: [evidence_id, content]
+      responses:
+        "201":
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  comment_id:
+                    type: string
+                    format: uuid
+                  created_at:
+                    type: string
+                    format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /review/comments/{evidence_id}:
+    get:
+      operationId: getReviewComments
+      summary: Get all comments for a specific evidence record
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/EvidenceIdPath"
+      responses:
+        "200":
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /review/decisions:
+    post:
+      operationId: submitReviewDecision
+      summary: Submit a formal review decision (include/exclude/uncertain)
+      tags: [Review]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewDecisionRequest"
+      responses:
+        "200":
+          description: Decision submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReviewDecisionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /review/conflicts/resolve:
+    post:
+      operationId: resolveReviewConflict
+      summary: Resolve conflicting reviewer decisions on an evidence record
+      tags: [Review]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                evidence_id:
+                  type: string
+                  format: uuid
+                resolution:
+                  type: string
+                  enum: [include, exclude, escalate]
+                rationale:
+                  type: string
+              required: [evidence_id, resolution, rationale]
+      responses:
+        "200":
+          description: Conflict resolved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resolution_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /review/presence/{evidence_id}:
+    get:
+      operationId: getReviewPresence
+      summary: Get active reviewers currently viewing an evidence record
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/EvidenceIdPath"
+      responses:
+        "200":
+          description: Active reviewers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active_users:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user_id:
+                          type: string
+                          format: uuid
+                        username:
+                          type: string
+                        last_active:
+                          type: string
+                          format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: updateReviewPresence
+      summary: Update reviewer presence status on an evidence record
+      tags: [Review]
+      parameters:
+        - $ref: "#/components/parameters/EvidenceIdPath"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [join, leave, heartbeat]
+      responses:
+        "200":
+          description: Presence updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Artifacts (Layer 10)
+  # ---------------------------------------------------------------------------
+  /projects/{project_id}/generate-artifact:
+    post:
+      operationId: generateArtifact
+      summary: Generate a regulatory artifact (PRISMA, forest plot, SoE table, etc.)
+      tags: [Artifacts]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                artifact_type:
+                  type: string
+                  enum: [prisma_diagram, forest_plot, soe_table, grade_assessment, narrative_synthesis, submission_package]
+                format:
+                  type: string
+                  enum: [pdf, docx, html, json]
+                  default: pdf
+                options:
+                  type: object
+              required: [artifact_type]
+      responses:
+        "200":
+          description: Artifact generation initiated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegulatoryArtifactResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /projects/{project_id}/artifacts:
+    get:
+      operationId: listProjectArtifacts
+      summary: List all generated artifacts for a project
+      tags: [Artifacts]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: List of artifacts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/RegulatoryArtifactResponse"
+                  total:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /artifacts/{artifact_id}/download:
+    get:
+      operationId: downloadArtifact
+      summary: Download a generated regulatory artifact file
+      tags: [Artifacts]
+      parameters:
+        - name: artifact_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Artifact file binary
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ---------------------------------------------------------------------------
+  # Statistics
+  # ---------------------------------------------------------------------------
+  /statistics/full-analysis:
+    get:
+      operationId: getFullStatisticalAnalysis
+      summary: Run full statistical analysis across all project evidence
+      tags: [Statistics]
+      parameters:
+        - name: project_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Comprehensive statistical analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary_statistics:
+                    type: object
+                  meta_analysis:
+                    type: object
+                  heterogeneity:
+                    type: object
+                  sensitivity_analysis:
+                    type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /statistics/summary:
+    get:
+      operationId: getStatisticsSummary
+      summary: Get summary statistics for the platform
+      tags: [Statistics]
+      responses:
+        "200":
+          description: Summary statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_projects:
+                    type: integer
+                  total_evidence:
+                    type: integer
+                  total_reviews:
+                    type: integer
+                  total_artifacts:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Search
+  # ---------------------------------------------------------------------------
+  /search/semantic:
+    post:
+      operationId: semanticSearch
+      summary: Perform vector-based semantic search across evidence
+      tags: [Search]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                project_id:
+                  type: string
+                  format: uuid
+                limit:
+                  type: integer
+                  default: 20
+                threshold:
+                  type: number
+                  format: float
+              required: [query]
+      responses:
+        "200":
+          description: Semantic search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /search/hybrid:
+    post:
+      operationId: hybridSearch
+      summary: Combined keyword and semantic search
+      tags: [Search]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: string
+                project_id:
+                  type: string
+                  format: uuid
+                keyword_weight:
+                  type: number
+                  format: float
+                  default: 0.5
+                semantic_weight:
+                  type: number
+                  format: float
+                  default: 0.5
+                limit:
+                  type: integer
+                  default: 20
+              required: [query]
+      responses:
+        "200":
+          description: Hybrid search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /search/recommendations/{evidence_id}:
+    get:
+      operationId: getSearchRecommendations
+      summary: Get related evidence recommendations for a given record
+      tags: [Search]
+      parameters:
+        - $ref: "#/components/parameters/EvidenceIdPath"
+      responses:
+        "200":
+          description: Recommended evidence
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recommendations:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /search/save:
+    post:
+      operationId: saveSearch
+      summary: Save a search query for later reuse
+      tags: [Search]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                query:
+                  type: string
+                filters:
+                  type: object
+                search_type:
+                  type: string
+              required: [name, query]
+      responses:
+        "201":
+          description: Search saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /search/saved:
+    get:
+      operationId: listSavedSearches
+      summary: List saved searches for the current user
+      tags: [Search]
+      responses:
+        "200":
+          description: Saved searches
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /search/citation-network:
+    post:
+      operationId: buildCitationNetwork
+      summary: Build a citation network graph from a set of evidence records
+      tags: [Search]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                evidence_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                depth:
+                  type: integer
+                  default: 2
+              required: [evidence_ids]
+      responses:
+        "200":
+          description: Citation network
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      type: object
+                  edges:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /search/semantic-scholar:
+    get:
+      operationId: searchSemanticScholar
+      summary: Search Semantic Scholar for academic papers
+      tags: [Search]
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: year_from
+          in: query
+          schema:
+            type: integer
+        - name: year_to
+          in: query
+          schema:
+            type: integer
+        - name: fields_of_study
+          in: query
+          schema:
+            type: string
+          description: Comma-separated list of fields
+        - name: open_access_only
+          in: query
+          schema:
+            type: boolean
+        - name: min_citation_count
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Semantic Scholar results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  offset:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /search/semantic-scholar/paper/{paper_id}:
+    get:
+      operationId: getSemanticScholarPaper
+      summary: Get detailed metadata for a Semantic Scholar paper
+      tags: [Search]
+      parameters:
+        - name: paper_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Paper details
+          content:
+            application/json:
+              schema:
+                type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /search/semantic-scholar/recommendations:
+    post:
+      operationId: getSemanticScholarRecommendations
+      summary: Get paper recommendations based on seed papers
+      tags: [Search]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                positive_paper_ids:
+                  type: array
+                  items:
+                    type: string
+                limit:
+                  type: integer
+                  default: 10
+              required: [positive_paper_ids]
+      responses:
+        "200":
+          description: Recommended papers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /search/rare-disease-evidence:
+    post:
+      operationId: searchRareDiseaseEvidence
+      summary: Specialized search for rare disease evidence across multiple databases
+      tags: [Search]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                disease_name:
+                  type: string
+                intervention:
+                  type: string
+                limit:
+                  type: integer
+                  default: 20
+                year_from:
+                  type: integer
+              required: [disease_name]
+      responses:
+        "200":
+          description: Rare disease evidence results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ---------------------------------------------------------------------------
+  # Federated (Layers 11-12)
+  # ---------------------------------------------------------------------------
+  /federated/nodes:
+    get:
+      operationId: listFederatedNodes
+      summary: List federated evidence network nodes and their status
+      tags: [Federated]
+      responses:
+        "200":
+          description: Federated node list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  nodes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        node_id:
+                          type: string
+                        name:
+                          type: string
+                        status:
+                          type: string
+                          enum: [online, offline, syncing]
+                        last_sync:
+                          type: string
+                          format: date-time
+                        evidence_count:
+                          type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ---------------------------------------------------------------------------
+  # Admin
+  # ---------------------------------------------------------------------------
+  /users/me:
+    get:
+      operationId: getUserProfile
+      summary: Get the current user's profile
+      tags: [Admin]
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /users:
+    get:
+      operationId: listUsers
+      summary: List all platform users (admin only)
+      tags: [Admin]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [viewer, analyst, reviewer, admin]
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Paginated list of users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/UserResponse"
+                  total:
+                    type: integer
+                  page:
+                    type: integer
+                  page_size:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /audit/logs:
+    get:
+      operationId: getAuditLogs
+      summary: Retrieve system audit logs (admin only)
+      tags: [Admin]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: event_type
+          in: query
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: start_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditLogResponse"
+                  total:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /analytics/dashboard:
+    get:
+      operationId: getDashboardAnalytics
+      summary: Get aggregated analytics data for the admin dashboard
+      tags: [Admin]
+      responses:
+        "200":
+          description: Dashboard analytics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  project_stats:
+                    type: object
+                  evidence_stats:
+                    type: object
+                  review_stats:
+                    type: object
+                  user_activity:
+                    type: object
+                  system_health:
+                    type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  # ---------------------------------------------------------------------------
+  # AI & Workflow
+  # ---------------------------------------------------------------------------
+  /projects/{project_id}/ai/comprehensive-analysis:
+    post:
+      operationId: runComprehensiveAnalysis
+      summary: Run full AI-driven analysis pipeline on project evidence
+      tags: [AI & Workflow]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                analysis_modules:
+                  type: array
+                  items:
+                    type: string
+                    enum: [bias, comparability, quality, synthesis, critique]
+                llm_provider:
+                  type: string
+                  enum: [anthropic, openai]
+                  default: anthropic
+      responses:
+        "200":
+          description: Analysis initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                  status:
+                    type: string
+                  estimated_duration:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{project_id}/workflow/guidance:
+    get:
+      operationId: getWorkflowGuidance
+      summary: Get AI-generated next-step workflow guidance for a project
+      tags: [AI & Workflow]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Workflow guidance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  current_stage:
+                    type: string
+                  next_steps:
+                    type: array
+                    items:
+                      type: object
+                  completion_percentage:
+                    type: number
+                    format: float
+                  recommendations:
+                    type: array
+                    items:
+                      type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{project_id}/workflow/execute-step:
+    post:
+      operationId: executeWorkflowStep
+      summary: Execute a specific workflow step
+      tags: [AI & Workflow]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                step_id:
+                  type: string
+                parameters:
+                  type: object
+              required: [step_id]
+      responses:
+        "200":
+          description: Step execution result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  result:
+                    type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /workflows/{workflow_id}/progress:
+    get:
+      operationId: getWorkflowProgress
+      summary: Get progress status for a running workflow
+      tags: [AI & Workflow]
+      parameters:
+        - name: workflow_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Workflow progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  workflow_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                  progress:
+                    type: number
+                    format: float
+                  current_step:
+                    type: string
+                  steps_completed:
+                    type: integer
+                  steps_total:
+                    type: integer
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /projects/{project_id}/security/threat-detection:
+    post:
+      operationId: runThreatDetection
+      summary: Run security threat detection on project data and uploads
+      tags: [AI & Workflow]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                scan_type:
+                  type: string
+                  enum: [full, uploads_only, metadata_only]
+                  default: full
+      responses:
+        "200":
+          description: Threat detection results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  threats_found:
+                    type: integer
+                  risk_level:
+                    type: string
+                    enum: [none, low, medium, high, critical]
+                  details:
+                    type: array
+                    items:
+                      type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /user/{user_id}/workflow/optimize:
+    post:
+      operationId: optimizeUserWorkflow
+      summary: Generate personalized workflow optimization suggestions for a user
+      tags: [AI & Workflow]
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                optimization_goal:
+                  type: string
+                  enum: [speed, quality, thoroughness]
+      responses:
+        "200":
+          description: Optimization suggestions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions:
+                    type: array
+                    items:
+                      type: object
+                  estimated_improvement:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /data/classify:
+    post:
+      operationId: classifyData
+      summary: Classify uploaded data by type, quality, and relevance
+      tags: [AI & Workflow]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                data:
+                  type: object
+                classification_type:
+                  type: string
+                  enum: [study_type, evidence_level, data_quality]
+              required: [data]
+      responses:
+        "200":
+          description: Classification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  classification:
+                    type: string
+                  confidence:
+                    type: number
+                    format: float
+                  details:
+                    type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  # ---------------------------------------------------------------------------
+  # SAR Pipeline
+  # ---------------------------------------------------------------------------
+  /sar-pipeline/init:
+    post:
+      operationId: initSARPipeline
+      summary: Initialize a Safety Assessment Report pipeline for a project
+      tags: [SAR Pipeline]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                project_id:
+                  type: string
+                  format: uuid
+                treatment_source:
+                  type: string
+                control_source:
+                  type: string
+                primary_endpoint:
+                  type: string
+                analysis_type:
+                  type: string
+                  enum: [comparative, single_arm, observational]
+              required: [project_id, treatment_source, control_source, primary_endpoint]
+      responses:
+        "201":
+          description: SAR pipeline initialized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pipeline_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+                  stages:
+                    type: array
+                    items:
+                      type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /sar-pipeline/{project_id}/status:
+    get:
+      operationId: getSARPipelineStatus
+      summary: Get current status of the SAR pipeline for a project
+      tags: [SAR Pipeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Pipeline status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  current_stage:
+                    type: string
+                  stages_completed:
+                    type: array
+                    items:
+                      type: string
+                  stages_remaining:
+                    type: array
+                    items:
+                      type: string
+                  progress:
+                    type: number
+                    format: float
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /sar-pipeline/{project_id}/run-stage:
+    post:
+      operationId: runSARStage
+      summary: Execute the next stage in the SAR pipeline
+      tags: [SAR Pipeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                stage:
+                  type: string
+                config:
+                  type: object
+              required: [stage]
+      responses:
+        "200":
+          description: Stage execution result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stage:
+                    type: string
+                  status:
+                    type: string
+                  result:
+                    type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /sar-pipeline/{project_id}/results:
+    get:
+      operationId: getSARResults
+      summary: Get accumulated results from all completed SAR pipeline stages
+      tags: [SAR Pipeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: Pipeline results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stages:
+                    type: object
+                  summary:
+                    type: object
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /sar-pipeline/{project_id}/report:
+    get:
+      operationId: getSARReport
+      summary: Get the final SAR report document
+      tags: [SAR Pipeline]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200":
+          description: SAR report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  report:
+                    type: object
+                  generated_at:
+                    type: string
+                    format: date-time
+                  download_url:
+                    type: string
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+# =============================================================================
+# COMPONENTS
+# =============================================================================
+components:
+
+  # ---------------------------------------------------------------------------
+  # Security Schemes
+  # ---------------------------------------------------------------------------
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        JWT access token obtained from /auth/login. Tokens include issuer
+        (afarensis-enterprise), audience (afarensis-api), and a unique JTI
+        for revocation support. Access tokens expire per server configuration
+        (default 30 minutes). Refresh via /auth/refresh using httpOnly cookie.
+
+  # ---------------------------------------------------------------------------
+  # Reusable Parameters
+  # ---------------------------------------------------------------------------
+  parameters:
+    ProjectId:
+      name: project_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique project identifier
+
+    EvidenceId:
+      name: evidence_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique evidence record identifier
+
+    EvidenceIdPath:
+      name: evidence_id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+      description: Unique evidence record identifier
+
+  # ---------------------------------------------------------------------------
+  # Reusable Responses
+  # ---------------------------------------------------------------------------
+  responses:
+    Unauthorized:
+      description: Authentication required or token expired
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    Forbidden:
+      description: Insufficient permissions for this operation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    NotFound:
+      description: Requested resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ValidationError:
+      description: Request body validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorResponse"
+
+  # ---------------------------------------------------------------------------
+  # Schemas
+  # ---------------------------------------------------------------------------
+  schemas:
+
+    # --- Authentication ---
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: analyst@afarensis.io
+        password:
+          type: string
+          format: password
+          minLength: 8
+      required: [email, password]
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: JWT access token
+        refresh_token:
+          type: string
+          description: JWT refresh token (also set as httpOnly cookie)
+        token_type:
+          type: string
+          example: bearer
+        user:
+          $ref: "#/components/schemas/UserResponse"
+
+    # --- Projects ---
+    ProjectCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, active, completed, archived, on_hold]
+          default: draft
+      required: [name]
+
+    ProjectResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [draft, active, completed, archived, on_hold]
+        owner_id:
+          type: string
+          format: uuid
+          nullable: true
+        created_by:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PaginatedProjectResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectResponse"
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    # --- Evidence ---
+    EvidenceRecordResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        abstract:
+          type: string
+          nullable: true
+        authors:
+          type: array
+          items:
+            type: string
+        publicationDate:
+          type: string
+          nullable: true
+        source:
+          type: string
+          enum: [pubmed, clinicaltrials, openalex, semanticscholar, manual]
+        sourceId:
+          type: string
+          nullable: true
+        doi:
+          type: string
+          nullable: true
+        qualityScore:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          maximum: 100
+        status:
+          type: string
+          enum: [pending, screening, in_review, approved, rejected, archived]
+        aiSummary:
+          type: string
+          nullable: true
+        metadataJson:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          nullable: true
+        updatedBy:
+          type: string
+          nullable: true
+
+    PaginatedEvidenceResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/EvidenceRecordResponse"
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+
+    # --- Comparability ---
+    ComparabilityScoreResponse:
+      type: object
+      properties:
+        project_id:
+          type: string
+          format: uuid
+        scores:
+          type: array
+          items:
+            type: object
+            properties:
+              evidence_a_id:
+                type: string
+                format: uuid
+              evidence_b_id:
+                type: string
+                format: uuid
+              overall_score:
+                type: number
+                format: float
+                minimum: 0
+                maximum: 1
+              dimension_scores:
+                type: object
+                properties:
+                  population:
+                    type: number
+                  intervention:
+                    type: number
+                  outcomes:
+                    type: number
+                  study_design:
+                    type: number
+        generated_at:
+          type: string
+          format: date-time
+
+    # --- Bias ---
+    BiasAnalysisResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        results:
+          type: object
+          nullable: true
+          properties:
+            overall_risk:
+              type: string
+              enum: [low, some_concerns, high]
+            domain_assessments:
+              type: array
+              items:
+                type: object
+            fragility_index:
+              type: integer
+              nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # --- Review Decisions ---
+    ReviewDecisionRequest:
+      type: object
+      properties:
+        evidence_id:
+          type: string
+          format: uuid
+        decision:
+          type: string
+          enum: [include, exclude, uncertain]
+        confidence_level:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        rationale:
+          type: string
+        quality_rating:
+          type: integer
+          minimum: 1
+          maximum: 10
+      required: [evidence_id, decision, rationale]
+
+    ReviewDecisionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        evidence_id:
+          type: string
+          format: uuid
+        reviewer_id:
+          type: string
+          format: uuid
+        decision:
+          type: string
+          enum: [include, exclude, uncertain]
+        confidence_level:
+          type: number
+          format: float
+        rationale:
+          type: string
+        quality_rating:
+          type: integer
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    # --- Artifacts ---
+    RegulatoryArtifactResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        project_id:
+          type: string
+          format: uuid
+        artifact_type:
+          type: string
+          enum: [prisma_diagram, forest_plot, soe_table, grade_assessment, narrative_synthesis, submission_package]
+        format:
+          type: string
+          enum: [pdf, docx, html, json]
+        status:
+          type: string
+          enum: [generating, completed, failed]
+        download_url:
+          type: string
+          nullable: true
+        file_size:
+          type: integer
+          nullable: true
+        generated_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          nullable: true
+
+    # --- Users ---
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [viewer, analyst, reviewer, admin]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # --- Audit ---
+    AuditLogResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        event_type:
+          type: string
+        user_id:
+          type: string
+          format: uuid
+          nullable: true
+        resource_type:
+          type: string
+          nullable: true
+        resource_id:
+          type: string
+          nullable: true
+        details:
+          type: object
+        ip_address:
+          type: string
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+
+    # --- Health ---
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        timestamp:
+          type: string
+          format: date-time
+        database:
+          type: string
+          enum: [connected, disconnected]
+        version:
+          type: string
+          example: "2.0.0"
+
+    # --- Errors ---
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+      required: [detail]
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  oneOf:
+                    - type: string
+                    - type: integer
+              msg:
+                type: string
+              type:
+                type: string

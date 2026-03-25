@@ -1,0 +1,94 @@
+# Afarensis Enterprise - Docker Compose
+#
+# Usage:
+#   Development:  docker compose up -d postgres redis
+#   Production:   docker compose --profile production up -d
+#
+# After starting Postgres:
+#   cd backend
+#   DATABASE_URL=postgresql+asyncpg://afarensis:afarensis_dev_2024@localhost:5432/afarensis \
+#     alembic upgrade head
+#   DATABASE_URL=postgresql+asyncpg://afarensis:afarensis_dev_2024@localhost:5432/afarensis \
+#     python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+services:
+  # ── PostgreSQL 16 ────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: afarensis-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: afarensis
+      POSTGRES_USER: afarensis
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-afarensis_dev_2024}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afarensis"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis 7 (caching, rate limiting, sessions) ──────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: afarensis-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── PgBouncer (connection pooling, production profile) ──────────────
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: afarensis-pgbouncer
+    restart: unless-stopped
+    profiles: ["production"]
+    environment:
+      DATABASE_URL: postgres://afarensis:${POSTGRES_PASSWORD:-afarensis_dev_2024}@postgres:5432/afarensis
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+      MIN_POOL_SIZE: 5
+      RESERVE_POOL_SIZE: 5
+    ports:
+      - "6432:5432"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── Automated Backups (production profile) ──────────────────────────
+  pg-backup:
+    image: prodrigestivill/postgres-backup-local:16
+    container_name: afarensis-backup
+    restart: unless-stopped
+    profiles: ["production"]
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: afarensis
+      POSTGRES_USER: afarensis
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-afarensis_dev_2024}
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: 30
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 6
+      HEALTHCHECK_PORT: 8080
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local

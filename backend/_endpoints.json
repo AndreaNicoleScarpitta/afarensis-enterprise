@@ -1,0 +1,1618 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/v1/health",
+    "name": "health_check",
+    "doc": "System health check",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/login",
+    "name": "login",
+    "doc": "Authenticate user and return JWT tokens",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/auth/me",
+    "name": "get_me",
+    "doc": "Get current authenticated user info (camelCase for frontend UserSchema)",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/logout",
+    "name": "logout",
+    "doc": "Log out current user (client-side token removal)",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/auth/refresh",
+    "name": "refresh_token_endpoint",
+    "doc": "Refresh access token using refresh token",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects",
+    "name": "create_project",
+    "doc": "Create a new evidence review project",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects",
+    "name": "list_projects",
+    "doc": "List evidence review projects",
+    "params": [
+      {
+        "name": "status",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": "annotation=int required=False default=50 alias='limit' json_schema_extra={} metadata=[Le(le=200)]"
+      },
+      {
+        "name": "offset",
+        "type": "int",
+        "default": "annotation=int required=False default=0 alias='offset' json_schema_extra={} metadata=[Ge(ge=0)]"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}",
+    "name": "get_project",
+    "doc": "Get detailed project information",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/upload",
+    "name": "upload_protocol_document",
+    "doc": "Upload protocol document or SAP for parsing",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "file",
+        "type": "UploadFile",
+        "default": "annotation=UploadFile required=True alias='file' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/discover-evidence",
+    "name": "discover_evidence",
+    "doc": "Discover and extract evidence from PubMed and ClinicalTrials.gov",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "max_pubmed_results",
+        "type": "int",
+        "default": "annotation=int required=False default=50 alias='max_pubmed_results' json_schema_extra={} metadata=[Le(le=200)]"
+      },
+      {
+        "name": "max_trials_results",
+        "type": "int",
+        "default": "annotation=int required=False default=50 alias='max_trials_results' json_schema_extra={} metadata=[Le(le=200)]"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/evidence",
+    "name": "get_project_evidence",
+    "doc": "Get evidence records for a project",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "source_type",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "min_score",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": "annotation=int required=False default=100 alias='limit' json_schema_extra={} metadata=[Le(le=500)]"
+      },
+      {
+        "name": "offset",
+        "type": "int",
+        "default": "annotation=int required=False default=0 alias='offset' json_schema_extra={} metadata=[Ge(ge=0)]"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/generate-anchors",
+    "name": "generate_anchor_candidates",
+    "doc": "Generate and score anchor candidates",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/comparability-scores",
+    "name": "get_comparability_scores",
+    "doc": "Get comparability scores for project evidence",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "min_overall_score",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": "annotation=int required=False default=50 alias='limit' json_schema_extra={} metadata=[Le(le=200)]"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/analyze-bias",
+    "name": "analyze_bias_and_fragility",
+    "doc": "Perform bias detection and fragility analysis",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/bias-analysis",
+    "name": "get_bias_analysis",
+    "doc": "Get bias analysis results",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "bias_type",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "min_severity",
+        "type": "Optional",
+        "default": "None"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/generate-critique",
+    "name": "generate_evidence_critique",
+    "doc": "Generate AI-powered regulatory critique",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "reviewer_persona",
+        "type": "str",
+        "default": "annotation=str required=False default='fda_statistical_reviewer' alias='reviewer_persona' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/evidence/{evidence_id}/decision",
+    "name": "submit_evidence_decision",
+    "doc": "Submit reviewer decision on evidence record with cryptographic e-signature",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "evidence_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "decision_request",
+        "type": "ReviewDecisionRequest",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/decisions",
+    "name": "get_review_decisions",
+    "doc": "Get review decisions for a project",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "reviewer_id",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "decision",
+        "type": "Optional",
+        "default": "None"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/generate-artifact",
+    "name": "generate_regulatory_artifact",
+    "doc": "Generate regulatory submission artifact with real content",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "artifact_type",
+        "type": "str",
+        "default": "annotation=str required=True alias='artifact_type' description='Type: safety_assessment_report, fda_reviewer_packet, ema_assessment, summary_report, evidence_table, statistical_analysis_plan' json_schema_extra={}"
+      },
+      {
+        "name": "format",
+        "type": "str",
+        "default": "annotation=str required=False default='html' alias='format' description='Output format: docx, html' json_schema_extra={}"
+      },
+      {
+        "name": "body",
+        "type": "ArtifactGenerateBody",
+        "default": "title=None include_sections=None regulatory_agency='FDA' submission_context=None custom_parameters=None"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/artifacts/{artifact_id}/download",
+    "name": "download_regulatory_artifact",
+    "doc": "Download generated regulatory artifact as a file",
+    "params": [
+      {
+        "name": "artifact_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/artifacts",
+    "name": "list_project_artifacts",
+    "doc": "List artifacts generated for a project",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "artifact_type",
+        "type": "Optional",
+        "default": "None"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/federated/nodes",
+    "name": "list_federated_nodes",
+    "doc": "List federated network nodes",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/evidence-patterns",
+    "name": "get_evidence_patterns",
+    "doc": "Get successful evidence patterns from the pattern library",
+    "params": [
+      {
+        "name": "indication_category",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "regulatory_agency",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "min_approval_likelihood",
+        "type": "Optional",
+        "default": "None"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/ai/comprehensive-analysis",
+    "name": "ai_comprehensive_analysis",
+    "doc": "AI-powered comprehensive evidence analysis",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "evidence_id",
+        "type": "str",
+        "default": "annotation=str required=True alias='evidence_id' json_schema_extra={}"
+      },
+      {
+        "name": "analysis_depth",
+        "type": "str",
+        "default": "annotation=str required=False default='comprehensive' alias='analysis_depth' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/workflow/guidance",
+    "name": "get_intelligent_workflow_guidance",
+    "doc": "Get AI-powered intelligent workflow guidance and recommendations",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "user_context",
+        "type": "Optional",
+        "default": "annotation=Union[str, NoneType] required=False default=None alias='user_context' description='Additional user context' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/workflow/execute-step",
+    "name": "execute_intelligent_workflow_step",
+    "doc": "Execute workflow step with AI assistance and automation",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "step_id",
+        "type": "str",
+        "default": "annotation=str required=True alias='step_id' json_schema_extra={}"
+      },
+      {
+        "name": "automation_level",
+        "type": "str",
+        "default": "annotation=str required=False default='assisted' alias='automation_level' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/evidence/network",
+    "name": "get_evidence_network",
+    "doc": "Get evidence network data for advanced visualization",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "include_relationships",
+        "type": "bool",
+        "default": "annotation=bool required=False default=True alias='include_relationships' json_schema_extra={}"
+      },
+      {
+        "name": "min_quality_score",
+        "type": "float",
+        "default": "annotation=float required=False default=0.0 alias='min_quality_score' json_schema_extra={} metadata=[Ge(ge=0.0), Le(le=1.0)]"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/security/threat-detection",
+    "name": "detect_security_threats",
+    "doc": "Real-time security threat detection and analysis",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "session_data",
+        "type": "Dict",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/user/{user_id}/workflow/optimize",
+    "name": "optimize_user_workflow",
+    "doc": "Optimize workflow for specific user",
+    "params": [
+      {
+        "name": "user_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "workflow_history",
+        "type": "List",
+        "default": "[]"
+      },
+      {
+        "name": "performance_metrics",
+        "type": "Dict",
+        "default": "{}"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/data/classify",
+    "name": "classify_data_sensitivity",
+    "doc": "Classify data sensitivity and determine protection requirements",
+    "params": [
+      {
+        "name": "data_type",
+        "type": "str",
+        "default": "annotation=str required=True alias='data_type' json_schema_extra={}"
+      },
+      {
+        "name": "content_indicators",
+        "type": "List",
+        "default": "annotation=List[str] required=False default=[] alias='content_indicators' json_schema_extra={}"
+      },
+      {
+        "name": "regulatory_context",
+        "type": "Dict",
+        "default": "{}"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/users/me",
+    "name": "get_current_user_info",
+    "doc": "Get current user information",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/users",
+    "name": "list_users",
+    "doc": "List system users (admin only)",
+    "params": [
+      {
+        "name": "role",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "organization",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": "annotation=int required=False default=50 alias='limit' json_schema_extra={} metadata=[Le(le=200)]"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/audit/logs",
+    "name": "get_audit_logs",
+    "doc": "Get audit logs for compliance reporting",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "user_id",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "action",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "start_date",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "end_date",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": "annotation=int required=False default=100 alias='limit' json_schema_extra={} metadata=[Le(le=1000)]"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/analytics/dashboard",
+    "name": "get_analytics_dashboard",
+    "doc": "Get analytics dashboard data with real counts from the database",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/statistics/full-analysis",
+    "name": "run_full_analysis",
+    "doc": "Run complete statistical analysis for XY-301 study",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/statistics/summary",
+    "name": "get_stats_summary",
+    "doc": "Get statistical results summary",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/search/semantic",
+    "name": "semantic_search",
+    "doc": "Perform semantic search with AI-powered similarity",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/search/hybrid",
+    "name": "hybrid_search",
+    "doc": "Perform hybrid search combining semantic and keyword approaches",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/search/recommendations/{evidence_id}",
+    "name": "get_evidence_recommendations",
+    "doc": "Get AI-powered recommendations for evidence",
+    "params": [
+      {
+        "name": "evidence_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "recommendation_type",
+        "type": "str",
+        "default": "annotation=str required=False default='similar' alias='recommendation_type' description='similar, citing, cited, co_cited' json_schema_extra={}"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": "annotation=int required=False default=10 alias='limit' json_schema_extra={} metadata=[Le(le=50)]"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/search/save",
+    "name": "save_search",
+    "doc": "Save a search for later reuse and alerts",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/search/saved",
+    "name": "get_saved_searches",
+    "doc": "Get user's saved searches",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/search/citation-network",
+    "name": "analyze_citation_network",
+    "doc": "Analyze citation relationships between evidence records",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/review/workflows",
+    "name": "create_review_workflow",
+    "doc": "Create a collaborative review workflow",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/review/assignments",
+    "name": "assign_reviewer",
+    "doc": "Assign a reviewer to evidence",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/review/assignments",
+    "name": "get_review_assignments",
+    "doc": "Get review assignments with filtering",
+    "params": [
+      {
+        "name": "evidence_id",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "reviewer_id",
+        "type": "Optional",
+        "default": "None"
+      },
+      {
+        "name": "status",
+        "type": "Optional",
+        "default": "None"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/review/comments",
+    "name": "add_review_comment",
+    "doc": "Add a comment to evidence review",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/review/comments/{evidence_id}",
+    "name": "get_evidence_comments",
+    "doc": "Get all comments for evidence with threading",
+    "params": [
+      {
+        "name": "evidence_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "include_resolved",
+        "type": "bool",
+        "default": "annotation=bool required=False default=True alias='include_resolved' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/review/decisions",
+    "name": "submit_collaborative_review_decision",
+    "doc": "Submit a review decision via collaborative review service",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/review/conflicts/resolve",
+    "name": "resolve_review_conflicts",
+    "doc": "Resolve conflicts between reviewer decisions",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/review/presence/{evidence_id}",
+    "name": "get_real_time_presence",
+    "doc": "Get real-time presence information for evidence review",
+    "params": [
+      {
+        "name": "evidence_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/review/presence/{evidence_id}",
+    "name": "update_user_presence",
+    "doc": "Update user's real-time presence",
+    "params": [
+      {
+        "name": "evidence_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/workflows/{workflow_id}/progress",
+    "name": "get_workflow_progress",
+    "doc": "Get progress of a review workflow",
+    "params": [
+      {
+        "name": "workflow_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/search/semantic-scholar",
+    "name": "search_semantic_scholar",
+    "doc": "Search Semantic Scholar academic papers",
+    "params": [
+      {
+        "name": "query",
+        "type": "str",
+        "default": "annotation=str required=True alias='query' json_schema_extra={} metadata=[MinLen(min_length=2)]"
+      },
+      {
+        "name": "limit",
+        "type": "int",
+        "default": "annotation=int required=False default=20 alias='limit' json_schema_extra={} metadata=[Ge(ge=1), Le(le=100)]"
+      },
+      {
+        "name": "offset",
+        "type": "int",
+        "default": "annotation=int required=False default=0 alias='offset' json_schema_extra={} metadata=[Ge(ge=0)]"
+      },
+      {
+        "name": "year_from",
+        "type": "Optional",
+        "default": "annotation=Union[int, NoneType] required=False default=None alias='year_from' json_schema_extra={}"
+      },
+      {
+        "name": "year_to",
+        "type": "Optional",
+        "default": "annotation=Union[int, NoneType] required=False default=None alias='year_to' json_schema_extra={}"
+      },
+      {
+        "name": "fields_of_study",
+        "type": "Optional",
+        "default": "annotation=Union[str, NoneType] required=False default=None alias='fields_of_study' description='Comma-separated list' json_schema_extra={}"
+      },
+      {
+        "name": "open_access_only",
+        "type": "bool",
+        "default": "annotation=bool required=False default=False alias='open_access_only' json_schema_extra={}"
+      },
+      {
+        "name": "min_citation_count",
+        "type": "int",
+        "default": "annotation=int required=False default=0 alias='min_citation_count' json_schema_extra={} metadata=[Ge(ge=0)]"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/search/semantic-scholar/paper/{paper_id:path}",
+    "name": "get_semantic_scholar_paper",
+    "doc": "Get a specific paper from Semantic Scholar by ID",
+    "params": [
+      {
+        "name": "paper_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/search/semantic-scholar/recommendations",
+    "name": "get_semantic_scholar_recommendations",
+    "doc": "Get paper recommendations from Semantic Scholar",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/search/rare-disease-evidence",
+    "name": "search_rare_disease_evidence",
+    "doc": "Search for rare disease evidence across Semantic Scholar",
+    "params": []
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/sar-pipeline/init",
+    "name": "init_sar_pipeline",
+    "doc": "Initialize a new SAR pipeline for a project",
+    "params": []
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sar-pipeline/{project_id}/status",
+    "name": "get_sar_pipeline_status",
+    "doc": "Get SAR pipeline status for a project, populated from processing_config",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/sar-pipeline/{project_id}/run-stage",
+    "name": "run_sar_stage",
+    "doc": "Trigger execution of a specific SAR pipeline stage",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sar-pipeline/{project_id}/results",
+    "name": "get_sar_results",
+    "doc": "Get full results from a completed SAR pipeline using real project data",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/sar-pipeline/{project_id}/report",
+    "name": "get_sar_report",
+    "doc": "Get the assembled SAR regulatory report derived from processing_config",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/definition",
+    "name": "get_study_definition",
+    "doc": "Retrieve the study definition section from processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/projects/{project_id}/study/definition",
+    "name": "save_study_definition",
+    "doc": "Save or update the study definition section in processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "body",
+        "type": "Dict",
+        "default": "annotation=Dict[str, Any] required=True alias='body' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/projects/{project_id}/study/lock",
+    "name": "lock_study_protocol",
+    "doc": "Lock the study protocol, preventing further edits, and create an audit log entry.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/covariates",
+    "name": "get_study_covariates",
+    "doc": "Retrieve the covariates section from processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/projects/{project_id}/study/covariates",
+    "name": "save_study_covariates",
+    "doc": "Save or update the covariates section in processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "body",
+        "type": "Dict",
+        "default": "annotation=Dict[str, Any] required=True alias='body' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/data-sources",
+    "name": "get_study_data_sources",
+    "doc": "Retrieve the data sources section from processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/projects/{project_id}/study/data-sources",
+    "name": "save_study_data_sources",
+    "doc": "Save or update the data sources section in processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "body",
+        "type": "Dict",
+        "default": "annotation=Dict[str, Any] required=True alias='body' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/cohort",
+    "name": "get_study_cohort",
+    "doc": "Retrieve the cohort section from processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/projects/{project_id}/study/cohort",
+    "name": "save_study_cohort",
+    "doc": "Save or update the cohort section in processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "body",
+        "type": "Dict",
+        "default": "annotation=Dict[str, Any] required=True alias='body' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/cohort/run",
+    "name": "run_cohort_attrition",
+    "doc": "Simulate an attrition funnel based on cohort inclusion/exclusion criteria.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/balance",
+    "name": "get_study_balance",
+    "doc": "Get covariate balance data (SMD) for a Love plot.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/balance/compute",
+    "name": "compute_study_balance",
+    "doc": "Compute propensity scores, IPTW, and covariate balance (SMD).",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/results/forest-plot",
+    "name": "get_study_forest_plot",
+    "doc": "Get forest plot data (primary + sensitivity + subgroup results).",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/bias",
+    "name": "get_study_bias",
+    "doc": "Get bias analysis results for the study.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/bias/run",
+    "name": "run_study_bias_analysis",
+    "doc": "Run bias analysis for the project and compute E-values.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/reproducibility",
+    "name": "get_study_reproducibility",
+    "doc": "Retrieve the reproducibility section from processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "PUT",
+    "path": "/api/v1/projects/{project_id}/study/reproducibility",
+    "name": "save_study_reproducibility",
+    "doc": "Save or update the reproducibility section in processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "body",
+        "type": "Dict",
+        "default": "annotation=Dict[str, Any] required=True alias='body' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/audit",
+    "name": "get_study_audit",
+    "doc": "Get audit log events for a project, optionally filtered by category.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "category",
+        "type": "Optional",
+        "default": "annotation=Union[str, NoneType] required=False default=None alias='category' description='Filter by action category' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/regulatory",
+    "name": "get_study_regulatory_readiness",
+    "doc": "Compute regulatory readiness checklist from processing_config sections.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/regulatory/generate",
+    "name": "generate_study_regulatory_document",
+    "doc": "Generate a regulatory document (SAR) using real project data from processing_config.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "format",
+        "type": "str",
+        "default": "annotation=str required=False default='html' alias='format' description='Output format: html or docx' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/regulatory/download/{artifact_id}",
+    "name": "download_study_regulatory_artifact",
+    "doc": "Download a generated regulatory artifact by its ID.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "artifact_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/sap/generate",
+    "name": "generate_sap_document",
+    "doc": "Generate a Statistical Analysis Plan (SAP) document.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "format",
+        "type": "str",
+        "default": "annotation=str required=False default='docx' alias='format' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/tfl/demographics",
+    "name": "gen_tfl_demo",
+    "doc": "Generate demographics table (Table 14.1.1).",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/tfl/ae-table",
+    "name": "gen_tfl_ae",
+    "doc": "Generate adverse events table (Table 14.3.1).",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/tfl/km-curve",
+    "name": "gen_tfl_km",
+    "doc": "Generate Kaplan-Meier survival curves (Figure 14.2.1).",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/tfl/forest-plot",
+    "name": "gen_tfl_forest",
+    "doc": "Generate forest plot (Figure 14.2.2).",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/tfl/love-plot",
+    "name": "gen_tfl_love",
+    "doc": "Generate covariate balance Love plot (Figure 14.1.1).",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/tfl/shells",
+    "name": "get_tfl_shells_ep",
+    "doc": "List planned TFL shells.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/tfl/generate-all",
+    "name": "gen_all_tfls_ep",
+    "doc": "Generate all TFLs as a package.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/adam/generate/{dataset_type}",
+    "name": "gen_adam",
+    "doc": "Generate a CDISC ADaM dataset (adsl, adae, adtte).",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "dataset_type",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/adam/datasets",
+    "name": "list_adam_ep",
+    "doc": "List generated ADaM datasets.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/adam/validate",
+    "name": "validate_adam_ep",
+    "doc": "Validate all ADaM datasets.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/adam/metadata",
+    "name": "adam_metadata_ep",
+    "doc": "Export ADaM metadata (Define-XML style JSON).",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/missing-data/impute",
+    "name": "run_mi_ep",
+    "doc": "Run multiple imputation with Rubin's rules.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/missing-data/tipping",
+    "name": "run_tipping_ep",
+    "doc": "Run tipping-point sensitivity analysis.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/study/missing-data/mmrm",
+    "name": "run_mmrm_ep",
+    "doc": "Run MMRM analysis.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/study/missing-data/summary",
+    "name": "missing_summary_ep",
+    "doc": "Get missing data pattern summary.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/submission/ectd/generate",
+    "name": "generate_ectd_package",
+    "doc": "Generate eCTD Module 5 submission package.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/submission/ectd/manifest",
+    "name": "get_ectd_manifest",
+    "doc": "Get HTML manifest for the eCTD package.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/submission/ectd/validate",
+    "name": "validate_ectd_package",
+    "doc": "Validate eCTD package structure and completeness.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/submission/define-xml/generate",
+    "name": "generate_define_xml",
+    "doc": "Generate Define-XML 2.1 for ADaM datasets.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/submission/define-xml/validate",
+    "name": "validate_define_xml_ep",
+    "doc": "Validate Define-XML content.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      },
+      {
+        "name": "xml_content",
+        "type": "str",
+        "default": "annotation=str required=False default='' alias='xml_content' json_schema_extra={}"
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/submission/adrg/generate",
+    "name": "generate_adrg",
+    "doc": "Generate Analysis Data Reviewer's Guide (ADRG) as DOCX.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/submission/csr/synopsis",
+    "name": "generate_csr_synopsis",
+    "doc": "Generate CSR Synopsis as DOCX.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/submission/csr/section-11",
+    "name": "generate_csr_section_11",
+    "doc": "Generate CSR Section 11: Efficacy as DOCX.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/submission/csr/section-12",
+    "name": "generate_csr_section_12",
+    "doc": "Generate CSR Section 12: Safety as DOCX.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/submission/csr/appendix-16",
+    "name": "generate_csr_appendix_16",
+    "doc": "Generate CSR Appendix 16.1.9 as DOCX.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "POST",
+    "path": "/api/v1/projects/{project_id}/submission/csr/full",
+    "name": "generate_full_csr",
+    "doc": "Generate all CSR sections and save each as a regulatory artifact.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  },
+  {
+    "method": "GET",
+    "path": "/api/v1/projects/{project_id}/submission/status",
+    "name": "get_submission_status",
+    "doc": "Get overall submission readiness status across all Phase 3 outputs.",
+    "params": [
+      {
+        "name": "project_id",
+        "type": "str",
+        "default": null
+      }
+    ]
+  }
+]

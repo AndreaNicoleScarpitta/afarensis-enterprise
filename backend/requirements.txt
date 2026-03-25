@@ -1,0 +1,199 @@
+# Afarensis Enterprise Backend Requirements - CRITICAL FIXES APPLIED
+# Production-grade dependencies for regulatory evidence review platform
+
+# Core Framework - Pinned compatible versions
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# Database & ORM - Compatible async stack
+sqlalchemy==2.0.36
+alembic==1.14.1
+asyncpg==0.30.0  # PostgreSQL async driver (optional, for PostgreSQL)
+psycopg2-binary==2.9.10  # Synchronous PostgreSQL driver for migrations (optional)
+# databases[postgresql]==0.9.0  # Removed: using direct SQLAlchemy async sessions
+aiosqlite>=0.19.0  # SQLite async driver (default database)
+
+# Caching & Session Management
+redis==5.2.1
+hiredis==2.4.0  # Redis performance optimization
+
+# Authentication & Security - CRITICAL FIX: Use compatible versions
+python-jose[cryptography]==3.3.0
+# MIGRATION OPTION 1: Use compatible bcrypt version with passlib
+bcrypt==4.0.1  # Last version compatible with passlib
+passlib[bcrypt]==1.7.4
+# MIGRATION OPTION 2: Use modern pwdlib instead (recommended)
+# pwdlib[argon2]==0.2.2  # Uncomment to use instead of passlib
+python-multipart==0.0.18
+cryptography==44.0.0
+pyotp==2.9.0  # Two-factor authentication
+qrcode==7.4.2  # QR code generation for 2FA
+python-gnupg==0.5.2  # GPG encryption
+
+# HTTP Client & API Integration - Single httpx version
+httpx==0.28.1
+httpcore==1.0.7
+aiohttp==3.10.11
+
+# AI/LLM Integration - Compatible versions
+openai==1.58.1
+anthropic==0.42.0
+langchain==0.3.12
+langchain-openai==0.2.11
+langchain-community==0.3.12
+tiktoken==0.8.0
+transformers==4.47.1
+torch==2.5.1
+tensorflow==2.18.0
+huggingface-hub==0.27.1
+
+# Embeddings & Vector Search for Advanced Search
+sentence-transformers==3.3.1
+faiss-cpu==1.9.0
+# chromadb==0.5.23
+pinecone==5.3.1
+numpy==1.26.4
+scipy==1.14.1
+
+# Real-time Collaboration - FIXED: Removed JS packages
+websockets==13.1
+python-socketio==5.11.4
+# REMOVED: socketio>=5.10.0 (this is a JavaScript package, not Python)
+
+# Citation Analysis & Network Processing
+networkx==3.4.2
+igraph==0.11.8
+matplotlib==3.10.0
+plotly==5.24.1
+
+# Natural Language Processing for Search
+spacy==3.8.3
+nltk==3.9.1
+textblob==0.18.0
+
+# Document Processing
+pypdf==5.1.0
+python-docx==1.1.2
+python-pptx==1.0.2
+openpyxl==3.1.5
+python-magic==0.4.27
+# REMOVED: PyPDF2 (pypdf is the modern replacement)
+
+# Data Processing & Analysis
+pandas==2.2.3
+scikit-learn==1.6.0
+statsmodels==0.14.4
+pingouin==0.5.5  # Advanced statistical functions
+prophet==1.1.6  # Time series forecasting
+arch==7.2.0  # Financial time series analysis
+
+# Medical/Scientific Data - FIXED: Removed fake package
+biopython==1.84
+# REMOVED: pubmedpy>=0.3.0 (fake package)
+pymed==0.8.9  # Real PubMed API client
+
+# Background Tasks
+celery==5.4.0
+flower==2.0.1  # Celery monitoring
+kombu==5.4.2  # Message passing library for Celery
+
+# Monitoring & Logging
+prometheus-client==0.21.1
+prometheus-fastapi-instrumentator==7.0.2
+structlog==24.4.0
+colorama==0.4.6
+
+# File Upload & Storage
+aiofiles==24.1.0
+
+# Validation & Testing
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-cov==6.0.0
+pytest-mock==3.12.0
+
+# Security Testing
+bandit==1.8.0
+safety==3.2.11
+
+# Code Quality
+mypy==1.13.0
+black==24.10.0
+isort==5.13.2
+flake8==7.1.1
+pre-commit==4.0.1
+
+# Development Tools
+python-dotenv==1.0.1
+watchdog==6.0.0
+jupyter==1.1.1  # For data analysis notebooks
+
+# API Documentation
+email-validator==2.2.0
+
+# Compliance & Audit
+pytz==2024.2  # Timezone handling for audit logs
+freezegun==1.5.1  # Time testing for compliance
+
+# Performance
+gunicorn==23.0.0  # Production WSGI server
+gevent==24.11.1  # Async worker support
+
+# Network Security
+requests==2.32.3
+urllib3==2.2.3
+
+# Configuration Management
+dynaconf==3.2.6  # Advanced configuration management
+python-decouple==3.8  # Simple config management
+
+# Distributed Computing (for federated features)
+aioredis==2.0.1
+
+# Error Tracking & APM
+sentry-sdk[fastapi]>=2.0.0
+
+# Text Processing & NLP - FIXED: Removed JS packages
+textstat==0.7.3  # Text readability statistics
+# REMOVED: compromise>=14.10.0 (JavaScript NLP library)
+# REMOVED: natural>=6.7.0 (JavaScript NLP library)
+
+# Visualization & Reporting
+seaborn==0.13.2
+Pillow==11.0.0  # Image processing
+
+# XML/JSON Processing
+lxml==5.3.0
+orjson==3.10.12  # Fast JSON processing
+
+# Regulatory Specific
+xmltodict==0.13.0  # For regulatory XML processing
+markdown==3.7  # For document generation
+
+# Enterprise Features
+# ldap3==2.9.1  # LDAP authentication
+# python-ldap==3.4.4  # Alternative LDAP support
+
+# Rate Limiting and Security
+slowapi==0.1.9  # Rate limiting for FastAPI
+
+# Additional dependencies for specific features
+cachetools==5.5.0  # Memory efficient caching
+tenacity==9.0.0  # Retry logic with exponential backoff
+click==8.1.7  # Command line interface
+rich==13.9.4  # Beautiful terminal output
+typer==0.15.1  # Modern CLI framework
+
+# Type hints for development
+types-redis==4.6.0.20241004
+types-requests==2.32.0.20241016
+types-setuptools==75.6.0.20241126
+
+# CRITICAL NOTES:
+# 1. bcrypt pinned to 4.0.1 - last version compatible with passlib
+# 2. Removed fake JS packages: socketio, compromise, natural, pubmedpy
+# 3. All major packages pinned to compatible versions
+# 4. Added missing dependencies for PyInstaller compatibility
+# 5. httpx version unified across all LLM SDKs

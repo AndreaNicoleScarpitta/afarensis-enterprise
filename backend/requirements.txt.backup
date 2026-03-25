@@ -1,0 +1,363 @@
+# Afarensis Enterprise Backend Requirements - CRITICAL FIXES APPLIED
+# Production-grade dependencies for regulatory evidence review platform
+
+# Core Framework - Pinned compatible versions
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# Database & ORM - Compatible async stack
+sqlalchemy==2.0.36
+alembic==1.14.1
+asyncpg==0.30.0  # PostgreSQL async driver
+psycopg2-binary==2.9.10  # Synchronous PostgreSQL driver for migrations
+databases[postgresql]==0.9.0
+
+# Caching & Session Management
+redis==5.2.1
+hiredis==2.4.1  # Redis performance optimization
+
+# Authentication & Security - CRITICAL FIX: Use compatible versions
+python-jose[cryptography]==3.3.0
+# MIGRATION OPTION 1: Use compatible bcrypt version with passlib
+bcrypt==4.0.1  # Last version compatible with passlib
+# passlib[bcrypt]==1.7.4  # DISABLED: Using direct bcrypt instead
+python-multipart==0.0.18
+cryptography==44.0.0
+pyotp==2.9.0  # Two-factor authentication
+qrcode==7.4.2  # QR code generation for 2FA
+python-gnupg==0.5.2  # GPG encryption
+
+# HTTP Client & API Integration - Single httpx version
+httpx==0.28.1
+httpcore==1.0.7
+aiohttp==3.10.11
+
+# AI/LLM Integration - Compatible versions
+openai==1.58.1
+anthropic==0.42.0
+langchain==0.3.12
+langchain-openai==0.2.11
+langchain-community==0.3.12
+tiktoken==0.8.0
+transformers==4.47.1
+torch==2.5.1
+tensorflow==2.18.0
+huggingface-hub==0.27.1
+
+# Embeddings & Vector Search for Advanced Search
+sentence-transformers==3.3.1
+faiss-cpu==1.9.0
+chromadb==0.5.23
+pinecone-client==5.3.1
+numpy==1.26.4
+scipy==1.14.1
+
+# Real-time Collaboration - FIXED: Removed JS packages
+websockets==13.1
+python-socketio==5.11.4
+# REMOVED: socketio>=5.10.0 (this is a JavaScript package, not Python)
+
+# Citation Analysis & Network Processing
+networkx==3.4.2
+igraph==0.11.8
+matplotlib==3.10.0
+plotly==5.24.1
+
+# Natural Language Processing for Search
+spacy==3.8.3
+nltk==3.9.1
+textblob==0.18.0
+
+# Document Processing
+pypdf==5.1.0
+python-docx==1.1.2
+python-pptx==1.0.2
+openpyxl==3.1.5
+python-magic==0.4.27
+
+# Data Processing & Analysis
+pandas==2.2.3
+scikit-learn==1.6.0
+statsmodels==0.14.4
+pingouin==0.5.5  # Advanced statistical functions
+prophet==1.1.6  # Time series forecasting
+arch==7.2.0  # Financial time series analysis
+
+# Medical/Scientific Data - FIXED: Removed fake package
+biopython==1.84
+pymed==0.8.9  # Real PubMed API client
+
+# Background Tasks
+celery==5.4.0
+flower==2.0.1  # Celery monitoring
+kombu==5.4.2  # Message passing library for Celery
+
+# Monitoring & Logging
+prometheus-client==0.21.1
+prometheus-fastapi-instrumentator==7.0.2
+structlog==24.4.0
+colorama==0.4.6
+
+# File Upload & Storage
+aiofiles==24.1.0
+
+# Validation & Testing
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-cov==6.0.0
+pytest-mock==3.12.0
+
+# Security Testing
+bandit==1.8.0
+safety==3.2.11
+
+# Code Quality
+mypy==1.13.0
+black==24.10.0
+isort==5.13.2
+flake8==7.1.1
+pre-commit==4.0.1
+
+# Development Tools
+python-dotenv==1.0.1
+watchdog==6.0.0
+
+# API Documentation
+email-validator==2.2.0
+
+# Compliance & Audit
+pytz==2024.2  # Timezone handling for audit logs
+
+# Performance
+gunicorn==23.0.0  # Production WSGI server
+
+# Network Security
+requests==2.32.3
+urllib3==2.2.3
+
+# Configuration Management
+dynaconf==3.2.6  # Advanced configuration management
+
+# Distributed Computing
+aioredis==2.0.1
+
+# Text Processing
+textstat==0.7.3  # Text readability statistics
+
+# Visualization & Reporting
+seaborn==0.13.2
+Pillow==11.0.0  # Image processing
+
+# XML/JSON Processing
+lxml==5.3.0
+orjson==3.10.12  # Fast JSON processing
+
+# Regulatory Specific
+xmltodict==0.13.0  # For regulatory XML processing
+markdown==3.7  # For document generation
+
+# Enterprise Features
+ldap3==2.9.1  # LDAP authentication
+python-ldap==3.4.4  # Alternative LDAP support
+
+# Rate Limiting and Security
+slowapi==0.1.9  # Rate limiting for FastAPI
+
+# Additional dependencies for specific features
+cachetools==5.5.0  # Memory efficient caching
+tenacity==9.0.0  # Retry logic with exponential backoff
+click==8.1.7  # Command line interface
+rich==13.9.4  # Beautiful terminal output
+typer==0.15.1  # Modern CLI framework
+
+# Type hints for development
+types-redis==4.6.0.20241004
+types-requests==2.32.0.20241016
+types-setuptools==75.6.0.20241126
+
+# CRITICAL NOTES:
+# 1. bcrypt pinned to 4.0.1 - last version compatible with passlib
+# 2. Removed fake JS packages: socketio, compromise, natural, pubmedpy
+# 3. All major packages pinned to compatible versions
+# 4. Added missing dependencies for PyInstaller compatibility
+# 5. httpx version unified across all LLM SDKs
+
+# AI/LLM Integration
+openai>=1.3.8
+anthropic>=0.7.8
+langchain>=0.0.350
+langchain-openai>=0.0.2
+langchain-community>=0.0.10
+tiktoken>=0.5.2
+transformers>=4.36.2
+torch>=2.1.2
+tensorflow>=2.15.0
+huggingface-hub>=0.19.4
+
+# Embeddings & Vector Search for Advanced Search
+sentence-transformers>=2.2.2
+faiss-cpu>=1.7.4
+chromadb>=0.4.18
+pinecone-client>=2.2.4
+numpy>=1.24.4
+scipy>=1.11.4
+
+# Real-time Collaboration
+websockets>=12.0
+python-socketio>=5.10.0
+socketio>=5.10.0
+
+# Citation Analysis & Network Processing
+networkx>=3.2.1
+igraph>=0.10.8
+matplotlib>=3.8.2
+plotly>=5.17.0
+
+# Natural Language Processing for Search
+spacy>=3.7.2
+nltk>=3.8.1
+textblob>=0.17.1
+
+# Document Processing
+pypdf>=3.17.1
+python-docx>=1.1.0
+python-pptx>=0.6.22
+openpyxl>=3.1.2
+python-magic>=0.4.27
+PyPDF2>=3.0.1
+
+# Data Processing & Analysis
+pandas>=2.1.4
+numpy>=1.25.2
+scipy>=1.11.4
+scikit-learn>=1.3.2
+statsmodels>=0.14.1
+networkx>=3.2.1
+pingouin>=0.5.3  # Advanced statistical functions
+igraph>=0.11.3  # Graph analysis
+prophet>=1.1.5  # Time series forecasting
+arch>=6.2.0  # Financial time series analysis
+
+# Medical/Scientific Data
+biopython>=1.81
+pubmedpy>=0.3.0
+
+# Background Tasks
+celery>=5.3.4
+flower>=2.0.1  # Celery monitoring
+
+# Monitoring & Logging
+prometheus-client>=0.19.0
+structlog>=23.2.0
+colorama>=0.4.6
+
+# File Upload & Storage
+python-multipart>=0.0.6
+aiofiles>=23.2.1
+
+# Validation & Testing
+pytest>=7.4.3
+pytest-asyncio>=0.22.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+httpx>=0.25.2  # For testing
+
+# Security Testing
+bandit>=1.7.5
+safety>=2.3.4
+
+# Code Quality
+mypy>=1.7.1
+black>=23.12.0
+isort>=5.13.0
+flake8>=6.1.0
+pre-commit>=3.6.0
+
+# Development Tools
+python-dotenv>=1.0.0
+watchdog>=3.0.0
+jupyter>=1.0.0  # For data analysis notebooks
+
+# API Documentation
+email-validator>=2.1.0
+
+# Compliance & Audit
+pytz>=2023.3  # Timezone handling for audit logs
+freezegun>=1.2.2  # Time testing for compliance
+
+# Performance
+gunicorn>=21.2.0  # Production WSGI server
+gevent>=23.9.1  # Async worker support
+
+# Network Security
+requests>=2.31.0
+urllib3>=2.1.0
+
+# Configuration Management
+dynaconf>=3.2.4  # Advanced configuration management
+python-decouple>=3.8  # Simple config management
+
+# Distributed Computing (for federated features)
+aioredis>=2.0.1
+kombu>=5.3.4
+
+# Text Processing & NLP
+spacy>=3.7.2
+nltk>=3.8.1
+textblob>=0.17.1
+textstat>=0.7.3  # Text readability statistics
+compromise>=14.10.0  # Advanced NLP
+natural>=6.7.0  # Natural language processing
+
+# Visualization & Reporting
+matplotlib>=3.8.2
+seaborn>=0.13.0
+plotly>=5.17.0
+Pillow>=10.1.0  # Image processing
+
+# XML/JSON Processing
+lxml>=4.9.3
+orjson>=3.9.10  # Fast JSON processing
+
+# Regulatory Specific
+xmltodict>=0.13.0  # For regulatory XML processing
+markdown>=3.5.1  # For document generation
+
+# Enterprise Features
+ldap3>=2.9.1  # LDAP authentication
+python-ldap>=3.4.3  # Alternative LDAP support
+
+# Development Dependencies (dev group)
+# Install with: pip install -e ".[dev]"
+
+# Testing
+pytest-xdist>=3.5.0  # Parallel testing
+pytest-benchmark>=4.0.0  # Performance testing
+factory-boy>=3.3.0  # Test data factories
+
+# Debugging
+ipython>=8.17.2
+ipdb>=0.13.13
+
+# Documentation
+sphinx>=7.2.6
+sphinx-rtd-theme>=1.3.0
+myst-parser>=2.0.0
+
+# Performance Profiling
+memory-profiler>=0.61.0
+py-spy>=0.3.14
+
+# Type Checking
+types-redis>=4.6.0
+types-requests>=2.31.0
+types-setuptools>=68.2.0
+
+# Deployment
+docker>=6.1.3
+kubernetes>=28.1.0
+
+# Lock file for exact dependency versions
+# Generate with: pip freeze > requirements.lock

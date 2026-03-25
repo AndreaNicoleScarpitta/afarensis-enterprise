@@ -1,0 +1,42 @@
+# Environment & secrets
+backend/.env
+backend/.secret_key
+backend/afarensis.db
+backend/.deps_installed
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.mypy_cache/
+.pytest_cache/
+htmlcov/
+
+# Node
+frontend/node_modules/
+frontend/.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build artifacts (keep frontend/dist for deployment)
+backend/artifacts/
+backend/uploads/
+
+# Old build/installer artifacts
+build/
+dist/
+afarensis_enterprise_setup/
+*.exe
+*.spec
+*.ico
+*.log
+afarensis_setup.log
+build_log.txt

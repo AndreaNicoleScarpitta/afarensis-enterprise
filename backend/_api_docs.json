@@ -1,0 +1,881 @@
+{
+  "total": 146,
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/health",
+      "name": "health_check",
+      "doc": "System health check"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "name": "login",
+      "doc": "Authenticate user and return JWT tokens"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/auth/me",
+      "name": "get_me",
+      "doc": "Get current authenticated user info (camelCase for frontend UserSchema)"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "name": "logout",
+      "doc": "Log out current user (client-side token removal)"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/revoke-all-sessions",
+      "name": "revoke_all_sessions",
+      "doc": "Revoke all refresh and reset tokens for the current user (logout everywhere)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/forgot-password",
+      "name": "forgot_password",
+      "doc": "Request a password reset. Sends a 6-digit verification code."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/verify-reset-code",
+      "name": "verify_reset_code",
+      "doc": "Verify the 6-digit reset code."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/reset-password",
+      "name": "reset_password",
+      "doc": "Reset the user's password using a verified reset token."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "name": "refresh_token_endpoint",
+      "doc": "Refresh access token using refresh token.\n\n    Implements token rotation: the old refresh token is revoked and a new\n    refresh token is issued alongside the new access token.  If a revoked\n    refresh token is reused (indicating potential theft), ALL of the user's\n    refresh tokens are invalidated, forcing re-authentication everywhere."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tasks/{task_id}",
+      "name": "get_task_status",
+      "doc": "Poll background task status. Returns progress, state, and result when complete."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tasks/{task_id}/result",
+      "name": "get_task_result",
+      "doc": "Get the full result of a completed task."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/tasks",
+      "name": "list_tasks",
+      "doc": "List recent background tasks."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/tasks/{task_id}/cancel",
+      "name": "cancel_task",
+      "doc": "Cancel a running task."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects",
+      "name": "create_project",
+      "doc": "Create a new evidence review project"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects",
+      "name": "list_projects",
+      "doc": "List evidence review projects"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}",
+      "name": "get_project",
+      "doc": "Get detailed project information"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/upload",
+      "name": "upload_protocol_document",
+      "doc": "Upload protocol document or SAP for parsing"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/discover-evidence",
+      "name": "discover_evidence",
+      "doc": "Discover and extract evidence from PubMed and ClinicalTrials.gov.\n\n    Returns immediately with a task_id. Poll GET /tasks/{task_id} for progress."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/evidence",
+      "name": "get_project_evidence",
+      "doc": "Get evidence records for a project"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/generate-anchors",
+      "name": "generate_anchor_candidates",
+      "doc": "Generate and score anchor candidates"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/comparability-scores",
+      "name": "get_comparability_scores",
+      "doc": "Get comparability scores for project evidence"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/analyze-bias",
+      "name": "analyze_bias_and_fragility",
+      "doc": "Perform bias detection and fragility analysis"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/bias-analysis",
+      "name": "get_bias_analysis",
+      "doc": "Get bias analysis results"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/generate-critique",
+      "name": "generate_evidence_critique",
+      "doc": "Generate AI-powered regulatory critique"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/evidence/{evidence_id}/decision",
+      "name": "submit_evidence_decision",
+      "doc": "Submit reviewer decision on evidence record with cryptographic e-signature"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/decisions",
+      "name": "get_review_decisions",
+      "doc": "Get review decisions for a project"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/generate-artifact",
+      "name": "generate_regulatory_artifact",
+      "doc": "Generate regulatory submission artifact with real content"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/artifacts/{artifact_id}/download",
+      "name": "download_regulatory_artifact",
+      "doc": "Download generated regulatory artifact as a file"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/artifacts",
+      "name": "list_project_artifacts",
+      "doc": "List artifacts generated for a project"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/federated/nodes",
+      "name": "list_federated_nodes",
+      "doc": "List federated network nodes"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/evidence-patterns",
+      "name": "get_evidence_patterns",
+      "doc": "Get successful evidence patterns from the pattern library"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/ai/comprehensive-analysis",
+      "name": "ai_comprehensive_analysis",
+      "doc": "AI-powered comprehensive evidence analysis"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/workflow/guidance",
+      "name": "get_intelligent_workflow_guidance",
+      "doc": "Get AI-powered intelligent workflow guidance and recommendations"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/workflow/execute-step",
+      "name": "execute_intelligent_workflow_step",
+      "doc": "Execute workflow step with AI assistance and automation"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/evidence/network",
+      "name": "get_evidence_network",
+      "doc": "Get evidence network data for advanced visualization"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/security/threat-detection",
+      "name": "detect_security_threats",
+      "doc": "Real-time security threat detection and analysis"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/user/{user_id}/workflow/optimize",
+      "name": "optimize_user_workflow",
+      "doc": "Optimize workflow for specific user"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/data/classify",
+      "name": "classify_data_sensitivity",
+      "doc": "Classify data sensitivity and determine protection requirements"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me",
+      "name": "get_current_user_info",
+      "doc": "Get current user information"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users",
+      "name": "list_users",
+      "doc": "List system users (admin only)"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/audit/logs",
+      "name": "get_audit_logs",
+      "doc": "Get audit logs for compliance reporting"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/analytics/dashboard",
+      "name": "get_analytics_dashboard",
+      "doc": "Get analytics dashboard data with real counts from the database"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/statistics/full-analysis",
+      "name": "run_full_analysis",
+      "doc": "Run complete statistical analysis for XY-301 study"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/statistics/summary",
+      "name": "get_stats_summary",
+      "doc": "Get statistical results summary"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/search/semantic",
+      "name": "semantic_search",
+      "doc": "Perform semantic search with AI-powered similarity"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/search/hybrid",
+      "name": "hybrid_search",
+      "doc": "Perform hybrid search combining semantic and keyword approaches"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/search/recommendations/{evidence_id}",
+      "name": "get_evidence_recommendations",
+      "doc": "Get AI-powered recommendations for evidence"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/search/save",
+      "name": "save_search",
+      "doc": "Save a search for later reuse and alerts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/search/saved",
+      "name": "get_saved_searches",
+      "doc": "Get user's saved searches"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/search/citation-network",
+      "name": "analyze_citation_network",
+      "doc": "Analyze citation relationships between evidence records"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/review/workflows",
+      "name": "create_review_workflow",
+      "doc": "Create a collaborative review workflow"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/review/assignments",
+      "name": "assign_reviewer",
+      "doc": "Assign a reviewer to evidence"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/review/assignments",
+      "name": "get_review_assignments",
+      "doc": "Get review assignments with filtering"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/review/comments",
+      "name": "add_review_comment",
+      "doc": "Add a comment to evidence review"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/review/comments/{evidence_id}",
+      "name": "get_evidence_comments",
+      "doc": "Get all comments for evidence with threading"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/review/decisions",
+      "name": "submit_collaborative_review_decision",
+      "doc": "Submit a review decision via collaborative review service"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/review/conflicts/resolve",
+      "name": "resolve_review_conflicts",
+      "doc": "Resolve conflicts between reviewer decisions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/review/presence/{evidence_id}",
+      "name": "get_real_time_presence",
+      "doc": "Get real-time presence information for evidence review"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/review/presence/{evidence_id}",
+      "name": "update_user_presence",
+      "doc": "Update user's real-time presence"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/workflows/{workflow_id}/progress",
+      "name": "get_workflow_progress",
+      "doc": "Get progress of a review workflow"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/search/semantic-scholar",
+      "name": "search_semantic_scholar",
+      "doc": "Search Semantic Scholar academic papers"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/search/semantic-scholar/paper/{paper_id:path}",
+      "name": "get_semantic_scholar_paper",
+      "doc": "Get a specific paper from Semantic Scholar by ID"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/search/semantic-scholar/recommendations",
+      "name": "get_semantic_scholar_recommendations",
+      "doc": "Get paper recommendations from Semantic Scholar"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/search/rare-disease-evidence",
+      "name": "search_rare_disease_evidence",
+      "doc": "Search for rare disease evidence across Semantic Scholar"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sar-pipeline/init",
+      "name": "init_sar_pipeline",
+      "doc": "Initialize a new SAR pipeline for a project"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sar-pipeline/{project_id}/status",
+      "name": "get_sar_pipeline_status",
+      "doc": "Get SAR pipeline status for a project, populated from processing_config"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/sar-pipeline/{project_id}/run-stage",
+      "name": "run_sar_stage",
+      "doc": "Trigger execution of a specific SAR pipeline stage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sar-pipeline/{project_id}/results",
+      "name": "get_sar_results",
+      "doc": "Get full results from a completed SAR pipeline using real project data"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/sar-pipeline/{project_id}/report",
+      "name": "get_sar_report",
+      "doc": "Get the assembled SAR regulatory report derived from processing_config"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/definition",
+      "name": "get_study_definition",
+      "doc": "Retrieve the study definition section from processing_config."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/projects/{project_id}/study/definition",
+      "name": "save_study_definition",
+      "doc": "Save or update the study definition section in processing_config."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/projects/{project_id}/study/lock",
+      "name": "lock_study_protocol",
+      "doc": "Lock the study protocol, preventing further edits, and create an audit log entry."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/covariates",
+      "name": "get_study_covariates",
+      "doc": "Retrieve the covariates section from processing_config."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/projects/{project_id}/study/covariates",
+      "name": "save_study_covariates",
+      "doc": "Save or update the covariates section in processing_config."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/data-sources",
+      "name": "get_study_data_sources",
+      "doc": "Retrieve the data sources section from processing_config."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/projects/{project_id}/study/data-sources",
+      "name": "save_study_data_sources",
+      "doc": "Save or update the data sources section in processing_config."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/cohort",
+      "name": "get_study_cohort",
+      "doc": "Retrieve the cohort section from processing_config."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/projects/{project_id}/study/cohort",
+      "name": "save_study_cohort",
+      "doc": "Save or update the cohort section in processing_config."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/cohort/run",
+      "name": "run_cohort_attrition",
+      "doc": "Simulate an attrition funnel based on cohort inclusion/exclusion criteria."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/balance",
+      "name": "get_study_balance",
+      "doc": "Get covariate balance data (SMD) for a Love plot."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/balance/compute",
+      "name": "compute_study_balance",
+      "doc": "Compute propensity scores, IPTW, and covariate balance (SMD)."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/results/forest-plot",
+      "name": "get_study_forest_plot",
+      "doc": "Get forest plot data (primary + sensitivity + subgroup results)."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/bias",
+      "name": "get_study_bias",
+      "doc": "Get bias analysis results for the study."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/bias/run",
+      "name": "run_study_bias_analysis",
+      "doc": "Run bias analysis for the project and compute E-values."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/reproducibility",
+      "name": "get_study_reproducibility",
+      "doc": "Retrieve the reproducibility section from processing_config."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/projects/{project_id}/study/reproducibility",
+      "name": "save_study_reproducibility",
+      "doc": "Save or update the reproducibility section in processing_config."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/audit",
+      "name": "get_study_audit",
+      "doc": "Get audit log events for a project, optionally filtered by category."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/regulatory",
+      "name": "get_study_regulatory_readiness",
+      "doc": "Compute regulatory readiness checklist from processing_config sections."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/regulatory/generate",
+      "name": "generate_study_regulatory_document",
+      "doc": "Generate a regulatory document (SAR) using real project data from processing_config."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/regulatory/download/{artifact_id}",
+      "name": "download_study_regulatory_artifact",
+      "doc": "Download a generated regulatory artifact by its ID."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/sap/generate",
+      "name": "generate_sap_document",
+      "doc": "Generate a Statistical Analysis Plan (SAP) document."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/tfl/demographics",
+      "name": "gen_tfl_demo",
+      "doc": "Generate demographics table (Table 14.1.1)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/tfl/ae-table",
+      "name": "gen_tfl_ae",
+      "doc": "Generate adverse events table (Table 14.3.1)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/tfl/km-curve",
+      "name": "gen_tfl_km",
+      "doc": "Generate Kaplan-Meier survival curves (Figure 14.2.1)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/tfl/forest-plot",
+      "name": "gen_tfl_forest",
+      "doc": "Generate forest plot (Figure 14.2.2)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/tfl/love-plot",
+      "name": "gen_tfl_love",
+      "doc": "Generate covariate balance Love plot (Figure 14.1.1)."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/tfl/shells",
+      "name": "get_tfl_shells_ep",
+      "doc": "List planned TFL shells."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/tfl/generate-all",
+      "name": "gen_all_tfls_ep",
+      "doc": "Generate all TFLs as a package."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/adam/generate/{dataset_type}",
+      "name": "gen_adam",
+      "doc": "Generate a CDISC ADaM dataset (adsl, adae, adtte)."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/adam/datasets",
+      "name": "list_adam_ep",
+      "doc": "List generated ADaM datasets."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/adam/validate",
+      "name": "validate_adam_ep",
+      "doc": "Validate all ADaM datasets."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/adam/metadata",
+      "name": "adam_metadata_ep",
+      "doc": "Export ADaM metadata (Define-XML style JSON)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/missing-data/impute",
+      "name": "run_mi_ep",
+      "doc": "Run multiple imputation with Rubin's rules."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/missing-data/tipping",
+      "name": "run_tipping_ep",
+      "doc": "Run tipping-point sensitivity analysis."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/missing-data/mmrm",
+      "name": "run_mmrm_ep",
+      "doc": "Run MMRM analysis."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/study/missing-data/summary",
+      "name": "missing_summary_ep",
+      "doc": "Get missing data pattern summary."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/submission/ectd/generate",
+      "name": "generate_ectd_package",
+      "doc": "Generate eCTD Module 5 submission package."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/submission/ectd/manifest",
+      "name": "get_ectd_manifest",
+      "doc": "Get HTML manifest for the eCTD package."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/submission/ectd/validate",
+      "name": "validate_ectd_package",
+      "doc": "Validate eCTD package structure and completeness."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/submission/define-xml/generate",
+      "name": "generate_define_xml",
+      "doc": "Generate Define-XML 2.1 for ADaM datasets."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/submission/define-xml/validate",
+      "name": "validate_define_xml_ep",
+      "doc": "Validate Define-XML content."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/submission/adrg/generate",
+      "name": "generate_adrg",
+      "doc": "Generate Analysis Data Reviewer's Guide (ADRG) as DOCX."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/submission/csr/synopsis",
+      "name": "generate_csr_synopsis",
+      "doc": "Generate CSR Synopsis as DOCX."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/submission/csr/section-11",
+      "name": "generate_csr_section_11",
+      "doc": "Generate CSR Section 11: Efficacy as DOCX."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/submission/csr/section-12",
+      "name": "generate_csr_section_12",
+      "doc": "Generate CSR Section 12: Safety as DOCX."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/submission/csr/appendix-16",
+      "name": "generate_csr_appendix_16",
+      "doc": "Generate CSR Appendix 16.1.9 as DOCX."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/submission/csr/full",
+      "name": "generate_full_csr",
+      "doc": "Generate all CSR sections and save each as a regulatory artifact."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/submission/status",
+      "name": "get_submission_status",
+      "doc": "Get overall submission readiness status across all Phase 3 outputs."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/bayesian/analyze",
+      "name": "run_bayesian_analyze",
+      "doc": "Run full Bayesian analysis pipeline with simulation data."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/bayesian/prior-elicitation",
+      "name": "run_bayesian_prior",
+      "doc": "Compute Bayesian prior elicitation from historical data."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/bayesian/adaptive",
+      "name": "run_bayesian_adaptive",
+      "doc": "Compute Bayesian adaptive decision at interim."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/interim/boundaries",
+      "name": "compute_interim_boundaries_ep",
+      "doc": "Compute group-sequential stopping boundaries."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/interim/evaluate",
+      "name": "evaluate_interim_ep",
+      "doc": "Evaluate an observed z-statistic against pre-computed boundaries."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/study/interim/dsmb-report",
+      "name": "generate_dsmb_report_ep",
+      "doc": "Generate a structured DSMB/IDMC report."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/sdtm/generate/{domain}",
+      "name": "gen_sdtm_domain",
+      "doc": "Generate a single SDTM domain (dm, ae, lb, vs, ex, ds)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/sdtm/generate-all",
+      "name": "gen_sdtm_all",
+      "doc": "Generate all SDTM domains for a project."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/projects/{project_id}/sdtm/validate",
+      "name": "validate_sdtm_ep",
+      "doc": "Validate all generated SDTM domains."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/projects/{project_id}/sdtm/acrf",
+      "name": "get_sdtm_acrf",
+      "doc": "Generate annotated CRF (aCRF) HTML."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/program/overview",
+      "name": "program_overview",
+      "doc": "Get cross-study program overview."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/program/portfolio",
+      "name": "program_portfolio",
+      "doc": "Get portfolio summary with readiness scores for all projects."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/program/{project_id}/readiness",
+      "name": "program_readiness",
+      "doc": "Get submission readiness checklist for a project."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/program/{project_id}/milestones",
+      "name": "program_milestones",
+      "doc": "Get milestone timeline for a project."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/org/info",
+      "name": "get_org_info",
+      "doc": "Get current organization info."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/org/users",
+      "name": "list_org_users",
+      "doc": "List users in the current user's organization."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/org/users/invite",
+      "name": "invite_user",
+      "doc": "Invite a new user to the organization. Admin only."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/org/users/{user_id}/role",
+      "name": "update_user_role",
+      "doc": "Update a user's role. Admin only."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/org/users/{user_id}/deactivate",
+      "name": "deactivate_user",
+      "doc": "Deactivate a user. Admin only."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/org/users/{user_id}/activate",
+      "name": "activate_user",
+      "doc": "Re-activate a user. Admin only."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/storage-stats",
+      "name": "get_storage_stats",
+      "doc": "Get file storage backend statistics."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/cache-stats",
+      "name": "get_cache_stats",
+      "doc": "Get cache backend statistics (admin only)."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/metrics",
+      "name": "get_system_metrics",
+      "doc": "Get request metrics, latency percentiles, and error rates."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/system/health/detailed",
+      "name": "detailed_health",
+      "doc": "Detailed health check with component status."
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/biogpt/status",
+      "name": "biogpt_status",
+      "doc": "Get BioGPT model status (loaded, device, parameters)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/biogpt/generate",
+      "name": "biogpt_generate",
+      "doc": "Generate biomedical text using BioGPT (runs locally, no API key)."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/biogpt/explain-mechanism",
+      "name": "biogpt_explain_mechanism",
+      "doc": "Explain drug mechanism of action using BioGPT."
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/biogpt/summarize",
+      "name": "biogpt_summarize",
+      "doc": "Summarize clinical evidence using BioGPT."
+    }
+  ]
+}

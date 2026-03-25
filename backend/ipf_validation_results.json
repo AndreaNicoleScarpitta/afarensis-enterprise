@@ -1,0 +1,131 @@
+{
+  "dataset": "IPF_20pts",
+  "results": {
+    "Lifelines reference": {
+      "status": "PASS",
+      "detail": "HR=0.0000, KM_untreated=7.9, KM_antifibrotic=inf"
+    },
+    "Login": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "Create Project": {
+      "status": "PASS",
+      "detail": "ID: f0e5f91e-a1f..."
+    },
+    "Save Study Definition": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "Save Covariates": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "Consent": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "Generate CSV": {
+      "status": "PASS",
+      "detail": "20 patients, 8 columns"
+    },
+    "Upload": {
+      "status": "PASS",
+      "detail": "Status: CLEARED_WITH_WARNINGS, Rows: 20, Arms: {\"ANTIFIBROTIC\": 10, \"UNTREATED\": 10}"
+    },
+    "Analyze Dataset": {
+      "status": "PASS",
+      "detail": "Source: uploaded"
+    },
+    "  IPTW Cox PH": {
+      "status": "INFO",
+      "detail": "HR=18168339341883.9453 [18168339341883.9453, 18168339341883.9453] p=1.0000"
+    },
+    "  Unadjusted Cox": {
+      "status": "INFO",
+      "detail": "HR=41467886518686912.0000 p=0.0000"
+    },
+    "  PS C-statistic": {
+      "status": "INFO",
+      "detail": "1.0000"
+    },
+    "  E-value": {
+      "status": "INFO",
+      "detail": "36336678683767.3906"
+    },
+    "  Cox HR (multivariate)": {
+      "status": "FAIL",
+      "detail": "Afarensis=41467886518686912.0000 ref=0.0000 diff=19056138246950765222428672.0%"
+    },
+    "  Cox p-value": {
+      "status": "FAIL",
+      "detail": "Afarensis=0.0000 ref=0.9945 diff=0.9945"
+    },
+    "  KM Median (Untreated)": {
+      "status": "PASS",
+      "detail": "Afarensis=7.9000 ref=7.9000 diff=0.0%"
+    },
+    "  Log-rank p-value": {
+      "status": "PASS",
+      "detail": "Afarensis=0.0000 ref=0.0000 diff=0.0000"
+    },
+    "ADaM ADSL": {
+      "status": "PASS",
+      "detail": "897 records"
+    },
+    "ADaM ADAE": {
+      "status": "PASS",
+      "detail": "3380 records"
+    },
+    "ADaM ADTTE": {
+      "status": "PASS",
+      "detail": "2643 records"
+    },
+    "TFL Demographics": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "TFL KM Curve": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "TFL Forest Plot": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "TFL Love Plot": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "Generate SAR HTML": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "Generate SAP": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "Generate CSR Synopsis": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "Generate ADRG": {
+      "status": "PASS",
+      "detail": ""
+    },
+    "Download SAR": {
+      "status": "PASS",
+      "detail": "23,984 bytes"
+    }
+  },
+  "reference": {
+    "cox_hr_multi": 2.1760907683025612e-07,
+    "cox_coef_multi": -15.340565609460263,
+    "cox_p_multi": 0.9945410878510478,
+    "cox_ci_lower_multi": 0.0,
+    "cox_ci_upper_multi": Infinity,
+    "km_median_untreated": 7.9,
+    "km_median_antifibrotic": Infinity,
+    "logrank_p": 2.9683673192942092e-06
+  }
+}
