@@ -913,9 +913,14 @@ function App() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  const navigate = useNavigate()
+
   const handleLogin = useCallback(async (email: string, password: string) => {
     await login(email, password)
-  }, [login])
+    // After successful authentication, programmatically navigate to the dashboard
+    // so the URL updates from /login to /dashboard immediately.
+    navigate('/dashboard', { replace: true })
+  }, [login, navigate])
 
   const handleLockProtocol = useCallback(() => {
     setProtocolLocked(true)
@@ -942,9 +947,22 @@ function App() {
         if (match) {
           setSelectedStudy(match)
         } else {
+          // Don't fire the API call until the access token is available.
+          // On first load the auth refresh may still be in progress; without
+          // this guard the request goes out unauthenticated and the backend
+          // returns 404 ("Project not found") instead of 401.
+          if (!apiClient.getAccessToken()) {
+            // Token not ready yet — the effect will re-run once `studies`
+            // is populated (after the parent projects-fetch completes) or
+            // on the next render cycle when auth finishes.
+            return
+          }
+
+          let cancelled = false
           const fetchProject = () => {
             apiClient.request(`/projects/${projectId}`, z.any())
               .then((project: any) => {
+                if (cancelled) return
                 const tempStudy: Study = {
                   id: project.id,
                   name: project.title || 'Untitled Project',
@@ -957,19 +975,22 @@ function App() {
                 setSelectedStudy(tempStudy)
               })
               .catch((err: any) => {
-                // Retry up to 2 times with a short delay (handles race with auth init)
-                if (retryCountRef.current < 2) {
+                if (cancelled) return
+                // Retry up to 3 times with increasing delay (handles race with auth init)
+                if (retryCountRef.current < 3) {
                   retryCountRef.current += 1
-                  setTimeout(fetchProject, 500)
+                  setTimeout(fetchProject, 800 * retryCountRef.current)
                 } else {
                   setSyncError(err?.message || 'Failed to load project')
                 }
               })
           }
           fetchProject()
+
+          return () => { cancelled = true }
         }
       }
-    }, [projectId])
+    }, [projectId, studies])
 
     // Show error instead of infinite spinner
     if (syncError) {

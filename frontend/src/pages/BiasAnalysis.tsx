@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { apiClient } from '../services/apiClient'
 import { 
   AlertTriangle, 
   Shield, 
@@ -40,7 +41,7 @@ const BiasAnalysis: React.FC = () => {
   useEffect(() => {
     const fetchAssessments = async () => {
       try {
-        const token = localStorage.getItem('token')
+        const token = (apiClient as any).accessToken || ''
         const response = await fetch('/api/v1/bias-assessments', {
           headers: { 'Authorization': `Bearer ${token}` },
         })

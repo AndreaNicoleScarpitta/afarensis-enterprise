@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { apiClient } from '../services/apiClient'
 import {
   Network, Globe, Share2, CheckCircle, Clock, AlertTriangle,
   Plus, Settings, Shield, Lock, Wifi, WifiOff, BarChart3,
@@ -83,7 +84,7 @@ const FederatedNetwork: React.FC = () => {
   const handleSync = async (nodeId: string) => {
     setSyncing(nodeId)
     try {
-      const token = localStorage.getItem('token')
+      const token = (apiClient as any).accessToken || ''
       await fetch(`/api/v1/federated-network/nodes/${nodeId}/sync`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },

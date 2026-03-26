@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { apiClient } from '../services/apiClient'
 import { 
   BarChart3, 
   Target, 
@@ -44,7 +45,7 @@ const ComparabilityAnalysis: React.FC = () => {
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const token = localStorage.getItem('token')
+        const token = (apiClient as any).accessToken || ''
         const response = await fetch('/api/v1/comparability-analyses', {
           headers: { 'Authorization': `Bearer ${token}` },
         })

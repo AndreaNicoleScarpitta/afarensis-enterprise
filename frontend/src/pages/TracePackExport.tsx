@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { apiClient } from '../services/apiClient'
 import {
   PackageCheck, Lock, Eye, CheckCircle2, AlertTriangle, Download,
   FileSpreadsheet, FileText, FileCode, FolderTree, Shield,
@@ -189,7 +190,7 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
   const handleGenerate = async () => {
     setGenerating(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = (apiClient as any).accessToken || ''
       const response = await fetch(`/api/v1/projects/${selectedStudy.id}/trace-pack/generate`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },

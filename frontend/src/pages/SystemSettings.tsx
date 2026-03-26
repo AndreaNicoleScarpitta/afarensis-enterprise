@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { apiClient } from '../services/apiClient'
 import {
   Settings, Save, RefreshCw, Shield, Database, Bell, Globe,
   Key, Clock, AlertTriangle, CheckCircle, Loader2, ToggleLeft,
@@ -75,7 +76,7 @@ const SystemSettings: React.FC = () => {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = (apiClient as any).accessToken || ''
       const response = await fetch('/api/v1/settings', {
         method: 'PUT',
         headers: {
