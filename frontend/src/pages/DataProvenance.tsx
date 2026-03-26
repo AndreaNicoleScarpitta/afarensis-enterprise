@@ -97,11 +97,14 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     }
   }, [provData])
 
+  // Auth token helper — apiClient stores JWT in memory, not localStorage
+  const getAuthToken = () => (apiClient as any).accessToken || ''
+
   // Fetch existing ADaM datasets on mount
   useEffect(() => {
     if (selectedStudy?.id) {
       fetch(`/api/v1/projects/${selectedStudy.id}/adam/datasets`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       }).then(r => r.json()).then(setAdamDatasets).catch(() => {})
     }
   }, [selectedStudy?.id])
@@ -111,7 +114,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     try {
       await apiClient.runStudyComputation(selectedStudy?.id, `../adam/generate/${type}`)
       const r = await fetch(`/api/v1/projects/${selectedStudy?.id}/adam/datasets`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       })
       setAdamDatasets(await r.json())
     } catch (err) { console.error('ADaM generation failed:', err) }
@@ -123,7 +126,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     try {
       await apiClient.runStudyComputation(selectedStudy?.id, '../adam/validate')
       const r = await fetch(`/api/v1/projects/${selectedStudy?.id}/adam/datasets`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       })
       setAdamDatasets(await r.json())
     } catch (err) { console.error('ADaM validation failed:', err) }
@@ -159,7 +162,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     if (selectedStudy?.id) {
       setDatasetLoading(true)
       fetch(`/api/v1/projects/${selectedStudy.id}/datasets`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       })
         .then(r => r.json())
         .then(data => {
@@ -179,7 +182,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       const r = await fetch(`/api/v1/projects/${selectedStudy.id}/ingestion/consent`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -222,7 +225,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       const r = await fetch(`/api/v1/projects/${selectedStudy.id}/ingestion/upload`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
         },
         body: formData,
       })
@@ -247,7 +250,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       const response = await fetch(`/api/v1/projects/${selectedStudy.id}/study/analyze-dataset`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${getAuthToken()}`,
           'Content-Type': 'application/json',
         },
       })
@@ -295,7 +298,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
   useEffect(() => {
     if (selectedStudy?.id) {
       fetch(`/api/v1/projects/${selectedStudy.id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       }).then(r => r.json()).then(proj => {
         if (proj?.processing_config?.sdtm) setSdtmDomains(proj.processing_config.sdtm)
       }).catch(() => {})
@@ -307,7 +310,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     try {
       const result = await fetch(`/api/v1/projects/${selectedStudy?.id}/sdtm/generate/${domain}`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       })
       const data = await result.json()
       setSdtmDomains(prev => ({ ...prev, [domain]: data }))
@@ -320,11 +323,11 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     try {
       await fetch(`/api/v1/projects/${selectedStudy?.id}/sdtm/generate-all`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       })
       // Refresh domains from project config
       const r = await fetch(`/api/v1/projects/${selectedStudy?.id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       })
       const proj = await r.json()
       if (proj?.processing_config?.sdtm) setSdtmDomains(proj.processing_config.sdtm)
@@ -337,7 +340,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     try {
       const r = await fetch(`/api/v1/projects/${selectedStudy?.id}/sdtm/validate`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
       })
       const data = await r.json()
       setSdtmValidationReports(data.reports || [])
