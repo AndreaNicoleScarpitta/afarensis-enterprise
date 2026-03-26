@@ -420,8 +420,8 @@ class AdvancedSearchService:
         """Save a search for later reuse and optional alerts"""
         
         saved_search = SavedSearch(
-            id=uuid.uuid4(),
-            user_id=self.user_id,
+            id=str(uuid.uuid4()),
+            user_id=str(self.user_id),
             name=name,
             query=query,
             search_type=search_type,

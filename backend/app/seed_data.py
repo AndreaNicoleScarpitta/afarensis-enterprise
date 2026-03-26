@@ -81,23 +81,23 @@ async def seed_database(session: AsyncSession):
     project4_id = str(uuid.uuid4())
 
     projects = [
-        (project1_id, "XY-301: Rare CNS Disorder (Pediatric)", "REVIEW",
+        (project1_id, "[Sample] XY-301: Rare CNS Disorder (Pediatric)", "REVIEW",
          "Phase 3 single-arm study of XY-301 in pediatric patients with rare CNS disorder. "
          "External control arm constructed from registry data and natural history studies. "
          "Primary endpoint: change in neurological severity score at 48 weeks.",
          "Evaluate efficacy and safety of XY-301 vs external comparator using ATT estimand with propensity score methods.",
          admin_id, org_afarensis_id),
-        (project2_id, "CLARITY-AD: Alzheimer's Disease Phase 3", "COMPLETED",
+        (project2_id, "[Sample] CLARITY-AD: Alzheimer's Disease Phase 3", "COMPLETED",
          "Phase 3 randomized controlled trial evaluating monoclonal antibody therapy in early Alzheimer's disease. "
          "Co-primary endpoints: CDR-SB and ADAS-Cog14 at 76 weeks.",
          "Assess treatment effect using ITT estimand in mild cognitive impairment and mild AD dementia populations.",
          reviewer1_id, org_afarensis_id),
-        (project3_id, "GLP1-2026: Cardiovascular Outcomes", "DRAFT",
+        (project3_id, "[Sample] GLP1-2026: Cardiovascular Outcomes", "DRAFT",
          "Cardiovascular outcomes trial for novel GLP-1 receptor agonist. "
          "Primary endpoint: time to first MACE (cardiovascular death, MI, or stroke).",
          "Evaluate cardiovascular safety and potential benefit using ATE estimand with time-to-event analysis.",
          analyst_id, org_afarensis_id),
-        (project4_id, "MRD-100: Autoimmune Hepatitis Phase 2", "DRAFT",
+        (project4_id, "[Sample] MRD-100: Autoimmune Hepatitis Phase 2", "DRAFT",
          "Phase 2 dose-ranging study of MRD-100, a selective JAK1 inhibitor, in moderate-to-severe autoimmune hepatitis. "
          "Primary endpoint: biochemical response (ALT normalization) at 24 weeks.",
          "Evaluate dose-response relationship using Bayesian adaptive design with external control from IAIHG registry data.",
@@ -516,6 +516,187 @@ async def seed_database(session: AsyncSession):
             "journal": ev["journal"], "pub_year": ev["publication_year"],
             "structured_data": ev["structured_data"],
             "now": now, "rank": clarity_evidence.index(ev) + 1
+        })
+
+    # ---------- Evidence Records (8 for GLP1-2026) ----------
+    glp1_evidence = [
+        {
+            "id": str(uuid.uuid4()), "project_id": project3_id,
+            "source_type": "PUBMED", "source_id": "39112233",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/39112233/",
+            "title": "Cardiovascular Outcomes with GLP-1 Receptor Agonists: A Systematic Review and Meta-Analysis",
+            "abstract": "Meta-analysis of 8 cardiovascular outcomes trials (N=60,080) of GLP-1 RAs. Overall MACE reduction HR 0.88 (95% CI 0.82-0.94). Benefit driven by reduction in atherosclerotic events. Consistent across subgroups including diabetes status and baseline CV risk.",
+            "authors": '["Sattar N", "Lee MMY", "Kristensen SL", "Branch KRH"]',
+            "journal": "The Lancet",
+            "publication_year": 2025,
+            "structured_data": '{"sample_size": 60080, "study_type": "meta_analysis", "primary_endpoint": "MACE", "primary_result": {"hr": 0.88, "ci_lower": 0.82, "ci_upper": 0.94}}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project3_id,
+            "source_type": "PUBMED", "source_id": "38998877",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38998877/",
+            "title": "SELECT Trial: Semaglutide and Cardiovascular Outcomes in Adults with Overweight or Obesity",
+            "abstract": "In 17,604 adults with established CV disease and overweight/obesity without diabetes, semaglutide 2.4mg weekly reduced MACE by 20% vs placebo (HR 0.80, 95% CI 0.72-0.90, p<0.001) over 39.8 months.",
+            "authors": '["Lincoff AM", "Brown-Frandsen K", "Colhoun HM", "Deanfield J"]',
+            "journal": "New England Journal of Medicine",
+            "publication_year": 2024,
+            "structured_data": '{"sample_size": 17604, "study_type": "phase_3_rct", "follow_up_months": 40, "primary_endpoint": "MACE", "primary_result": {"hr": 0.80, "ci_lower": 0.72, "ci_upper": 0.90, "p_value": 0.001}}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project3_id,
+            "source_type": "CLINICALTRIALS", "source_id": "NCT05812345",
+            "source_url": "https://clinicaltrials.gov/study/NCT05812345",
+            "title": "Cardiovascular Outcomes Study of Novel GLP-1 Receptor Agonist (GLP1-2026-CVOT)",
+            "abstract": "Phase 3 randomized, double-blind, placebo-controlled cardiovascular outcomes trial of GLP1-2026 in adults with established atherosclerotic cardiovascular disease. Target enrollment: 9,200 subjects. Primary endpoint: time to first MACE.",
+            "authors": '["Novo Nordisk"]',
+            "journal": "ClinicalTrials.gov",
+            "publication_year": 2025,
+            "structured_data": '{"sample_size": 9200, "study_type": "phase_3_rct", "follow_up_months": 48, "primary_endpoint": "MACE"}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project3_id,
+            "source_type": "PUBMED", "source_id": "38776655",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38776655/",
+            "title": "Time-to-Event Analysis Methods for Cardiovascular Outcome Trials: FDA Guidance and Best Practices",
+            "abstract": "Review of statistical methods for CVOTs with external control arms. Recommends Cox PH with IPTW, pre-specified subgroup analyses, and landmark analyses at 6, 12, and 24 months. Addresses challenges of informative censoring and competing risks in CV trials.",
+            "authors": '["FDA Center for Drug Evaluation and Research"]',
+            "journal": "Statistics in Medicine",
+            "publication_year": 2024,
+            "structured_data": '{"study_type": "methodological_guidance", "primary_endpoint": "CVOT methodology", "primary_result": {"recommended_method": "Cox PH + IPTW"}}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project3_id,
+            "source_type": "PUBMED", "source_id": "39223344",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/39223344/",
+            "title": "Real-World Cardiovascular Outcomes with GLP-1 RAs: Multi-Database Cohort Study",
+            "abstract": "Retrospective cohort study across 4 US claims databases (N=128,450). GLP-1 RA initiators had 15% lower MACE risk vs DPP-4i (HR 0.85, 95% CI 0.79-0.91). Results consistent with clinical trials across age, sex, and baseline CV risk strata.",
+            "authors": '["Patorno E", "Goldfine AB", "Schneeweiss S", "Everett BM"]',
+            "journal": "Circulation",
+            "publication_year": 2025,
+            "structured_data": '{"sample_size": 128450, "study_type": "retrospective_cohort", "follow_up_months": 36, "primary_endpoint": "MACE", "primary_result": {"hr": 0.85, "ci_lower": 0.79, "ci_upper": 0.91}}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project3_id,
+            "source_type": "PUBMED", "source_id": "38554433",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38554433/",
+            "title": "Propensity Score Methods for Cardiovascular Comparative Effectiveness Research",
+            "abstract": "Methodological review of PS approaches in CV research. IPTW with overlap weights showed best balance in simulations. Recommends Love plots, SMD thresholds <0.1, and E-value reporting for unmeasured confounding.",
+            "authors": '["Austin PC", "Stuart EA", "Brookhart MA"]',
+            "journal": "European Heart Journal",
+            "publication_year": 2024,
+            "structured_data": '{"study_type": "methodological_review", "primary_endpoint": "PS method comparison", "primary_result": {"recommended_approach": "IPTW overlap weights"}}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project3_id,
+            "source_type": "PUBMED", "source_id": "39001122",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/39001122/",
+            "title": "GLP-1 RA Mechanisms of Cardiovascular Protection: Beyond Glucose Control",
+            "abstract": "Review of pleiotropic cardiovascular mechanisms of GLP-1 RAs including anti-inflammatory effects, endothelial function improvement, and direct myocardial protection. Evidence from preclinical models and mechanistic clinical studies supports glucose-independent cardioprotection.",
+            "authors": '["Drucker DJ", "Nauck MA", "Marx N"]',
+            "journal": "Nature Reviews Cardiology",
+            "publication_year": 2025,
+            "structured_data": '{"study_type": "mechanistic_review", "primary_endpoint": "CV mechanisms of GLP-1 RAs"}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project3_id,
+            "source_type": "PUBMED", "source_id": "38889900",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38889900/",
+            "title": "FDA Advisory Committee Review: GLP-1 RA Cardiovascular Indication Expansion",
+            "abstract": "Summary of FDA advisory committee review of GLP-1 RA class for expanded cardiovascular indication. Committee voted 14-1 in favor based on trial-level meta-analysis showing consistent MACE reduction. Recommended post-marketing commitments for long-term safety monitoring.",
+            "authors": '["FDA Endocrinologic and Metabolic Drugs Advisory Committee"]',
+            "journal": "FDA Briefing Document",
+            "publication_year": 2025,
+            "structured_data": '{"study_type": "regulatory_review", "primary_endpoint": "Advisory committee vote", "primary_result": {"vote_for": 14, "vote_against": 1}}'
+        },
+    ]
+
+    for ev in glp1_evidence:
+        await session.execute(text(
+            "INSERT INTO evidence_records "
+            "(id, project_id, source_type, source_id, source_url, title, abstract, authors, journal, publication_year, structured_data, discovered_at, retrieval_rank) "
+            "VALUES (:id, :project_id, :source_type, :source_id, :source_url, :title, :abstract, :authors, :journal, :pub_year, :structured_data, :now, :rank)"
+        ), {
+            "id": ev["id"], "project_id": ev["project_id"],
+            "source_type": ev["source_type"], "source_id": ev["source_id"],
+            "source_url": ev["source_url"], "title": ev["title"],
+            "abstract": ev["abstract"], "authors": ev["authors"],
+            "journal": ev["journal"], "pub_year": ev["publication_year"],
+            "structured_data": ev["structured_data"],
+            "now": now, "rank": glp1_evidence.index(ev) + 1
+        })
+
+    # ---------- Evidence Records (5 for MRD-100) ----------
+    mrd_evidence = [
+        {
+            "id": str(uuid.uuid4()), "project_id": project4_id,
+            "source_type": "PUBMED", "source_id": "38334455",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38334455/",
+            "title": "JAK Inhibitors in Autoimmune Hepatitis: A Systematic Review of Preclinical and Early Clinical Evidence",
+            "abstract": "Systematic review of JAK inhibition in AIH. Preclinical models show selective JAK1 inhibition reduces hepatic inflammation and fibrosis. Two phase 1 studies (N=45) demonstrated dose-dependent ALT reduction with acceptable safety profile.",
+            "authors": '["Mack CL", "Manns MP", "Lohse AW", "Vergani D"]',
+            "journal": "Hepatology",
+            "publication_year": 2024,
+            "structured_data": '{"sample_size": 45, "study_type": "systematic_review", "primary_endpoint": "ALT normalization", "primary_result": {"response_rate": 0.62, "dose_dependent": true}}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project4_id,
+            "source_type": "PUBMED", "source_id": "38445566",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38445577/",
+            "title": "Natural History of Autoimmune Hepatitis: Long-Term Outcomes from the IAIHG Registry",
+            "abstract": "Registry-based natural history study of 1,892 AIH patients from 27 centers. Biochemical remission with standard therapy achieved in 65% at 12 months. Relapse rate 50% upon dose reduction. 15-year transplant-free survival 80%.",
+            "authors": '["Czaja AJ", "Liberal R", "Mieli-Vergani G", "Vergani D"]',
+            "journal": "Journal of Hepatology",
+            "publication_year": 2024,
+            "structured_data": '{"sample_size": 1892, "study_type": "registry_cohort", "follow_up_months": 180, "primary_endpoint": "Biochemical remission at 12m", "primary_result": {"remission_rate": 0.65, "relapse_rate": 0.50}}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project4_id,
+            "source_type": "CLINICALTRIALS", "source_id": "NCT06234567",
+            "source_url": "https://clinicaltrials.gov/study/NCT06234567",
+            "title": "Phase 2 Dose-Ranging Study of MRD-100 in Moderate-to-Severe Autoimmune Hepatitis",
+            "abstract": "Randomized, double-blind, placebo-controlled phase 2 study of MRD-100 (selective JAK1 inhibitor) at 3 dose levels in adults with moderate-to-severe AIH inadequately controlled on standard immunosuppression. Target enrollment: 120 subjects.",
+            "authors": '["Meridian Therapeutics"]',
+            "journal": "ClinicalTrials.gov",
+            "publication_year": 2025,
+            "structured_data": '{"sample_size": 120, "study_type": "phase_2_rct", "follow_up_months": 24, "primary_endpoint": "ALT normalization at 24 weeks"}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project4_id,
+            "source_type": "PUBMED", "source_id": "39112244",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/39112244/",
+            "title": "Bayesian Adaptive Designs in Rare Liver Disease: Opportunities and Regulatory Considerations",
+            "abstract": "Review of Bayesian adaptive designs applied to rare liver diseases including AIH, PBC, and PSC. External control arms from registries can augment small trials via Bayesian dynamic borrowing. FDA receptive to adaptive approaches with pre-specified decision rules.",
+            "authors": '["Berry SM", "Carlin BP", "Lee JJ", "Muller P"]',
+            "journal": "Clinical Pharmacology & Therapeutics",
+            "publication_year": 2025,
+            "structured_data": '{"study_type": "methodological_review", "primary_endpoint": "Bayesian adaptive design in rare liver disease"}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project4_id,
+            "source_type": "PUBMED", "source_id": "38667799",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38667799/",
+            "title": "External Control Arms in Hepatology: Lessons from PBC and PSC Trials",
+            "abstract": "Analysis of 6 hepatology trials using external controls from registries and natural history databases. Key success factors: harmonized endpoint definitions, contemporaneous controls, and transparent sensitivity analyses for unmeasured confounding.",
+            "authors": '["Hirschfield GM", "Dyson JK", "Alexander GJ", "Chapman MH"]',
+            "journal": "Gut",
+            "publication_year": 2024,
+            "structured_data": '{"sample_size": 6, "study_type": "case_series_analysis", "primary_endpoint": "ECA success factors in hepatology"}'
+        },
+    ]
+
+    for ev in mrd_evidence:
+        await session.execute(text(
+            "INSERT INTO evidence_records "
+            "(id, project_id, source_type, source_id, source_url, title, abstract, authors, journal, publication_year, structured_data, discovered_at, retrieval_rank) "
+            "VALUES (:id, :project_id, :source_type, :source_id, :source_url, :title, :abstract, :authors, :journal, :pub_year, :structured_data, :now, :rank)"
+        ), {
+            "id": ev["id"], "project_id": ev["project_id"],
+            "source_type": ev["source_type"], "source_id": ev["source_id"],
+            "source_url": ev["source_url"], "title": ev["title"],
+            "abstract": ev["abstract"], "authors": ev["authors"],
+            "journal": ev["journal"], "pub_year": ev["publication_year"],
+            "structured_data": ev["structured_data"],
+            "now": now, "rank": mrd_evidence.index(ev) + 1
         })
 
     # ---------- Comparability Scores (for each evidence record) ----------

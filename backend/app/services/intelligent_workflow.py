@@ -279,7 +279,62 @@ class IntelligentWorkflowService(BaseService):
                 pattern_analysis, personalized_config
             )
         }
-    
+
+    async def _analyze_user_workflow_patterns(
+        self, user_id: uuid.UUID, workflow_history: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Analyze user workflow patterns from history."""
+        total_steps = len(workflow_history)
+        step_types: Dict[str, int] = {}
+        for step in workflow_history:
+            st = step.get("step_type", "unknown")
+            step_types[st] = step_types.get(st, 0) + 1
+        return {
+            "total_steps_analyzed": total_steps,
+            "step_type_distribution": step_types,
+            "average_time_per_step": sum(s.get("duration_seconds", 0) for s in workflow_history) / max(total_steps, 1),
+            "most_common_step": max(step_types, key=step_types.get) if step_types else None,
+        }
+
+    async def _identify_optimization_opportunities(
+        self, pattern_analysis: Dict[str, Any], performance_metrics: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """Identify optimization opportunities based on patterns and metrics."""
+        opportunities = []
+        avg_time = pattern_analysis.get("average_time_per_step", 0)
+        if avg_time > 60:
+            opportunities.append({"type": "speed", "suggestion": "Consider batching frequent steps", "priority": "high"})
+        if performance_metrics.get("error_rate", 0) > 0.1:
+            opportunities.append({"type": "accuracy", "suggestion": "Review steps with high error rates", "priority": "medium"})
+        if not opportunities:
+            opportunities.append({"type": "general", "suggestion": "Workflow is performing well", "priority": "low"})
+        return opportunities
+
+    async def _generate_personalized_workflow_config(
+        self, user_id: uuid.UUID, pattern_analysis: Dict[str, Any], opportunities: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """Generate personalized workflow configuration."""
+        return {
+            "user_id": str(user_id),
+            "recommended_step_order": list(pattern_analysis.get("step_type_distribution", {}).keys()),
+            "optimizations_applied": len(opportunities),
+            "auto_skip_optional": any(o.get("type") == "speed" for o in opportunities),
+        }
+
+    async def _update_user_workflow_preferences(
+        self, user_id: uuid.UUID, config: Dict[str, Any]
+    ) -> None:
+        """Persist personalized workflow preferences (no-op for now)."""
+        pass
+
+    async def _calculate_efficiency_gain(
+        self, pattern_analysis: Dict[str, Any], config: Dict[str, Any]
+    ) -> float:
+        """Estimate efficiency gain from optimization."""
+        base = pattern_analysis.get("average_time_per_step", 30)
+        optimizations = config.get("optimizations_applied", 0)
+        return round(min(optimizations * 0.05, 0.35), 3)
+
     async def _analyze_project_state(self, project_id: uuid.UUID) -> Dict[str, Any]:
         """Comprehensive analysis of current project state"""
         

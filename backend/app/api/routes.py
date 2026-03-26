@@ -935,6 +935,24 @@ async def list_projects(
     if conditions:
         query = query.where(and_(*conditions))
 
+    # Pre-fetch evidence counts for all projects in one query
+    from app.models import EvidenceRecord
+    from sqlalchemy import func as sa_func
+    ev_counts_q = sa_select(
+        EvidenceRecord.project_id,
+        sa_func.count(EvidenceRecord.id).label("cnt")
+    ).group_by(EvidenceRecord.project_id)
+    ev_counts_result = await db.execute(ev_counts_q)
+    ev_counts_map = {str(row[0]): row[1] for row in ev_counts_result.all()}
+
+    # Pre-fetch distinct source types per project
+    ev_sources_q = sa_select(
+        EvidenceRecord.project_id,
+        sa_func.count(sa_func.distinct(EvidenceRecord.source_type)).label("src_cnt")
+    ).group_by(EvidenceRecord.project_id)
+    ev_sources_result = await db.execute(ev_sources_q)
+    ev_sources_map = {str(row[0]): row[1] for row in ev_sources_result.all()}
+
     result = await paginate_query(query, pagination, db, serializer=lambda p: {
         "id": p.id,
         "title": p.title,
@@ -944,6 +962,8 @@ async def list_projects(
         "created_by": p.created_by,
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+        "evidence_count": ev_counts_map.get(str(p.id), 0),
+        "source_count": ev_sources_map.get(str(p.id), 0),
     })
 
     await cache.set(cache_key, result, ttl=30)
@@ -1009,6 +1029,115 @@ async def get_project(
     }
     await cache.set(cache_key, result, ttl=120)
     return result
+
+
+# ── Project status update (archive / unarchive) ───────────────────────────
+
+@api_router.patch("/projects/{project_id}")
+async def update_project_status(
+    project_id: str,
+    payload: dict = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update project status — used for archive/unarchive."""
+    from sqlalchemy import select as sa_select
+    from app.core.cache import cache
+
+    new_status = payload.get("status")
+    if not new_status:
+        raise HTTPException(status_code=400, detail="Missing 'status' field")
+
+    valid_statuses = {s.value for s in ProjectStatus}
+    if new_status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status: {new_status}. Must be one of {valid_statuses}")
+
+    result = await db.execute(
+        sa_select(Project).where(Project.id == str(project_id))
+    )
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Org check
+    org_id = current_user.org_id if hasattr(current_user, 'org_id') else None
+    if org_id and project.organization_id and str(project.organization_id) != str(org_id):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    old_status = project.status.value if hasattr(project.status, 'value') else str(project.status)
+
+    # Store previous status before archiving (for unarchive restore)
+    if new_status == "archived" and old_status != "archived":
+        if not project.processing_config:
+            project.processing_config = {}
+        project.processing_config["pre_archive_status"] = old_status
+
+    # When unarchiving, restore to previous status
+    if old_status == "archived" and new_status == "unarchive":
+        restore_to = (project.processing_config or {}).get("pre_archive_status", "draft")
+        new_status = restore_to
+
+    project.status = ProjectStatus(new_status)
+    project.updated_at = datetime.utcnow()
+    await db.commit()
+
+    # Invalidate caches
+    await cache.delete(f"project:{project_id}")
+    await cache.delete("projects:list:*")
+
+    return {
+        "id": str(project.id),
+        "status": new_status,
+        "previous_status": old_status,
+        "message": f"Project status changed from {old_status} to {new_status}",
+    }
+
+
+# ── Project deletion (requires archived status) ───────────────────────────
+
+@api_router.delete("/projects/{project_id}")
+async def delete_project(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Permanently delete a project. Only archived projects can be deleted."""
+    from sqlalchemy import select as sa_select, delete as sa_delete
+    from app.core.cache import cache
+    from app.models import EvidenceRecord, ReviewDecision, AuditLog, ParsedSpecification
+
+    result = await db.execute(
+        sa_select(Project).where(Project.id == str(project_id))
+    )
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Org check
+    org_id = current_user.org_id if hasattr(current_user, 'org_id') else None
+    if org_id and project.organization_id and str(project.organization_id) != str(org_id):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    current_status = project.status.value if hasattr(project.status, 'value') else str(project.status)
+    if current_status != "archived":
+        raise HTTPException(
+            status_code=400,
+            detail="Only archived projects can be deleted. Archive the project first.",
+        )
+
+    # Delete related records first
+    for model in [EvidenceRecord, ReviewDecision, AuditLog, ParsedSpecification]:
+        await db.execute(sa_delete(model).where(model.project_id == str(project_id)))
+
+    await db.delete(project)
+    await db.commit()
+
+    # Invalidate caches
+    await cache.delete(f"project:{project_id}")
+    await cache.delete("projects:list:*")
+
+    return {"id": str(project_id), "deleted": True, "message": "Project permanently deleted"}
+
 
 # ── Study DAG endpoints ────────────────────────────────────────────────────
 
@@ -1323,8 +1452,9 @@ async def discover_evidence(
                     )
                     bg_db.add(record)
                     records_created += 1
-            except Exception:
-                pass  # PubMed unavailable; continue with ClinicalTrials
+            except Exception as e:
+                import logging as _log
+                _log.getLogger(__name__).error(f"PubMed search failed in discovery: {e}", exc_info=True)
 
             if task_status:
                 task_status.checkpoint("pubmed_search", data={"records_found": records_created})
@@ -1365,8 +1495,9 @@ async def discover_evidence(
                     )
                     bg_db.add(record)
                     records_created += 1
-            except Exception:
-                pass  # ClinicalTrials.gov unavailable
+            except Exception as e:
+                import logging as _log
+                _log.getLogger(__name__).error(f"ClinicalTrials.gov search failed in discovery: {e}", exc_info=True)
 
             # Search OpenAlex (no API key required)
             if task_status:
@@ -2519,9 +2650,15 @@ async def run_full_analysis(current_user=Depends(get_current_user)):
     POST /projects/{id}/study/analyze-dataset which enforces the full
     validation gate.
     """
+    import asyncio
     from app.services.statistical_models import StatisticalAnalysisService
-    stats = StatisticalAnalysisService()
-    results = stats.run_full_analysis()
+
+    def _run():
+        stats = StatisticalAnalysisService()
+        return stats.run_full_analysis()
+
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(None, _run)
     results["_data_source"] = "simulated_reference_data"
     results["_warning"] = "Results are from simulated reference data, not uploaded patient data."
     return results
@@ -2529,9 +2666,15 @@ async def run_full_analysis(current_user=Depends(get_current_user)):
 @api_router.get("/statistics/summary")
 async def get_stats_summary(current_user=Depends(get_current_user)):
     """Get statistical results summary from SIMULATED reference data."""
+    import asyncio
     from app.services.statistical_models import StatisticalAnalysisService
-    stats = StatisticalAnalysisService()
-    results = stats.run_full_analysis()
+
+    def _run():
+        stats = StatisticalAnalysisService()
+        return stats.run_full_analysis()
+
+    loop = asyncio.get_event_loop()
+    results = await loop.run_in_executor(None, _run)
     return {
         "_data_source": "simulated_reference_data",
         "_warning": "Summary is from simulated reference data, not uploaded patient data.",
@@ -2905,17 +3048,20 @@ async def update_user_presence(
     db: AsyncSession = Depends(get_db)
 ):
     """Update user's real-time presence"""
-    from app.services.collaborative_review import CollaborativeReviewService
+    try:
+        from app.services.collaborative_review import CollaborativeReviewService
 
-    review_service = CollaborativeReviewService(db, {"user_id": str(current_user.id)})
+        review_service = CollaborativeReviewService(db, {"user_id": str(current_user.id)})
 
-    await review_service.update_user_presence(
-        evidence_id=evidence_id,
-        activity=request.active_section or "viewing",
-        cursor_position=request.cursor_position
-    )
-    
-    return {"status": "updated"}
+        await review_service.update_user_presence(
+            evidence_id=evidence_id,
+            activity=request.active_section or "viewing",
+            cursor_position=request.cursor_position
+        )
+
+        return {"status": "updated"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 
 @api_router.get("/workflows/{workflow_id}/progress")
@@ -2980,7 +3126,7 @@ async def search_clinical_trials(
         max_results = body.get("max_results", 20)
         from app.services.external_apis import ExternalAPIService
         service = ExternalAPIService()
-        results = await service.search_clinical_trials(query=query, max_results=max_results)
+        results = await service.search_clinical_trials(condition=query, max_results=max_results)
         return results
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"ClinicalTrials search failed: {str(e)}")
@@ -3013,7 +3159,7 @@ async def search_semantic_scholar(
     year_to: Optional[int] = Query(None),
     fields_of_study: Optional[str] = Query(None, description="Comma-separated list"),
     open_access_only: bool = Query(False),
-    min_citation_count: int = Query(0, ge=0),
+    min_citation_count: Optional[int] = Query(None, ge=0),
     current_user: User = Depends(get_current_user),
 ):
     """Search Semantic Scholar academic papers"""
@@ -3023,7 +3169,7 @@ async def search_semantic_scholar(
         fields = fields_of_study.split(",") if fields_of_study else None
         year_range = None
         if year_from or year_to:
-            year_range = (year_from or 2000, year_to or 2030)
+            year_range = f"{year_from or 2000}-{year_to or 2030}"
         results = await service.search_papers(
             query=query,
             limit=limit,
@@ -3140,6 +3286,7 @@ async def init_sar_pipeline(
 async def get_sar_pipeline_status(
     project_id: str,
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get SAR pipeline status for a project, populated from processing_config"""
     from sqlalchemy import select as sa_select, func as sa_func
@@ -3447,6 +3594,181 @@ async def lock_study_protocol(
     db.add(audit)
     await db.commit()
     return {"status": "locked", "locked_at": config["protocol_locked_at"], "protocol_hash": config["protocol_hash"]}
+
+
+# ── 3b. POST parse-document → extract study definition fields ─────────────
+
+@api_router.post("/projects/{project_id}/study/parse-document")
+async def parse_document_for_study_definition(
+    project_id: str,
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Parse an uploaded document (PDF, DOCX, TXT) and extract study definition
+    fields using pattern matching. Only returns fields where extraction is
+    confident — does not guess or hallucinate values.
+    """
+    import re
+    import logging
+    logger = logging.getLogger(__name__)
+
+    _ = await get_project_with_org_check(project_id, current_user, db)
+
+    # Validate file type
+    fname = (file.filename or "").lower()
+    if not any(fname.endswith(ext) for ext in (".pdf", ".docx", ".doc", ".txt")):
+        raise HTTPException(400, "Unsupported file type. Accepted: .pdf, .docx, .txt")
+
+    # Read file content
+    raw_bytes = await file.read()
+    if len(raw_bytes) > 50 * 1024 * 1024:  # 50MB limit
+        raise HTTPException(413, "File too large (max 50MB)")
+
+    text = ""
+    try:
+        if fname.endswith(".pdf"):
+            from pypdf import PdfReader
+            import io
+            reader = PdfReader(io.BytesIO(raw_bytes))
+            text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        elif fname.endswith(".docx") or fname.endswith(".doc"):
+            from docx import Document
+            import io
+            doc = Document(io.BytesIO(raw_bytes))
+            text = "\n".join(p.text for p in doc.paragraphs)
+        elif fname.endswith(".txt"):
+            text = raw_bytes.decode("utf-8", errors="replace")
+    except Exception as e:
+        logger.warning("Document parsing failed: %s", e)
+        raise HTTPException(422, f"Could not parse document: {e}")
+
+    if not text.strip():
+        return {"extracted_fields": {}, "message": "No text could be extracted from the document."}
+
+    # ── Pattern-based field extraction (conservative — only populate if clear) ──
+    extracted: Dict[str, Any] = {}
+
+    # Phase detection
+    phase_match = re.search(
+        r'\b(Phase\s*(?:1/2|2/3|1b/2|2b/3|I/II|II/III|1|2|3|4|I\b|II\b|III\b|IV\b))',
+        text, re.IGNORECASE
+    )
+    if phase_match:
+        raw_phase = phase_match.group(1).strip()
+        phase_map = {
+            'i': 'Phase 1', '1': 'Phase 1',
+            'i/ii': 'Phase 1/2', '1/2': 'Phase 1/2', '1b/2': 'Phase 1/2',
+            'ii': 'Phase 2', '2': 'Phase 2',
+            'ii/iii': 'Phase 2/3', '2/3': 'Phase 2/3', '2b/3': 'Phase 2/3',
+            'iii': 'Phase 3', '3': 'Phase 3',
+            'iv': 'Phase 4 / Post-Marketing', '4': 'Phase 4 / Post-Marketing',
+        }
+        normalized = re.sub(r'^phase\s*', '', raw_phase, flags=re.IGNORECASE).strip().lower()
+        if normalized in phase_map:
+            extracted["phase"] = phase_map[normalized]
+
+    # Regulatory body
+    for body, key in [("FDA", "FDA"), ("EMA", "EMA"), ("PMDA", "PMDA"),
+                      ("Health Canada", "Health Canada"), ("TGA", "TGA"),
+                      ("MHRA", "MHRA"), ("ANVISA", "ANVISA"), ("NMPA", "NMPA")]:
+        if re.search(r'\b' + re.escape(body) + r'\b', text):
+            extracted["regBody"] = key
+            break
+
+    # Indication — look for "indication:" or "disease:" or "condition:" patterns
+    indication_match = re.search(
+        r'(?:indication|disease|condition|diagnosis)\s*[:]\s*([^\n.;]{5,120})',
+        text, re.IGNORECASE
+    )
+    if indication_match:
+        extracted["indication"] = indication_match.group(1).strip()
+
+    # Primary endpoint
+    ep_match = re.search(
+        r'(?:primary\s+(?:efficacy\s+)?endpoint|primary\s+outcome(?:\s+measure)?)\s*[:]\s*([^\n.;]{5,150})',
+        text, re.IGNORECASE
+    )
+    if ep_match:
+        extracted["endpoint"] = ep_match.group(1).strip()
+
+    # Estimand
+    if re.search(r'\b(?:intention[\s-]to[\s-]treat|ITT)\b', text, re.IGNORECASE):
+        extracted["estimand"] = "ITT"
+    elif re.search(r'\b(?:per[\s-]protocol|PP\s+analysis)\b', text, re.IGNORECASE):
+        extracted["estimand"] = "PP"
+    elif re.search(r'\baverage\s+treatment\s+effect\s+on\s+the\s+treated\b|ATT\b', text, re.IGNORECASE):
+        extracted["estimand"] = "ATT"
+    elif re.search(r'\baverage\s+treatment\s+effect\b|ATE\b', text, re.IGNORECASE):
+        extracted["estimand"] = "ATE"
+
+    # Comparator
+    if re.search(r'\bexternal\s+(?:comparator|control)\b', text, re.IGNORECASE):
+        extracted["comparator"] = "External comparator (real-world control)"
+    elif re.search(r'\bsynthetic\s+control\b', text, re.IGNORECASE):
+        extracted["comparator"] = "Synthetic control arm"
+    elif re.search(r'\bplacebo[\s-]controlled\b', text, re.IGNORECASE):
+        extracted["comparator"] = "Placebo / untreated"
+    elif re.search(r'\bactive[\s-](?:comparator|controlled)\b|head[\s-]to[\s-]head\b', text, re.IGNORECASE):
+        extracted["comparator"] = "Active comparator (head-to-head)"
+    elif re.search(r'\bhistorical\s+control\b', text, re.IGNORECASE):
+        extracted["comparator"] = "Historical control"
+
+    # Analysis method
+    if re.search(r'\bCox\s+(?:proportional\s+)?hazards?\b', text, re.IGNORECASE):
+        extracted["primaryModel"] = "cox_ph"
+    elif re.search(r'\blogistic\s+regression\b', text, re.IGNORECASE):
+        extracted["primaryModel"] = "logistic"
+    elif re.search(r'\bANCOVA\b', text, re.IGNORECASE):
+        extracted["primaryModel"] = "ancova"
+    elif re.search(r'\b(?:MMRM|mixed\s+model\s+for\s+repeated\s+measures)\b', text, re.IGNORECASE):
+        extracted["primaryModel"] = "mmrm"
+    elif re.search(r'\bnegative\s+binomial\b', text, re.IGNORECASE):
+        extracted["primaryModel"] = "neg_binom"
+    elif re.search(r'\bKaplan[\s-]Meier\b', text, re.IGNORECASE):
+        extracted["primaryModel"] = "km"
+
+    # Weighting method
+    if re.search(r'\bIPTW\b|inverse\s+probability\s+of\s+treatment\s+weight', text, re.IGNORECASE):
+        if re.search(r'\bstabilized\b', text, re.IGNORECASE):
+            extracted["weightingMethod"] = "iptw_stabilized"
+        else:
+            extracted["weightingMethod"] = "iptw"
+    elif re.search(r'\bpropensity\s+score\s+matching\b', text, re.IGNORECASE):
+        extracted["weightingMethod"] = "matching"
+    elif re.search(r'\boverlap\s+weights?\b', text, re.IGNORECASE):
+        extracted["weightingMethod"] = "overlap"
+    elif re.search(r'\bentropy\s+balancing\b', text, re.IGNORECASE):
+        extracted["weightingMethod"] = "entropy"
+
+    # Covariates — look for explicit lists
+    cov_match = re.search(
+        r'(?:covariates?|adjusted\s+for|baseline\s+(?:characteristics|variables))\s*[:]\s*([^\n]{10,300})',
+        text, re.IGNORECASE
+    )
+    if cov_match:
+        cov_text = cov_match.group(1)
+        # Split on commas, semicolons, or "and"
+        cov_list = [c.strip().strip('.-') for c in re.split(r'[,;]|\band\b', cov_text) if c.strip()]
+        cov_list = [c for c in cov_list if 3 <= len(c) <= 60]  # Filter noise
+        if cov_list:
+            extracted["covariates"] = cov_list[:20]  # Cap at 20
+
+    # Rationale — look for a justification section
+    rationale_match = re.search(
+        r'(?:scientific\s+rationale|justification|rationale\s+for\s+(?:study\s+)?design)\s*[:]\s*([^\n]{20,500})',
+        text, re.IGNORECASE
+    )
+    if rationale_match:
+        extracted["rationale"] = rationale_match.group(1).strip()
+
+    return {
+        "extracted_fields": extracted,
+        "fields_found": len(extracted),
+        "document_length": len(text),
+        "message": f"Extracted {len(extracted)} field(s) from document."
+    }
 
 
 # ── 4. GET covariates ────────────────────────────────────────────────────────
@@ -4162,51 +4484,56 @@ async def generate_study_regulatory_document(
                        "mitigation": ev_.get("interpretation", "")}]
 
     # Generate document
-    generator = DocumentGenerator()
-    title = f"SAR Report - {project.title} - {datetime.utcnow().strftime('%Y-%m-%d')}"
+    try:
+        generator = DocumentGenerator()
+        title = f"SAR Report - {project.title} - {datetime.utcnow().strftime('%Y-%m-%d')}"
 
-    if format == "docx":
-        content = generator.generate_sar_docx(
-            project=project_data, evidence=evidence_data,
-            comparability=comp_data, bias=bias_data, stats=stats_data,
+        if format == "docx":
+            content = generator.generate_sar_docx(
+                project=project_data, evidence=evidence_data,
+                comparability=comp_data, bias=bias_data, stats=stats_data,
+            )
+        else:
+            content = generator.generate_sar_html(
+                project=project_data, evidence=evidence_data,
+                comparability=comp_data, bias=bias_data, stats=stats_data,
+            )
+
+        ext = "docx" if format == "docx" else "html"
+        filename = f"sar_{project_id[:8]}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.{ext}"
+        saved = generator.save_artifact(content, filename, format=ext)
+
+        artifact = RegulatoryArtifact(
+            id=str(_uuid.uuid4()),
+            project_id=str(project_id),
+            artifact_type="safety_assessment_report",
+            title=title,
+            format=ext,
+            regulatory_agency="FDA",
+            generated_at=datetime.utcnow(),
+            generated_by=str(current_user.id),
+            file_path=saved["file_path"],
+            file_size=saved.get("file_size"),
+            checksum=saved.get("checksum"),
+            content=content if isinstance(content, str) else None,
         )
-    else:
-        content = generator.generate_sar_html(
-            project=project_data, evidence=evidence_data,
-            comparability=comp_data, bias=bias_data, stats=stats_data,
-        )
+        db.add(artifact)
+        await db.commit()
+        await db.refresh(artifact)
 
-    ext = "docx" if format == "docx" else "html"
-    filename = f"sar_{project_id[:8]}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.{ext}"
-    saved = generator.save_artifact(content, filename, format=ext)
-
-    artifact = RegulatoryArtifact(
-        id=str(_uuid.uuid4()),
-        project_id=str(project_id),
-        artifact_type="safety_assessment_report",
-        title=title,
-        format=ext,
-        regulatory_agency="FDA",
-        generated_at=datetime.utcnow(),
-        generated_by=str(current_user.id),
-        file_path=saved["file_path"],
-        file_size=saved.get("file_size"),
-        checksum=saved.get("checksum"),
-        content=content if isinstance(content, str) else None,
-    )
-    db.add(artifact)
-    await db.commit()
-    await db.refresh(artifact)
-
-    return {
-        "artifact_id": str(artifact.id),
-        "title": title,
-        "format": ext,
-        "status": "generated",
-        "file_size": saved.get("file_size"),
-        "checksum": saved.get("checksum"),
-        "download_url": f"/api/v1/projects/{project_id}/study/regulatory/download/{artifact.id}",
-    }
+        return {
+            "artifact_id": str(artifact.id),
+            "title": title,
+            "format": ext,
+            "status": "generated",
+            "file_size": saved.get("file_size"),
+            "checksum": saved.get("checksum"),
+            "download_url": f"/api/v1/projects/{project_id}/study/regulatory/download/{artifact.id}",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"Regulatory document generation failed: {str(e)}")
 
 
 # ── 21. GET regulatory/download/{artifact_id} ────────────────────────────────
@@ -4859,12 +5186,17 @@ async def adam_metadata_ep(project_id: str, current_user=Depends(get_current_use
 @api_router.post("/projects/{project_id}/study/missing-data/impute")
 async def run_mi_ep(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Run multiple imputation with Rubin's rules."""
+    import asyncio
     from app.services.statistical_models import StatisticalAnalysisService
     p = await get_project_with_org_check(project_id, current_user, db)
-    svc = StatisticalAnalysisService(); sim = svc.generate_simulation_data()
-    mi = svc.compute_multiple_imputation(data=sim["covariates"], treatment=sim["treatment"],
-                                          outcome=sim["event_indicator"], time=sim["time_to_event"],
-                                          event=sim["event_indicator"], m=20)
+
+    def _run():
+        svc = StatisticalAnalysisService(); sim = svc.generate_simulation_data()
+        return svc.compute_multiple_imputation(data=sim["covariates"], treatment=sim["treatment"],
+                                              outcome=sim["event_indicator"], time=sim["time_to_event"],
+                                              event=sim["event_indicator"], m=20)
+
+    mi = await asyncio.get_event_loop().run_in_executor(None, _run)
     config = dict(p.processing_config or {}); config.setdefault("missing_data", {})["imputation"] = mi
     p.processing_config = config; p.updated_at = datetime.utcnow(); await db.commit()
     return mi
@@ -4872,11 +5204,16 @@ async def run_mi_ep(project_id: str, current_user=Depends(get_current_user), db:
 @api_router.post("/projects/{project_id}/study/missing-data/tipping")
 async def run_tipping_ep(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Run tipping-point sensitivity analysis."""
+    import asyncio
     from app.services.statistical_models import StatisticalAnalysisService
     p = await get_project_with_org_check(project_id, current_user, db)
-    svc = StatisticalAnalysisService(); sim = svc.generate_simulation_data()
-    tp = svc.compute_tipping_point(treatment=sim["treatment"], outcome=sim["event_indicator"],
-                                    time=sim["time_to_event"], event=sim["event_indicator"])
+
+    def _run():
+        svc = StatisticalAnalysisService(); sim = svc.generate_simulation_data()
+        return svc.compute_tipping_point(treatment=sim["treatment"], outcome=sim["event_indicator"],
+                                        time=sim["time_to_event"], event=sim["event_indicator"])
+
+    tp = await asyncio.get_event_loop().run_in_executor(None, _run)
     config = dict(p.processing_config or {}); config.setdefault("missing_data", {})["tipping_point"] = tp
     p.processing_config = config; p.updated_at = datetime.utcnow(); await db.commit()
     return tp
@@ -4884,14 +5221,19 @@ async def run_tipping_ep(project_id: str, current_user=Depends(get_current_user)
 @api_router.post("/projects/{project_id}/study/missing-data/mmrm")
 async def run_mmrm_ep(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Run MMRM analysis."""
+    import asyncio
     from app.services.statistical_models import StatisticalAnalysisService
     import numpy as np
     p = await get_project_with_org_check(project_id, current_user, db)
-    svc = StatisticalAnalysisService(); sim = svc.generate_simulation_data()
-    n = len(sim["treatment"]); n_tp = 4
-    subj = np.repeat(np.arange(n), n_tp); tp = np.tile(np.arange(n_tp), n)
-    trt = np.repeat(sim["treatment"], n_tp); out = np.random.randn(n*n_tp) - 0.3*trt + 0.1*tp
-    mmrm = svc.compute_mmrm(subjects=subj, timepoints=tp, outcomes=out, treatment=trt)
+
+    def _run():
+        svc = StatisticalAnalysisService(); sim = svc.generate_simulation_data()
+        n = len(sim["treatment"]); n_tp = 4
+        subj = np.repeat(np.arange(n), n_tp); tp_arr = np.tile(np.arange(n_tp), n)
+        trt = np.repeat(sim["treatment"], n_tp); out = np.random.randn(n*n_tp) - 0.3*trt + 0.1*tp_arr
+        return svc.compute_mmrm(subjects=subj, timepoints=tp_arr, outcomes=out, treatment=trt)
+
+    mmrm = await asyncio.get_event_loop().run_in_executor(None, _run)
     config = dict(p.processing_config or {}); config.setdefault("missing_data", {})["mmrm"] = mmrm
     p.processing_config = config; p.updated_at = datetime.utcnow(); await db.commit()
     return mmrm
@@ -5474,11 +5816,26 @@ async def run_bayesian_prior(project_id: str, current_user=Depends(get_current_u
 
     p = await get_project_with_org_check(project_id, current_user, db)
 
-    stat_svc = StatisticalAnalysisService()
-    sim = stat_svc.generate_simulation_data()
-    bay_svc = BayesianAnalysisService()
-    prior = bay_svc.compute_prior_elicitation(historical_data=np.array(sim["control_outcome"]))
-    return prior
+    try:
+        patient_data = await _get_active_patient_data(project_id, db)
+        stat_svc = StatisticalAnalysisService()
+        if patient_data is not None:
+            raw = stat_svc.run_analysis_from_data(patient_data)
+            if "error" in raw:
+                sim = stat_svc.generate_simulation_data()
+            else:
+                sim = raw
+        else:
+            sim = stat_svc.generate_simulation_data()
+        # Extract control group outcomes from simulation data
+        treatment = np.array(sim["treatment"])
+        time_vals = np.array(sim["time_to_event"])
+        control_outcome = time_vals[treatment == 0]
+        bay_svc = BayesianAnalysisService()
+        prior = bay_svc.compute_prior_elicitation(historical_data=control_outcome)
+        return prior
+    except Exception as e:
+        raise HTTPException(500, detail=f"Prior elicitation failed: {str(e)}")
 
 
 @api_router.post("/projects/{project_id}/study/bayesian/adaptive")
@@ -5489,15 +5846,32 @@ async def run_bayesian_adaptive(project_id: str, current_user=Depends(get_curren
 
     p = await get_project_with_org_check(project_id, current_user, db)
 
-    stat_svc = StatisticalAnalysisService()
-    sim = stat_svc.generate_simulation_data()
-    bay_svc = BayesianAnalysisService()
-    result = bay_svc.compute_bayesian_adaptive(interim_data={
-        "treatment": sim["treatment_outcome"],
-        "control": sim["control_outcome"],
-        "outcome_type": "continuous",
-    })
-    return result
+    try:
+        import numpy as np
+        patient_data = await _get_active_patient_data(project_id, db)
+        stat_svc = StatisticalAnalysisService()
+        if patient_data is not None:
+            raw = stat_svc.run_analysis_from_data(patient_data)
+            if "error" in raw:
+                sim = stat_svc.generate_simulation_data()
+            else:
+                sim = raw
+        else:
+            sim = stat_svc.generate_simulation_data()
+        # Extract treatment/control outcomes from simulation data
+        treatment = np.array(sim["treatment"])
+        time_vals = np.array(sim["time_to_event"])
+        treatment_outcome = time_vals[treatment == 1]
+        control_outcome = time_vals[treatment == 0]
+        bay_svc = BayesianAnalysisService()
+        result = bay_svc.compute_bayesian_adaptive(interim_data={
+            "treatment": treatment_outcome.tolist(),
+            "control": control_outcome.tolist(),
+            "outcome_type": "continuous",
+        })
+        return result
+    except Exception as e:
+        raise HTTPException(500, detail=f"Bayesian adaptive failed: {str(e)}")
 
 
 # ── Interim Analysis Endpoints ───────────────────────────────────────────────
@@ -5560,21 +5934,39 @@ async def generate_dsmb_report_ep(project_id: str, current_user=Depends(get_curr
 
     p = await get_project_with_org_check(project_id, current_user, db)
 
-    config = p.processing_config or {}
-    boundaries = config.get("interim_boundaries")
-    if not boundaries:
-        svc = InterimAnalysisService()
-        boundaries = svc.compute_interim_boundaries(n_looks=3, method="obrien_fleming", alpha=0.025)
+    try:
+        config = p.processing_config or {}
+        boundaries = config.get("interim_boundaries")
+        if not boundaries:
+            svc = InterimAnalysisService()
+            boundaries = svc.compute_interim_boundaries(n_looks=3, method="obrien_fleming", alpha=0.025)
 
-    stat_svc = StatisticalAnalysisService()
-    sim = stat_svc.generate_simulation_data()
-    svc = InterimAnalysisService()
-    report = svc.generate_dsmb_report(
-        interim_data={"treatment": sim["treatment_outcome"], "control": sim["control_outcome"], "outcome_type": "continuous"},
-        boundaries=boundaries,
-        look_number=1,
-    )
-    return report
+        patient_data = await _get_active_patient_data(project_id, db)
+        stat_svc = StatisticalAnalysisService()
+        if patient_data is not None:
+            raw = stat_svc.run_analysis_from_data(patient_data)
+            if "error" in raw:
+                sim = stat_svc.generate_simulation_data()
+            else:
+                sim = raw
+        else:
+            sim = stat_svc.generate_simulation_data()
+        import numpy as np
+        treatment = np.array(sim["treatment"])
+        time_vals = np.array(sim["time_to_event"])
+        treatment_outcome = time_vals[treatment == 1].tolist()
+        control_outcome = time_vals[treatment == 0].tolist()
+        svc = InterimAnalysisService()
+        report = svc.generate_dsmb_report(
+            interim_data={"treatment": treatment_outcome, "control": control_outcome, "outcome_type": "continuous"},
+            boundaries=boundaries,
+            look_number=1,
+        )
+        return report
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, detail=f"DSMB report generation failed: {str(e)}")
 
 
 # ── SDTM Endpoints ──────────────────────────────────────────────────────────
@@ -6893,6 +7285,11 @@ async def export_audit_trail(
 
     entries = []
     for r in rows:
+        ts = r[7]
+        if ts is not None:
+            ts_str = ts.isoformat() if hasattr(ts, 'isoformat') else str(ts)
+        else:
+            ts_str = None
         entries.append({
             "id": r[0],
             "action": r[1],
@@ -6901,7 +7298,7 @@ async def export_audit_trail(
             "user_id": r[4],
             "ip_address": r[5],
             "user_agent": r[6],
-            "timestamp": r[7].isoformat() if r[7] else None,
+            "timestamp": ts_str,
             "change_summary": r[8],
             "regulatory_significance": r[9],
             "duration_ms": r[10],

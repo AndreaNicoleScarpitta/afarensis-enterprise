@@ -536,8 +536,8 @@ class ApiClient {
     if (params.fields_of_study?.length) searchParams.set('fields_of_study', params.fields_of_study.join(','));
     return this.request(
       `/search/semantic-scholar?${searchParams.toString()}`,
-      z.object({ results: z.array(z.any()), total: z.number(), offset: z.number() })
-    );
+      z.object({ papers: z.array(z.any()), total: z.number(), offset: z.number() }).passthrough()
+    ).then(data => ({ ...data, results: data.papers }));
   }
 
   async getSemanticScholarPaper(paperId: string): Promise<any> {

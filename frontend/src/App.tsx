@@ -51,9 +51,6 @@ import AuditTrail from './pages/AuditTrail'
 import RegulatoryOutput from './pages/RegulatoryOutput'
 import LiteratureSearch from './pages/LiteratureSearch'
 
-// DAG Workflow
-import StudyDAG from './pages/StudyDAG'
-
 // Analysis Lineage pages
 import InputExplorer from './pages/InputExplorer'
 import VariableNotebook from './pages/VariableNotebook'
@@ -842,6 +839,8 @@ const pageTransition = { type: 'tween', ease: 'anticipate', duration: 0.25 }
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [evidenceDrawerOpen, setEvidenceDrawerOpen] = useState(false)
+  const [lineageDrawerOpen, setLineageDrawerOpen] = useState(false)
   const location = useLocation()
 
   const { user, loading: authLoading, login, logout, isAuthenticated } = useAuth()
@@ -1086,7 +1085,87 @@ function App() {
           onLockProtocol={handleLockProtocol}
           reviewerMode={reviewerMode}
           onToggleReviewer={handleToggleReviewer}
+          evidenceOpen={evidenceDrawerOpen}
+          onToggleEvidence={() => { setEvidenceDrawerOpen(v => !v); setLineageDrawerOpen(false) }}
+          lineageOpen={lineageDrawerOpen}
+          onToggleLineage={() => { setLineageDrawerOpen(v => !v); setEvidenceDrawerOpen(false) }}
         />
+
+        {/* ── Global Layer Drawers (ambient, not navigation) ───────────── */}
+        {(evidenceDrawerOpen || lineageDrawerOpen) && (
+          <div
+            className="fixed inset-0 bg-black/40 z-30"
+            onClick={() => { setEvidenceDrawerOpen(false); setLineageDrawerOpen(false) }}
+          />
+        )}
+
+        {/* Evidence Base Drawer */}
+        <div className={`fixed top-0 right-0 h-full w-[520px] max-w-[90vw] bg-white dark:bg-[#111112] border-l border-gray-200 dark:border-white/10 shadow-2xl z-40 transition-transform duration-300 ease-in-out ${evidenceDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/8">
+            <div>
+              <p className="text-[10px] font-bold text-[#2563EB] uppercase tracking-widest">Global Layer</p>
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Evidence Base</h2>
+              <p className="text-[10px] text-gray-500 mt-0.5">Feeds the thinking — anticipates reviewer questions</p>
+            </div>
+            <button onClick={() => setEvidenceDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+          <div className="overflow-y-auto h-[calc(100%-72px)]">
+            {evidenceDrawerOpen && selectedStudy && <LiteratureSearch />}
+            {evidenceDrawerOpen && !selectedStudy && (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                <p className="text-sm text-gray-500">Select a project to access its evidence base.</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Analysis Lineage Drawer */}
+        <div className={`fixed top-0 right-0 h-full w-[520px] max-w-[90vw] bg-white dark:bg-[#111112] border-l border-gray-200 dark:border-white/10 shadow-2xl z-40 transition-transform duration-300 ease-in-out ${lineageDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/8">
+            <div>
+              <p className="text-[10px] font-bold text-[#2563EB] uppercase tracking-widest">Global Layer</p>
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Analysis Lineage</h2>
+              <p className="text-[10px] text-gray-500 mt-0.5">Proves the thinking — answers reviewer questions instantly</p>
+            </div>
+            <button onClick={() => setLineageDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+          </div>
+          <div className="overflow-y-auto h-[calc(100%-72px)]">
+            {lineageDrawerOpen && selectedStudy && (
+              <div className="divide-y divide-gray-200 dark:divide-white/8">
+                <button
+                  onClick={() => { setLineageDrawerOpen(false); window.location.href = `/projects/${selectedStudy.id}/input-explorer` }}
+                  className="w-full px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-white/3 transition-colors group"
+                >
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#2563EB]">Input Explorer</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Sources · schemas · data quality checks</p>
+                </button>
+                <button
+                  onClick={() => { setLineageDrawerOpen(false); window.location.href = `/projects/${selectedStudy.id}/variable-notebook` }}
+                  className="w-full px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-white/3 transition-colors group"
+                >
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#2563EB]">Variable Notebook</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Derivations · code lists · transformation rules</p>
+                </button>
+                <button
+                  onClick={() => { setLineageDrawerOpen(false); window.location.href = `/projects/${selectedStudy.id}/trace-pack` }}
+                  className="w-full px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-white/3 transition-colors group"
+                >
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#2563EB]">Trace Pack</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Export · checksums · eCTD submission artifacts</p>
+                </button>
+              </div>
+            )}
+            {lineageDrawerOpen && !selectedStudy && (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                <p className="text-sm text-gray-500">Select a project to access its analysis lineage.</p>
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Main content — offset by sidebar width */}
         <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-[280px]' : ''} min-h-screen`}>
@@ -1105,7 +1184,6 @@ function App() {
                     <Route path="/dashboard" element={<EnhancedDashboard />} />
 
                     {/* ── Project-scoped routes ─────────────────────────── */}
-                    <Route path="/projects/:projectId/dag"               element={<ProjectRouteSync><StudyDAG           {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/study"             element={<ProjectRouteSync><StudyDefinition    {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/causal-framework"  element={<ProjectRouteSync><CausalFramework    {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/data-provenance"   element={<ProjectRouteSync><DataProvenance     {...workflowProps} /></ProjectRouteSync>} />

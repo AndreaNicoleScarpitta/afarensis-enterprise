@@ -5,7 +5,7 @@ import {
   CheckCircle2, Circle, FlaskConical, GitBranch, Database,
   Users2, BarChart2, TrendingUp, ShieldAlert, Archive,
   ClipboardList, FileOutput, Eye, Unlock, BookOpen, Sun, Moon,
-  Search, PackageCheck, Microscope, FileText, LayoutDashboard,
+  LayoutDashboard, Route,
 } from 'lucide-react'
 import AfarensisLogo from '@/components/ui/AfarensisLogo'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -85,6 +85,10 @@ interface SidebarProps {
   onLockProtocol: () => void
   reviewerMode: boolean
   onToggleReviewer: () => void
+  evidenceOpen?: boolean
+  onToggleEvidence?: () => void
+  lineageOpen?: boolean
+  onToggleLineage?: () => void
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -93,6 +97,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   selectedStudy, onStudyChange,
   protocolLocked, onLockProtocol,
   reviewerMode, onToggleReviewer,
+  evidenceOpen, onToggleEvidence,
+  lineageOpen, onToggleLineage,
 }) => {
   const studyList = studiesProp ?? STUDIES
   const [studyOpen, setStudyOpen] = useState(false)
@@ -220,26 +226,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {selectedStudy ? (
             <>
-              {/* Analysis DAG overview link */}
-              <Link
-                to={projectPath(selectedStudy.id, 'dag')}
-                onClick={() => { if (window.innerWidth < 1024) onToggle() }}
-                className={cn(
-                  'flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2 text-left transition-all duration-150 mb-3',
-                  location.pathname.endsWith('/dag')
-                    ? 'bg-[#2563EB]/20 text-white'
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:bg-white/5 hover:text-white',
-                )}
-              >
-                <GitBranch className={cn('h-4 w-4 shrink-0', location.pathname.endsWith('/dag') ? 'text-[#2563EB]' : 'text-gray-600')} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold leading-tight">Analysis DAG</p>
-                  {location.pathname.endsWith('/dag') && (
-                    <p className="text-[10px] text-gray-500 mt-0.5">Workflow · dependencies · status</p>
-                  )}
-                </div>
-              </Link>
-
               <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest px-1 pb-2">Workflow</p>
 
               <div className="space-y-0.5">
@@ -300,64 +286,42 @@ const Sidebar: React.FC<SidebarProps> = ({
           )}
         </nav>
 
-        {/* ── Literature Search ───────────────────────────────────────────── */}
+        {/* ── Global Layers (ambient, not workflow steps) ────────────────── */}
         {selectedStudy && (
           <div className="px-2.5 pb-2 border-t border-gray-200 dark:border-white/8 pt-2 shrink-0">
-            <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest px-1 pb-1.5">Evidence Base</p>
-            <Link
-              to={projectPath(selectedStudy.id, 'literature-search')}
-              onClick={() => { if (window.innerWidth < 1024) onToggle() }}
+            <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest px-1 pb-1.5">Global Layers</p>
+            <button
+              onClick={onToggleEvidence}
               className={cn(
-                'flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2 text-left transition-all duration-150',
-                location.pathname.endsWith('/literature-search')
+                'flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2 text-left transition-all duration-150 mb-1',
+                evidenceOpen
                   ? 'bg-[#2563EB]/20 text-white'
-                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:bg-white/5 hover:text-white',
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-white',
               )}
             >
-              <BookOpen className={cn('h-3.5 w-3.5 shrink-0', location.pathname.endsWith('/literature-search') ? 'text-[#2563EB]' : 'text-gray-600')} />
+              <BookOpen className={cn('h-3.5 w-3.5 shrink-0', evidenceOpen ? 'text-[#2563EB]' : 'text-gray-600')} />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium leading-tight">Literature Search</p>
-                {location.pathname.endsWith('/literature-search') && (
-                  <p className="text-[10px] text-gray-500 mt-0.5">PubMed · ClinicalTrials · OpenAlex</p>
-                )}
+                <p className="text-xs font-medium leading-tight">Evidence Base</p>
+                <p className="text-[9px] text-gray-600 mt-0.5">Feeds the thinking</p>
               </div>
-            </Link>
-          </div>
-        )}
-
-        {/* ── Analysis Lineage ─────────────────────────────────────────── */}
-        {selectedStudy && (
-          <div className="px-2.5 pb-2 border-t border-gray-200 dark:border-white/8 pt-2 shrink-0">
-            <p className="text-[9px] font-bold text-gray-600 uppercase tracking-widest px-1 pb-1.5">Analysis Lineage</p>
-            {[
-              { slug: 'input-explorer', label: 'Input Explorer', sub: 'Sources · schemas · quality', icon: Search },
-              { slug: 'variable-notebook', label: 'Variable Notebook', sub: 'Derivations · code lists', icon: Microscope },
-              { slug: 'trace-pack', label: 'Trace Pack', sub: 'Export · checksums · eCTD', icon: PackageCheck },
-            ].map(item => {
-              const itemHref = projectPath(selectedStudy.id, item.slug)
-              const isActive = location.pathname === itemHref
-              return (
-                <Link
-                  key={item.slug}
-                  to={itemHref}
-                  onClick={() => { if (window.innerWidth < 1024) onToggle() }}
-                  className={cn(
-                    'flex items-center gap-2.5 w-full rounded-lg px-2.5 py-1.5 text-left transition-all duration-150 mb-0.5',
-                    isActive
-                      ? 'bg-[#2563EB]/20 text-white'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:bg-white/5 hover:text-white',
-                  )}
-                >
-                  <item.icon className={cn('h-3.5 w-3.5 shrink-0', isActive ? 'text-[#2563EB]' : 'text-gray-600')} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium leading-tight">{item.label}</p>
-                    {isActive && (
-                      <p className="text-[10px] text-gray-500 mt-0.5">{item.sub}</p>
-                    )}
-                  </div>
-                </Link>
-              )
-            })}
+              {evidenceOpen && <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB] shrink-0" />}
+            </button>
+            <button
+              onClick={onToggleLineage}
+              className={cn(
+                'flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2 text-left transition-all duration-150',
+                lineageOpen
+                  ? 'bg-[#2563EB]/20 text-white'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-white',
+              )}
+            >
+              <Route className={cn('h-3.5 w-3.5 shrink-0', lineageOpen ? 'text-[#2563EB]' : 'text-gray-600')} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium leading-tight">Analysis Lineage</p>
+                <p className="text-[9px] text-gray-600 mt-0.5">Proves the thinking</p>
+              </div>
+              {lineageOpen && <span className="w-1.5 h-1.5 rounded-full bg-[#2563EB] shrink-0" />}
+            </button>
           </div>
         )}
 

@@ -333,7 +333,28 @@ class DocumentGenerator:
 
     @staticmethod
     def _stats(stats: Optional[Dict]) -> Dict:
-        return stats if stats else dict(_XY301_STATS)
+        base = dict(_XY301_STATS)
+        if stats:
+            # Only override with non-None, non-empty values to preserve defaults
+            for k, v in stats.items():
+                if v is not None and v != [] and v != {}:
+                    base[k] = v
+        # Ensure numeric fields are float for format specs
+        for key in ("primary_hr", "primary_ci_lower", "primary_ci_upper", "primary_p",
+                     "e_value", "e_value_ci", "ps_c_statistic", "smd_max_before",
+                     "smd_max_after", "median_follow_up_weeks"):
+            if key in base and base[key] is not None:
+                try:
+                    base[key] = float(base[key])
+                except (ValueError, TypeError):
+                    pass
+        for key in ("n_trial", "n_external", "events_trial", "events_external", "covariates_n"):
+            if key in base and base[key] is not None:
+                try:
+                    base[key] = int(base[key])
+                except (ValueError, TypeError):
+                    pass
+        return base
 
     @staticmethod
     def _severity_badge(severity: str) -> str:
@@ -608,9 +629,10 @@ and prior immunotherapy use.
 
         forest_rows = ""
         for a in all_analyses:
-            hr = a["hr"]
-            lo = a["ci_lower"]
-            hi = a["ci_upper"]
+            hr = float(a["hr"])
+            lo = float(a["ci_lower"])
+            hi = float(a["ci_upper"])
+            p_val = f"{float(a['p']):.4f}" if a.get('p') is not None else ""
             # Simple bar representation: center at HR=1.0, scale 0-2 mapped to 0-100%
             bar_left = max(0, (lo / 2.0) * 100)
             bar_right = min(100, (hi / 2.0) * 100)
@@ -621,7 +643,7 @@ and prior immunotherapy use.
     <td>{a['name']}</td>
     <td style="text-align:center">{hr:.2f}</td>
     <td style="text-align:center">{lo:.2f} – {hi:.2f}</td>
-    <td style="text-align:center">{a.get('p', ''):.4f}</td>
+    <td style="text-align:center">{p_val}</td>
     <td class="bar-cell" style="position:relative;">
       <div class="forest-ref"></div>
       <div style="position:relative; height:18px;">

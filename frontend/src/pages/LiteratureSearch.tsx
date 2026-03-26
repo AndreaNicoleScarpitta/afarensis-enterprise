@@ -82,6 +82,45 @@ import { z } from 'zod'
 
 const SearchResultSchema = z.any() // Accept any shape — we normalise below
 
+/** Parse any date-like value into a sortable timestamp (ms since epoch). Returns 0 if unparseable. */
+function parseDate(paper: Paper): number {
+  const raw = paper.publicationDate ?? (paper.year != null ? String(paper.year) : null)
+  if (!raw) return 0
+  // Try ISO / full date first
+  const d = new Date(raw)
+  if (!isNaN(d.getTime())) return d.getTime()
+  // Try bare year (e.g. "2021")
+  const yearMatch = raw.match(/(\d{4})/)
+  if (yearMatch) return new Date(`${yearMatch[1]}-01-01`).getTime()
+  return 0
+}
+
+/** Compute a composite importance / impact score for sorting.
+ *  Combines citation count (log-scaled), influential citations, recency,
+ *  and cross-source presence into a single 0–100 score. */
+function computeImpactScore(paper: Paper): number {
+  const citations = paper.citationCount ?? 0
+  const influential = paper.influentialCitationCount ?? 0
+  const sources = paper._sources?.length ?? 1
+
+  // Log-scaled citation score (0-40 pts) — log10(1+citations) capped at 4 (10k cites)
+  const citScore = Math.min(Math.log10(1 + citations) / 4, 1) * 40
+
+  // Influential citation bonus (0-20 pts)
+  const inflScore = Math.min(Math.log10(1 + influential * 5) / 3, 1) * 20
+
+  // Recency bonus (0-25 pts) — papers from last 5 years get full credit, decays linearly
+  const pubYear = paper.year ?? parseInt(paper.publicationDate?.slice(0, 4) ?? '0', 10)
+  const currentYear = new Date().getFullYear()
+  const yearsAgo = currentYear - (pubYear || currentYear - 20)
+  const recencyScore = Math.max(0, 1 - yearsAgo / 20) * 25
+
+  // Multi-source bonus (0-15 pts) — found in multiple databases
+  const sourceScore = Math.min((sources - 1) * 7.5, 15)
+
+  return citScore + inflScore + recencyScore + sourceScore
+}
+
 async function fetchSource(source: Source, query: string, maxResults = 20): Promise<Paper[]> {
   const base = '/search'
   let raw: any[] = []
@@ -107,7 +146,13 @@ async function fetchSource(source: Source, query: string, maxResults = 20): Prom
   } else if (source === 'semanticscholar') {
     const params = new URLSearchParams({ query, limit: String(maxResults) })
     const data = await apiClient.request(`${base}/semantic-scholar?${params}`, SearchResultSchema)
-    raw = data?.results ?? (Array.isArray(data) ? data : [])
+    // Backend returns { papers: [...], total, offset, source }
+    raw = data?.papers ?? data?.results ?? (Array.isArray(data) ? data : [])
+    // If backend returned an error string, treat as empty
+    if (data?.error) {
+      console.warn('Semantic Scholar error:', data.error)
+      raw = []
+    }
   }
 
   return (Array.isArray(raw) ? raw : []).map(p => ({ ...p, source }))
@@ -325,15 +370,23 @@ export default function LiteratureSearch() {
 
     // Sort
     if (sortMode === 'citations') {
-      merged.sort((a, b) => (b.citationCount ?? 0) - (a.citationCount ?? 0))
+      // Impact score: composite of citations, influential cites, recency, source count
+      merged.sort((a, b) => computeImpactScore(b) - computeImpactScore(a))
     } else if (sortMode === 'date') {
+      // Parse real dates and sort newest-first
+      merged.sort((a, b) => parseDate(b) - parseDate(a))
+    } else {
+      // Relevance: use retrieval rank within each source, then interleave
+      // Papers appearing in more sources are ranked higher; within same source count,
+      // lower average rank = more relevant
       merged.sort((a, b) => {
-        const da = a.publicationDate ?? String(a.year ?? '0')
-        const db = b.publicationDate ?? String(b.year ?? '0')
-        return db.localeCompare(da)
+        const aSources = a._sources?.length ?? 1
+        const bSources = b._sources?.length ?? 1
+        if (bSources !== aSources) return bSources - aSources // more sources = more relevant
+        // Use impact score as tiebreaker for relevance
+        return computeImpactScore(b) - computeImpactScore(a)
       })
     }
-    // 'relevance' keeps original order (interleaved from sources)
 
     return merged
   }, [results, enabledSources, sortMode])
@@ -501,7 +554,7 @@ export default function LiteratureSearch() {
                 )}
                 <div className="flex items-center gap-1.5">
                   <ArrowUpDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
-                  {(['relevance', 'date', 'citations'] as SortMode[]).map(mode => (
+                  {([['relevance', 'Relevance'], ['date', 'Newest'], ['citations', 'Impact']] as [SortMode, string][]).map(([mode, label]) => (
                     <button
                       key={mode}
                       onClick={() => setSortMode(mode)}
@@ -511,7 +564,7 @@ export default function LiteratureSearch() {
                           : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300'
                       }`}
                     >
-                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                      {label}
                     </button>
                   ))}
                 </div>

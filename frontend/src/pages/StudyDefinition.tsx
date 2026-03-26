@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react'
-import { FlaskConical, Lock, Eye, ChevronRight, AlertCircle, CheckCircle2, Info, FileText, GitCompare, Calculator, Loader2, Brain } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { FlaskConical, Lock, Eye, ChevronRight, AlertCircle, CheckCircle2, Info, FileText, GitCompare, Calculator, Loader2, Brain, Upload, X, Plus } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
-import { apiClient } from '../services/apiClient'
 import LiteratureEvidence from '@/components/ui/LiteratureEvidence'
 import ShowYourWork from '@/components/ui/ShowYourWork'
 
@@ -12,55 +11,341 @@ interface Props {
   reviewerMode: boolean
 }
 
+// ─── Endpoint Options ──────────────────────────────────────────────────────────
 const ENDPOINT_OPTIONS = [
-  'All-cause hospitalization',
-  'Major adverse cardiovascular event (MACE)',
-  'Cognitive decline composite',
-  'Functional independence (ADL score)',
-  'Disease progression (imaging)',
+  // Survival / Mortality
   'All-cause mortality',
+  'Overall survival (OS)',
+  'Progression-free survival (PFS)',
+  'Disease-free survival (DFS)',
+  'Event-free survival (EFS)',
+  'Relapse-free survival (RFS)',
+  'Time to death',
+  // Cardiovascular
+  'Major adverse cardiovascular event (MACE)',
+  'All-cause hospitalization',
+  'Cardiovascular death',
+  'Heart failure hospitalization',
+  'Myocardial infarction',
+  'Stroke',
+  'Time to first cardiovascular event',
+  // Oncology
+  'Objective response rate (ORR)',
+  'Complete response rate (CR)',
+  'Partial response rate (PR)',
+  'Duration of response (DOR)',
+  'Time to progression (TTP)',
+  'Disease control rate (DCR)',
+  'Minimal residual disease (MRD) negativity',
+  'Pathologic complete response (pCR)',
+  // Neurological / Cognitive
+  'Cognitive decline composite',
+  'Change in MMSE score',
+  'Change in ADAS-Cog score',
+  'Disability progression (EDSS)',
+  'Annualized relapse rate',
+  // Respiratory
+  'Change in FEV1',
+  'Pulmonary exacerbation rate',
+  'Six-minute walk distance (6MWD)',
+  // Renal
+  'Change in eGFR',
+  'Time to kidney failure',
+  'Composite renal endpoint',
+  // Metabolic / Endocrine
+  'Change in HbA1c',
+  'Fasting plasma glucose',
+  'Body weight change',
+  // Functional / Quality of life
+  'Functional independence (ADL score)',
+  'Change in quality of life (QoL)',
+  'Patient-reported outcome (PRO)',
+  'Pain reduction (VAS/NRS)',
+  // Imaging / Biomarkers
+  'Disease progression (imaging)',
+  'Change in biomarker level',
+  'Radiographic response',
+  // Safety
+  'Incidence of treatment-emergent adverse events (TEAEs)',
+  'Serious adverse event rate',
+  'Dose-limiting toxicity (DLT)',
+  // Infectious disease
+  'Viral load reduction',
+  'Sustained virologic response (SVR)',
+  'Time to clinical improvement',
+  // Hematology
+  'Transfusion independence',
+  'Hemoglobin response',
+  // Other
+  'Composite primary endpoint',
+  'Time to treatment failure',
+  'Custom endpoint',
 ]
 
+// ─── SAP Logic: Endpoint Classification ────────────────────────────────────────
+type EndpointType = 'time-to-event' | 'binary' | 'continuous' | 'rate' | 'composite'
+
+function classifyEndpoint(ep: string): EndpointType {
+  const lower = ep.toLowerCase()
+  // Time-to-event
+  if (/\b(survival|time to|duration of|event-free|relapse-free|disease-free|progression-free|time-to)\b/i.test(lower)) return 'time-to-event'
+  if (/\b(mortality|death|hospitalization|mace|kidney failure|treatment failure)\b/i.test(lower)) return 'time-to-event'
+  // Rate endpoints
+  if (/\b(rate|annualized|exacerbation rate|relapse rate)\b/i.test(lower)) return 'rate'
+  // Binary
+  if (/\b(response rate|ORR|CR\b|PR\b|DCR|SVR|pCR|MRD|negativity|independence|transfusion|DLT)\b/i.test(lower)) return 'binary'
+  // Continuous
+  if (/\b(change in|reduction|fev1|egfr|hba1c|mmse|adas|edss|walk distance|body weight|glucose|biomarker|quality of life|QoL|PRO|pain|VAS|NRS|ADL)\b/i.test(lower)) return 'continuous'
+  // Composite
+  if (/\b(composite)\b/i.test(lower)) return 'composite'
+  // Imaging
+  if (/\b(imaging|radiographic)\b/i.test(lower)) return 'binary'
+  // Safety
+  if (/\b(adverse event|TEAE|serious adverse)\b/i.test(lower)) return 'rate'
+  return 'time-to-event' // default
+}
+
+// ─── SAP Logic: Valid Analysis Methods by Endpoint Type ────────────────────────
+const ANALYSIS_METHODS: Record<EndpointType, { value: string; label: string }[]> = {
+  'time-to-event': [
+    { value: 'cox_ph', label: 'Cox Proportional Hazards' },
+    { value: 'km', label: 'Kaplan-Meier / Log-rank' },
+    { value: 'aft', label: 'Accelerated Failure Time (AFT)' },
+    { value: 'rmst', label: 'Restricted Mean Survival Time (RMST)' },
+    { value: 'fine_gray', label: 'Fine-Gray Competing Risks' },
+  ],
+  'binary': [
+    { value: 'logistic', label: 'Logistic Regression' },
+    { value: 'modified_poisson', label: 'Modified Poisson (Risk Ratio)' },
+    { value: 'cmh', label: 'Cochran-Mantel-Haenszel' },
+    { value: 'exact', label: "Fisher's Exact / Chi-square" },
+    { value: 'gee_binomial', label: 'GEE (Binomial)' },
+  ],
+  'continuous': [
+    { value: 'ancova', label: 'ANCOVA' },
+    { value: 'mmrm', label: 'Mixed Model for Repeated Measures (MMRM)' },
+    { value: 'lmm', label: 'Linear Mixed Effects Model' },
+    { value: 'rank', label: 'Wilcoxon Rank-Sum / Mann-Whitney' },
+    { value: 'gee_gaussian', label: 'GEE (Gaussian)' },
+  ],
+  'rate': [
+    { value: 'neg_binom', label: 'Negative Binomial Regression' },
+    { value: 'poisson', label: 'Poisson Regression' },
+    { value: 'quasi_poisson', label: 'Quasi-Poisson Regression' },
+    { value: 'zero_inflated', label: 'Zero-Inflated Model' },
+  ],
+  'composite': [
+    { value: 'cox_ph', label: 'Cox PH (Time to First Component)' },
+    { value: 'logistic', label: 'Logistic Regression (Any Component)' },
+    { value: 'win_ratio', label: 'Win Ratio / Finkelstein-Schoenfeld' },
+    { value: 'gee_binomial', label: 'GEE (Binomial)' },
+  ],
+}
+
+// ─── SAP Logic: Weighting Methods ──────────────────────────────────────────────
+const WEIGHTING_METHODS = [
+  { value: 'iptw', label: 'IPTW (Inverse Probability of Treatment Weighting)' },
+  { value: 'iptw_stabilized', label: 'IPTW — Stabilized Weights' },
+  { value: 'overlap', label: 'Overlap Weights (ATO)' },
+  { value: 'matching', label: 'Propensity Score Matching' },
+  { value: 'stratification', label: 'PS Stratification (Subclassification)' },
+  { value: 'entropy', label: 'Entropy Balancing' },
+  { value: 'none', label: 'No Weighting (Regression Adjustment Only)' },
+]
+
+// ─── SAP Logic: Variance Estimators ────────────────────────────────────────────
+const VARIANCE_ESTIMATORS = [
+  { value: 'robust', label: 'Robust (Sandwich) SE' },
+  { value: 'bootstrap', label: 'Bootstrap (Non-parametric)' },
+  { value: 'model_based', label: 'Model-Based SE' },
+  { value: 'jackknife', label: 'Jackknife' },
+]
+
+// ─── SAP Logic: PS Trimming Options ────────────────────────────────────────────
+const TRIMMING_OPTIONS = [
+  { value: 'none', label: 'No Trimming' },
+  { value: '1_99', label: '1st – 99th Percentile' },
+  { value: '2.5_97.5', label: '2.5th – 97.5th Percentile' },
+  { value: '5_95', label: '5th – 95th Percentile' },
+  { value: 'crump', label: 'Crump Optimal Trimming' },
+  { value: 'custom', label: 'Custom Range' },
+]
+
+// ─── SAP Logic: ICE Strategies (ICH E9(R1)) ───────────────────────────────────
+const ICE_STRATEGY_OPTIONS = [
+  { value: 'treatment_policy', label: 'Treatment Policy', desc: 'Analyze regardless of what happened after the ICE' },
+  { value: 'composite', label: 'Composite', desc: 'ICE is incorporated as part of the endpoint definition' },
+  { value: 'hypothetical', label: 'Hypothetical', desc: 'Estimate what would have happened if the ICE had not occurred' },
+  { value: 'principal_stratum', label: 'Principal Stratum', desc: 'Effect in subgroup defined by post-randomization behavior' },
+  { value: 'while_on_treatment', label: 'While on Treatment', desc: 'Outcome measured only while on assigned treatment' },
+]
+
+const ICE_EVENT_PRESETS = [
+  'Treatment discontinuation',
+  'Death (non-endpoint)',
+  'Switch to rescue therapy',
+  'Use of prohibited concomitant medication',
+  'Loss to follow-up',
+  'Protocol deviation',
+]
+
+// ─── SAP Logic: Missing Data Methods ───────────────────────────────────────────
+const MISSING_DATA_PRIMARY = [
+  { value: 'complete_case', label: 'Complete Case Analysis' },
+  { value: 'mice', label: 'Multiple Imputation (MICE)' },
+  { value: 'mmrm', label: 'MMRM (Implicit Imputation)' },
+  { value: 'locf', label: 'Last Observation Carried Forward (LOCF)' },
+  { value: 'mi_rubin', label: "Multiple Imputation (Rubin's Rules)" },
+]
+
+const MISSING_DATA_SENSITIVITY = [
+  { value: 'mice', label: 'Multiple Imputation (MICE)' },
+  { value: 'tipping_point', label: 'Tipping Point Analysis' },
+  { value: 'pattern_mixture', label: 'Pattern Mixture Model' },
+  { value: 'delta_adjustment', label: 'Delta-Adjustment' },
+  { value: 'worst_case', label: 'Worst-Case Imputation' },
+  { value: 'complete_case', label: 'Complete Case Analysis' },
+]
+
+// ─── SAP Logic: Estimand ↔ Comparator Recommendations ─────────────────────────
 const ESTIMAND_OPTIONS = [
-  { value: 'ATT', label: 'ATT — Average Treatment effect on the Treated', desc: 'Effect among those who received treatment in the real-world setting' },
+  { value: 'ATT', label: 'ATT — Average Treatment Effect on the Treated', desc: 'Effect among those who received treatment in the real-world setting' },
   { value: 'ATE', label: 'ATE — Average Treatment Effect', desc: 'Effect averaged over the entire eligible population' },
   { value: 'ITT', label: 'ITT — Intention to Treat', desc: 'Effect of treatment assignment regardless of adherence' },
-  { value: 'PP',  label: 'PP — Per Protocol', desc: 'Effect among patients who adhered to assigned treatment' },
+  { value: 'PP', label: 'PP — Per Protocol', desc: 'Effect among patients who adhered to assigned treatment' },
 ]
 
-const PHASE_OPTIONS = ['Phase 2', 'Phase 3', 'Phase 4 / Post-Marketing', 'Pre-IND Supportive', 'NDA/BLA Support']
-const REGULATORY_OPTIONS = ['FDA', 'EMA', 'PMDA', 'Health Canada', 'TGA']
+function getEstimandWarning(estimand: string, comparator: string): string | null {
+  if (estimand === 'ITT' && comparator.includes('External'))
+    return 'ITT is designed for randomized designs. With an external comparator, ATT or ATE is typically more appropriate.'
+  if (estimand === 'PP' && comparator.includes('External'))
+    return 'Per-Protocol with external comparator requires careful definition of adherence in both arms. Consider ATT.'
+  if (estimand === 'ATE' && comparator.includes('Synthetic'))
+    return 'ATE with synthetic control requires strong exchangeability assumptions across the full population.'
+  return null
+}
 
+function getMethodWarning(method: string, weighting: string, endpointType: EndpointType): string | null {
+  if (method === 'cox_ph' && weighting === 'none')
+    return 'Cox PH without PS weighting assumes no unmeasured confounding. Consider adding propensity score adjustment.'
+  if (method === 'mmrm' && weighting !== 'none')
+    return 'MMRM with PS weighting is complex. Ensure proper variance estimation accounts for both the PS and repeated measures.'
+  if (endpointType === 'binary' && weighting === 'matching')
+    return 'PS matching with binary outcomes may discard many observations. Weighting (IPTW/overlap) preserves the full sample.'
+  return null
+}
+
+const PHASE_OPTIONS = ['', 'Phase 1', 'Phase 1/2', 'Phase 2', 'Phase 2/3', 'Phase 3', 'Phase 4 / Post-Marketing', 'Pre-IND Supportive', 'NDA/BLA Support']
+const REGULATORY_OPTIONS = ['', 'FDA', 'EMA', 'PMDA', 'Health Canada', 'TGA', 'MHRA', 'ANVISA', 'NMPA']
+
+const COMPARATOR_OPTIONS = [
+  'External comparator (real-world control)',
+  'Active comparator (head-to-head)',
+  'Placebo / untreated',
+  'Synthetic control arm',
+  'Historical control',
+  'Best available therapy',
+]
+
+// ─── Component ─────────────────────────────────────────────────────────────────
 export default function StudyDefinition({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const { data: studyDef, loading, error, saving, save, refetch } = useStudyData(selectedStudy?.id, 'definition')
 
-  const [endpoint, setEndpoint] = useState('All-cause hospitalization')
-  const [estimand, setEstimand] = useState(selectedStudy.estimand)
-  const [phase, setPhase] = useState('Phase 3')
-  const [regBody, setRegBody] = useState('FDA')
-  const [comparator, setComparator] = useState('External comparator (real-world control)')
-  const [indication, setIndication] = useState(selectedStudy.indication)
-  const [rationale, setRationale] = useState(
-    reviewerMode
-      ? 'Randomized controlled trial is ethically infeasible in this rare pediatric population. Real-world external comparator arm constructed using pre-specified causal inference methodology per ICH E9(R1).'
-      : ''
-  )
+  // ── Core study definition fields (empty defaults for new studies) ──
+  const [endpoint, setEndpoint] = useState('')
+  const [customEndpoint, setCustomEndpoint] = useState('')
+  const [secondaryEndpoints, setSecondaryEndpoints] = useState<string[]>([])
+  const [newSecondary, setNewSecondary] = useState('')
+  const [estimand, setEstimand] = useState(selectedStudy.estimand || '')
+  const [phase, setPhase] = useState('')
+  const [regBody, setRegBody] = useState('')
+  const [comparator, setComparator] = useState('')
+  const [indication, setIndication] = useState(selectedStudy.indication || '')
+  const [rationale, setRationale] = useState('')
 
+  // ── SAP specification fields (empty defaults) ──
+  const [primaryModel, setPrimaryModel] = useState('')
+  const [weightingMethod, setWeightingMethod] = useState('')
+  const [varianceEstimator, setVarianceEstimator] = useState('')
+  const [psTrimming, setPsTrimming] = useState('')
+  const [covariates, setCovariates] = useState<string[]>([])
+  const [newCovariate, setNewCovariate] = useState('')
+  const [iceStrategies, setIceStrategies] = useState<{ event: string; strategy: string; desc: string }[]>([])
+  const [newIceEvent, setNewIceEvent] = useState('')
+  const [newIceStrategy, setNewIceStrategy] = useState('')
+  const [missingDataPrimary, setMissingDataPrimary] = useState('')
+  const [missingDataSensitivity, setMissingDataSensitivity] = useState('')
+  const [missingThreshold, setMissingThreshold] = useState('5')
+
+  // ── UI state ──
+  const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [showWorkOpen, setShowWorkOpen] = useState(false)
+  const [activeSpecTab, setActiveSpecTab] = useState<'spec' | 'model' | 'diff'>('spec')
+
+  // ── Document upload state ──
+  const [uploadFile, setUploadFile] = useState<File | null>(null)
+  const [uploadLoading, setUploadLoading] = useState(false)
+  const [prefillResult, setPrefillResult] = useState<Record<string, any> | null>(null)
+  const [prefillAccepted, setPrefillAccepted] = useState<Set<string>>(new Set())
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // ── Derived SAP values ──
+  const effectiveEndpoint = endpoint === 'Custom endpoint' && customEndpoint.trim() ? customEndpoint.trim() : endpoint
+  const endpointType = useMemo(() => classifyEndpoint(effectiveEndpoint), [effectiveEndpoint])
+  const validMethods = useMemo(() => ANALYSIS_METHODS[endpointType] || [], [endpointType])
+  const estimandWarning = useMemo(() => getEstimandWarning(estimand, comparator), [estimand, comparator])
+  const methodWarning = useMemo(() => getMethodWarning(primaryModel, weightingMethod, endpointType), [primaryModel, weightingMethod, endpointType])
+
+  // When endpoint type changes, check if current method is still valid
+  useEffect(() => {
+    if (primaryModel && validMethods.length > 0 && !validMethods.find(m => m.value === primaryModel)) {
+      setPrimaryModel('')
+    }
+  }, [endpointType])
+
+  // ── Load saved data ──
   useEffect(() => {
     if (studyDef) {
-      setEndpoint(studyDef.endpoint || 'All-cause hospitalization')
-      setEstimand(studyDef.estimand || selectedStudy.estimand)
-      setPhase(studyDef.phase || 'Phase 3')
-      setRegBody(studyDef.regBody || 'FDA')
-      setComparator(studyDef.comparator || 'External comparator (real-world control)')
-      setIndication(studyDef.indication || selectedStudy.indication)
+      const savedEndpoint = studyDef.endpoint || ''
+      if (!savedEndpoint || ENDPOINT_OPTIONS.includes(savedEndpoint)) {
+        setEndpoint(savedEndpoint)
+        setCustomEndpoint('')
+      } else {
+        setEndpoint('Custom endpoint')
+        setCustomEndpoint(savedEndpoint)
+      }
+      setSecondaryEndpoints(studyDef.secondaryEndpoints || [])
+      setEstimand(studyDef.estimand || selectedStudy.estimand || '')
+      setPhase(studyDef.phase || '')
+      setRegBody(studyDef.regBody || '')
+      setComparator(studyDef.comparator || '')
+      setIndication(studyDef.indication || selectedStudy.indication || '')
       setRationale(studyDef.rationale || '')
+      // SAP fields
+      setPrimaryModel(studyDef.primaryModel || '')
+      setWeightingMethod(studyDef.weightingMethod || '')
+      setVarianceEstimator(studyDef.varianceEstimator || '')
+      setPsTrimming(studyDef.psTrimming || '')
+      setCovariates(studyDef.covariates || [])
+      setIceStrategies(studyDef.iceStrategies || [])
+      setMissingDataPrimary(studyDef.missingDataPrimary || '')
+      setMissingDataSensitivity(studyDef.missingDataSensitivity || '')
+      setMissingThreshold(studyDef.missingThreshold || '5')
     }
   }, [studyDef])
 
+  // ── Save ──
   const handleSave = async () => {
     try {
-      await save({ endpoint, estimand, phase, regBody, comparator, indication, rationale })
+      await save({
+        endpoint: effectiveEndpoint,
+        secondaryEndpoints,
+        estimand, phase, regBody, comparator, indication, rationale,
+        // SAP fields
+        primaryModel, weightingMethod, varianceEstimator, psTrimming,
+        covariates, iceStrategies,
+        missingDataPrimary, missingDataSensitivity, missingThreshold,
+      })
       setSaveToast({ message: 'Definition saved successfully', type: 'success' })
       setTimeout(() => setSaveToast(null), 3000)
     } catch {
@@ -69,16 +354,87 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
     }
   }
 
-  const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  // ── Document upload → prefill ──
+  const handleDocumentUpload = async () => {
+    if (!uploadFile) return
+    setUploadLoading(true)
+    setPrefillResult(null)
+    setPrefillAccepted(new Set())
+    try {
+      const formData = new FormData()
+      formData.append('file', uploadFile)
+      const resp = await fetch(`/api/projects/${selectedStudy.id}/study/parse-document`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('afarensis_token') || 'dev-token'}`,
+        },
+      })
+      if (!resp.ok) throw new Error('Failed to parse document')
+      const result = await resp.json()
+      setPrefillResult(result.extracted_fields || {})
+    } catch (e: any) {
+      setSaveToast({ message: `Document parsing failed: ${e.message}`, type: 'error' })
+      setTimeout(() => setSaveToast(null), 5000)
+    } finally {
+      setUploadLoading(false)
+    }
+  }
 
-  const [biogptLoading, setBiogptLoading] = useState(false)
-  const [biogptResult, setBiogptResult] = useState<string | null>(null)
-
-  const [showWorkOpen, setShowWorkOpen] = useState(false)
-  const [activeSpecTab, setActiveSpecTab] = useState<'spec' | 'model' | 'diff'>('spec')
+  const applyPrefill = () => {
+    if (!prefillResult) return
+    if (prefillAccepted.has('indication') && prefillResult.indication) setIndication(prefillResult.indication)
+    if (prefillAccepted.has('phase') && prefillResult.phase) setPhase(prefillResult.phase)
+    if (prefillAccepted.has('regBody') && prefillResult.regBody) setRegBody(prefillResult.regBody)
+    if (prefillAccepted.has('endpoint') && prefillResult.endpoint) {
+      if (ENDPOINT_OPTIONS.includes(prefillResult.endpoint)) {
+        setEndpoint(prefillResult.endpoint)
+        setCustomEndpoint('')
+      } else {
+        setEndpoint('Custom endpoint')
+        setCustomEndpoint(prefillResult.endpoint)
+      }
+    }
+    if (prefillAccepted.has('estimand') && prefillResult.estimand) setEstimand(prefillResult.estimand)
+    if (prefillAccepted.has('comparator') && prefillResult.comparator) setComparator(prefillResult.comparator)
+    if (prefillAccepted.has('primaryModel') && prefillResult.primaryModel) setPrimaryModel(prefillResult.primaryModel)
+    if (prefillAccepted.has('weightingMethod') && prefillResult.weightingMethod) setWeightingMethod(prefillResult.weightingMethod)
+    if (prefillAccepted.has('covariates') && prefillResult.covariates?.length) setCovariates(prefillResult.covariates)
+    if (prefillAccepted.has('rationale') && prefillResult.rationale) setRationale(prefillResult.rationale)
+    setPrefillResult(null)
+    setUploadFile(null)
+    setSaveToast({ message: `Applied ${prefillAccepted.size} extracted field(s)`, type: 'success' })
+    setTimeout(() => setSaveToast(null), 3000)
+  }
 
   const locked = protocolLocked || studyDef?.protocol_locked
   const selectedEstimand = ESTIMAND_OPTIONS.find(e => e.value === estimand)
+
+  // ── Field label mapping for prefill display ──
+  const FIELD_LABELS: Record<string, string> = {
+    indication: 'Indication',
+    phase: 'Regulatory Phase',
+    regBody: 'Target Regulatory Agency',
+    endpoint: 'Primary Endpoint',
+    estimand: 'Estimand',
+    comparator: 'Comparator Arm',
+    primaryModel: 'Primary Analysis Method',
+    weightingMethod: 'Weighting Method',
+    covariates: 'Pre-specified Covariates',
+    rationale: 'Scientific Rationale',
+  }
+
+  // Helper for model/method label lookup
+  const getMethodLabel = (val: string) => {
+    for (const methods of Object.values(ANALYSIS_METHODS)) {
+      const m = methods.find(m => m.value === val)
+      if (m) return m.label
+    }
+    return val
+  }
+  const getWeightingLabel = (val: string) => WEIGHTING_METHODS.find(w => w.value === val)?.label || val
+  const getVarianceLabel = (val: string) => VARIANCE_ESTIMATORS.find(v => v.value === val)?.label || val
+  const getTrimmingLabel = (val: string) => TRIMMING_OPTIONS.find(t => t.value === val)?.label || val
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] text-gray-900 dark:text-white">
@@ -96,7 +452,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Study Definition</h1>
-              <p className="text-gray-500 text-xs mt-0.5">Protocol · indication · primary endpoint · estimand</p>
+              <p className="text-gray-500 text-xs mt-0.5">Protocol &middot; indication &middot; primary endpoint &middot; estimand &middot; SAP</p>
             </div>
           </div>
           <div className="text-right">
@@ -130,6 +486,120 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
 
       <div className="px-8 py-6 space-y-6 max-w-4xl">
 
+        {/* ── Document Upload → Prefill (top of page) ── */}
+        {!locked && !reviewerMode && (
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/10 dark:to-blue-900/10 border border-purple-200 dark:border-purple-700/30 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-2">
+              <Upload className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Upload Document to Prefill Study Definition</h3>
+              <span className="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded-full font-medium">Optional</span>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+              Upload a protocol, SAP, or publication (PDF, DOCX, TXT). The system will extract fields it can confidently identify. You choose which extracted values to accept.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.docx,.doc,.txt"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) setUploadFile(f)
+                }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                {uploadFile ? uploadFile.name : 'Choose File...'}
+              </button>
+              {uploadFile && (
+                <>
+                  <button
+                    onClick={handleDocumentUpload}
+                    disabled={uploadLoading}
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    {uploadLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
+                    {uploadLoading ? 'Parsing...' : 'Extract Fields'}
+                  </button>
+                  <button onClick={() => { setUploadFile(null); setPrefillResult(null) }} className="text-gray-400 hover:text-red-400">
+                    <X className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* ── Prefill results (user picks which to accept) ── */}
+            {prefillResult && Object.keys(prefillResult).length > 0 && (
+              <div className="mt-4 border-t border-purple-200 dark:border-purple-700/30 pt-4 space-y-2">
+                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Extracted Fields — select which to apply:</p>
+                {Object.entries(prefillResult).map(([key, value]) => {
+                  if (!value || !FIELD_LABELS[key]) return null
+                  const displayValue = Array.isArray(value) ? (value as string[]).join(', ') : String(value)
+                  const isAccepted = prefillAccepted.has(key)
+                  return (
+                    <label key={key} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                      isAccepted
+                        ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-600/40'
+                        : 'bg-white dark:bg-white/3 border-gray-200 dark:border-white/8 hover:bg-gray-50 dark:hover:bg-white/5'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={isAccepted}
+                        onChange={() => {
+                          const next = new Set(prefillAccepted)
+                          if (isAccepted) next.delete(key)
+                          else next.add(key)
+                          setPrefillAccepted(next)
+                        }}
+                        className="mt-0.5 accent-purple-600"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">{FIELD_LABELS[key]}</p>
+                        <p className="text-sm text-gray-900 dark:text-white truncate">{displayValue}</p>
+                      </div>
+                    </label>
+                  )
+                })}
+                {Object.keys(prefillResult).filter(k => FIELD_LABELS[k] && prefillResult[k]).length === 0 && (
+                  <p className="text-xs text-gray-400 italic">No fields could be confidently extracted from this document.</p>
+                )}
+                <div className="flex gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      const all = new Set(Object.keys(prefillResult).filter(k => FIELD_LABELS[k] && prefillResult[k]))
+                      setPrefillAccepted(all)
+                    }}
+                    className="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={() => setPrefillAccepted(new Set())}
+                    className="text-xs text-gray-400 hover:underline font-medium"
+                  >
+                    Clear
+                  </button>
+                  <div className="flex-1" />
+                  <button
+                    onClick={applyPrefill}
+                    disabled={prefillAccepted.size === 0}
+                    className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition-colors"
+                  >
+                    Apply {prefillAccepted.size} Field{prefillAccepted.size !== 1 ? 's' : ''}
+                  </button>
+                </div>
+              </div>
+            )}
+            {prefillResult && Object.keys(prefillResult).length === 0 && (
+              <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">No fields could be confidently extracted. You may fill in all fields manually below.</p>
+            )}
+          </div>
+        )}
+
         {/* Reviewer banner */}
         {reviewerMode && (
           <div className="flex items-start gap-3 p-4 bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl">
@@ -154,8 +624,8 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
             {[
               { label: 'Protocol', value: selectedStudy.protocol },
               { label: 'Status', value: selectedStudy.status },
-              { label: 'Regulatory Phase', value: phase },
-              { label: 'Target Agency', value: regBody },
+              { label: 'Regulatory Phase', value: phase || '—' },
+              { label: 'Target Agency', value: regBody || '—' },
             ].map(({ label, value }) => (
               <div key={label}>
                 <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold mb-1">{label}</p>
@@ -169,10 +639,10 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
         <section>
           <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Indication</label>
           {locked || reviewerMode ? (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">{indication}</div>
+            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">{indication || <span className="text-gray-400 italic">Not specified</span>}</div>
           ) : (
             <input
-              className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-600 focus:outline-none focus:border-[#2563EB]/60 focus:bg-gray-100 dark:focus:bg-gray-100 dark:bg-white/6 transition-colors"
+              className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
               value={indication}
               onChange={e => setIndication(e.target.value)}
               placeholder="e.g. Type 2 Diabetes with cardiovascular risk"
@@ -182,17 +652,93 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
 
         {/* Primary endpoint */}
         <section>
-          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Primary Endpoint</label>
+          <div className="flex items-center gap-2 mb-2">
+            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Primary Endpoint</label>
+            {effectiveEndpoint && (
+              <span className="text-[10px] px-2 py-0.5 rounded-full border font-medium bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/30 text-blue-600 dark:text-blue-300">
+                {endpointType}
+              </span>
+            )}
+          </div>
           {locked || reviewerMode ? (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">{endpoint}</div>
+            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
+              {effectiveEndpoint || <span className="text-gray-400 italic">Not specified</span>}
+            </div>
           ) : (
-            <select
-              className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
-              value={endpoint}
-              onChange={e => setEndpoint(e.target.value)}
-            >
-              {ENDPOINT_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o}</option>)}
-            </select>
+            <>
+              <select
+                className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                value={endpoint}
+                onChange={e => setEndpoint(e.target.value)}
+              >
+                <option value="" className="bg-white dark:bg-[#1a1a1c]">Select primary endpoint...</option>
+                {ENDPOINT_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o}</option>)}
+              </select>
+              {endpoint === 'Custom endpoint' && (
+                <input
+                  type="text"
+                  className="w-full mt-2 bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                  value={customEndpoint}
+                  onChange={e => setCustomEndpoint(e.target.value)}
+                  placeholder="Enter your custom primary endpoint..."
+                />
+              )}
+            </>
+          )}
+        </section>
+
+        {/* Secondary endpoints */}
+        <section>
+          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Secondary Endpoints</label>
+          {secondaryEndpoints.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {secondaryEndpoints.map((ep, i) => (
+                <span key={i} className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-medium px-3 py-1.5 rounded-lg">
+                  {ep}
+                  {!locked && !reviewerMode && (
+                    <button
+                      onClick={() => setSecondaryEndpoints(prev => prev.filter((_, idx) => idx !== i))}
+                      className="text-blue-400 hover:text-red-400 transition-colors ml-1"
+                    >
+                      &times;
+                    </button>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
+          {!locked && !reviewerMode && (
+            <div className="flex gap-2">
+              <select
+                className="flex-1 bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                value={newSecondary}
+                onChange={e => setNewSecondary(e.target.value)}
+              >
+                <option value="">Add a secondary endpoint...</option>
+                {ENDPOINT_OPTIONS.filter(o => o !== endpoint && o !== 'Custom endpoint' && !secondaryEndpoints.includes(o)).map(o => (
+                  <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o}</option>
+                ))}
+                <option value="__custom__" className="bg-white dark:bg-[#1a1a1c]">Custom endpoint...</option>
+              </select>
+              <button
+                onClick={() => {
+                  if (newSecondary === '__custom__') {
+                    const custom = prompt('Enter custom secondary endpoint:')
+                    if (custom?.trim()) setSecondaryEndpoints(prev => [...prev, custom.trim()])
+                  } else if (newSecondary && !secondaryEndpoints.includes(newSecondary)) {
+                    setSecondaryEndpoints(prev => [...prev, newSecondary])
+                  }
+                  setNewSecondary('')
+                }}
+                disabled={!newSecondary}
+                className="px-4 py-2.5 bg-[#2563EB] text-white text-sm font-medium rounded-lg hover:bg-[#1d4ed8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Add
+              </button>
+            </div>
+          )}
+          {secondaryEndpoints.length === 0 && (locked || reviewerMode) && (
+            <div className="text-xs text-gray-400 italic">No secondary endpoints defined</div>
           )}
         </section>
 
@@ -211,7 +757,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
                   estimand === opt.value
                     ? 'bg-[#2563EB]/15 border-[#2563EB]/40 text-gray-900 dark:text-white'
-                    : 'bg-gray-50 dark:bg-white/3 border-gray-200 dark:border-white/8 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-white/5 hover:text-gray-600 dark:text-gray-300'
+                    : 'bg-gray-50 dark:bg-white/3 border-gray-200 dark:border-white/8 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
                 } ${locked || reviewerMode ? 'cursor-default' : 'cursor-pointer'}`}
               >
                 <div className="flex items-center justify-between">
@@ -222,25 +768,27 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
               </button>
             ))}
           </div>
+          {estimandWarning && (
+            <div className="mt-2 flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-700/30 rounded-lg">
+              <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-700 dark:text-amber-300">{estimandWarning}</p>
+            </div>
+          )}
         </section>
 
         {/* Comparator arm */}
         <section>
           <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Comparator Arm</label>
           {locked || reviewerMode ? (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">{comparator}</div>
+            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">{comparator || <span className="text-gray-400 italic">Not specified</span>}</div>
           ) : (
             <select
               className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
               value={comparator}
               onChange={e => setComparator(e.target.value)}
             >
-              {[
-                'External comparator (real-world control)',
-                'Active comparator (head-to-head)',
-                'Placebo / untreated',
-                'Synthetic control arm',
-              ].map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o}</option>)}
+              <option value="" className="bg-white dark:bg-[#1a1a1c]">Select comparator...</option>
+              {COMPARATOR_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o}</option>)}
             </select>
           )}
         </section>
@@ -252,15 +800,15 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
           </label>
           {locked || reviewerMode ? (
             <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
-              {rationale || <span className="text-gray-600 italic">No rationale entered.</span>}
+              {rationale || <span className="text-gray-400 italic">No rationale entered.</span>}
             </div>
           ) : (
             <textarea
               rows={5}
-              className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-600 focus:outline-none focus:border-[#2563EB]/60 focus:bg-gray-100 dark:focus:bg-gray-100 dark:bg-white/6 transition-colors resize-none"
+              className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors resize-none"
               value={rationale}
               onChange={e => setRationale(e.target.value)}
-              placeholder="Explain why RWE is appropriate, why RCT is infeasible or unethical, and how this design aligns with ICH E9(R1)…"
+              placeholder="Explain why RWE is appropriate, why RCT is infeasible or unethical, and how this design aligns with ICH E9(R1)..."
             />
           )}
         </section>
@@ -274,7 +822,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
             </div>
             {locked && (
               <span className="flex items-center gap-1.5 text-[10px] text-emerald-400 bg-emerald-900/30 border border-emerald-700/40 px-2.5 py-1 rounded-full font-bold">
-                <CheckCircle2 className="h-3 w-3" /> SAP v2.1 Locked
+                <CheckCircle2 className="h-3 w-3" /> SAP Locked
               </span>
             )}
           </div>
@@ -292,7 +840,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   activeSpecTab === tab.key
                     ? 'bg-[#2563EB]/15 text-[#2563EB] dark:text-[#60a5fa] border border-[#2563EB]/30'
-                    : 'text-gray-500 hover:text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-white/5'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
                 }`}
               >
                 {tab.icon} {tab.label}
@@ -300,71 +848,278 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
             ))}
           </div>
 
-          {/* Specification tab */}
+          {/* ── Specification tab (EDITABLE) ── */}
           {activeSpecTab === 'spec' && (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-4">
+            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-5">
+              {/* Primary Model & Weighting */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">Primary Outcome Model</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Cox Proportional Hazards</p>
+                  {locked || reviewerMode ? (
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{getMethodLabel(primaryModel) || '—'}</p>
+                  ) : (
+                    <select
+                      className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                      value={primaryModel}
+                      onChange={e => setPrimaryModel(e.target.value)}
+                    >
+                      <option value="">Select analysis method...</option>
+                      {validMethods.map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  )}
+                  {effectiveEndpoint && !locked && !reviewerMode && (
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Options filtered for <strong>{endpointType}</strong> endpoints
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">Weighting Method</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">IPTW (Stabilized)</p>
+                  {locked || reviewerMode ? (
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{getWeightingLabel(weightingMethod) || '—'}</p>
+                  ) : (
+                    <select
+                      className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                      value={weightingMethod}
+                      onChange={e => setWeightingMethod(e.target.value)}
+                    >
+                      <option value="">Select weighting method...</option>
+                      {WEIGHTING_METHODS.map(w => (
+                        <option key={w.value} value={w.value}>{w.label}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
+              </div>
+
+              {/* Variance & Trimming */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">Variance Estimator</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">Robust (Sandwich) SE</p>
+                  {locked || reviewerMode ? (
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{getVarianceLabel(varianceEstimator) || '—'}</p>
+                  ) : (
+                    <select
+                      className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                      value={varianceEstimator}
+                      onChange={e => setVarianceEstimator(e.target.value)}
+                    >
+                      <option value="">Select variance estimator...</option>
+                      {VARIANCE_ESTIMATORS.map(v => (
+                        <option key={v.value} value={v.value}>{v.label}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">PS Trimming</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">1st–99th percentile</p>
+                  {locked || reviewerMode ? (
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{getTrimmingLabel(psTrimming) || '—'}</p>
+                  ) : (
+                    <select
+                      className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                      value={psTrimming}
+                      onChange={e => setPsTrimming(e.target.value)}
+                    >
+                      <option value="">Select trimming approach...</option>
+                      {TRIMMING_OPTIONS.map(t => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 
+              {/* Method warning */}
+              {methodWarning && (
+                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-700/30 rounded-lg">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700 dark:text-amber-300">{methodWarning}</p>
+                </div>
+              )}
+
+              {/* Covariates */}
               <div>
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Pre-specified Covariates</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {['Age', 'Sex', 'CCI', 'Prior hospitalizations', 'Concomitant meds', 'Insurance type', 'Time since Dx', 'Physician specialty'].map(c => (
-                    <span key={c} className="text-[10px] bg-gray-200/80 dark:bg-white/8 border border-gray-300 dark:border-white/10 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">{c}</span>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {covariates.length === 0 && (locked || reviewerMode) && (
+                    <span className="text-xs text-gray-400 italic">No covariates specified</span>
+                  )}
+                  {covariates.map((c, i) => (
+                    <span key={i} className="inline-flex items-center gap-1 text-[10px] bg-gray-200/80 dark:bg-white/8 border border-gray-300 dark:border-white/10 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">
+                      {c}
+                      {!locked && !reviewerMode && (
+                        <button onClick={() => setCovariates(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-400 ml-0.5">&times;</button>
+                      )}
+                    </span>
                   ))}
                 </div>
+                {!locked && !reviewerMode && (
+                  <div className="flex gap-2">
+                    <input
+                      className="flex-1 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                      value={newCovariate}
+                      onChange={e => setNewCovariate(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && newCovariate.trim()) {
+                          setCovariates(prev => [...prev, newCovariate.trim()])
+                          setNewCovariate('')
+                        }
+                      }}
+                      placeholder="Add covariate (e.g. Age, Sex, CCI)..."
+                    />
+                    <button
+                      onClick={() => {
+                        if (newCovariate.trim()) {
+                          setCovariates(prev => [...prev, newCovariate.trim()])
+                          setNewCovariate('')
+                        }
+                      }}
+                      disabled={!newCovariate.trim()}
+                      className="px-3 py-1.5 bg-[#2563EB] text-white text-xs font-medium rounded-lg hover:bg-[#1d4ed8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
               </div>
 
+              {/* Intercurrent Event Strategies */}
               <div>
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Intercurrent Event Strategies (ICH E9(R1))</p>
-                <div className="space-y-1.5">
-                  {[
-                    { event: 'Treatment discontinuation', strategy: 'Treatment policy', desc: 'Analyze regardless of adherence' },
-                    { event: 'Death (non-endpoint)', strategy: 'Composite', desc: 'Include as component of primary outcome' },
-                    { event: 'Switch to rescue therapy', strategy: 'Hypothetical', desc: 'Censor at switch; sensitivity: treatment policy' },
-                  ].map((ice, i) => (
+                <div className="space-y-1.5 mb-2">
+                  {iceStrategies.length === 0 && (locked || reviewerMode) && (
+                    <span className="text-xs text-gray-400 italic">No ICE strategies specified</span>
+                  )}
+                  {iceStrategies.map((ice, i) => (
                     <div key={i} className="flex items-center gap-3 text-xs bg-gray-200/50 dark:bg-white/3 rounded-lg px-3 py-2">
                       <span className="text-gray-900 dark:text-white font-medium w-40 shrink-0">{ice.event}</span>
                       <span className="text-[#2563EB] dark:text-[#60a5fa] font-semibold w-28 shrink-0">{ice.strategy}</span>
-                      <span className="text-gray-500">{ice.desc}</span>
+                      <span className="text-gray-500 flex-1">{ice.desc}</span>
+                      {!locked && !reviewerMode && (
+                        <button onClick={() => setIceStrategies(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-400 shrink-0">&times;</button>
+                      )}
                     </div>
                   ))}
                 </div>
+                {!locked && !reviewerMode && (
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <select
+                        className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={newIceEvent}
+                        onChange={e => setNewIceEvent(e.target.value)}
+                      >
+                        <option value="">Select intercurrent event...</option>
+                        {ICE_EVENT_PRESETS.filter(e => !iceStrategies.find(s => s.event === e)).map(e => (
+                          <option key={e} value={e}>{e}</option>
+                        ))}
+                        <option value="__custom__">Custom event...</option>
+                      </select>
+                    </div>
+                    <div className="w-44">
+                      <select
+                        className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={newIceStrategy}
+                        onChange={e => setNewIceStrategy(e.target.value)}
+                      >
+                        <option value="">Strategy...</option>
+                        {ICE_STRATEGY_OPTIONS.map(s => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={() => {
+                        let eventName = newIceEvent
+                        if (eventName === '__custom__') {
+                          const custom = prompt('Enter intercurrent event:')
+                          if (!custom?.trim()) return
+                          eventName = custom.trim()
+                        }
+                        if (!eventName || !newIceStrategy) return
+                        const strat = ICE_STRATEGY_OPTIONS.find(s => s.value === newIceStrategy)
+                        setIceStrategies(prev => [...prev, {
+                          event: eventName,
+                          strategy: strat?.label || newIceStrategy,
+                          desc: strat?.desc || '',
+                        }])
+                        setNewIceEvent('')
+                        setNewIceStrategy('')
+                      }}
+                      disabled={!newIceEvent || !newIceStrategy}
+                      className="px-3 py-1.5 bg-[#2563EB] text-white text-xs font-medium rounded-lg hover:bg-[#1d4ed8] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
               </div>
 
+              {/* Missing Data Handling */}
               <div>
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Missing Data Handling</p>
-                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                  <p><strong className="text-gray-900 dark:text-white">Primary:</strong> Complete case analysis with documented missingness thresholds (&lt;5% per covariate)</p>
-                  <p><strong className="text-gray-900 dark:text-white">Sensitivity:</strong> Multiple imputation by chained equations (MICE, m=20) for covariates exceeding 5% missingness</p>
-                </div>
+                {locked || reviewerMode ? (
+                  <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                    <p><strong className="text-gray-900 dark:text-white">Primary:</strong> {MISSING_DATA_PRIMARY.find(m => m.value === missingDataPrimary)?.label || missingDataPrimary || '—'}{missingThreshold ? ` (threshold: <${missingThreshold}% per covariate)` : ''}</p>
+                    <p><strong className="text-gray-900 dark:text-white">Sensitivity:</strong> {MISSING_DATA_SENSITIVITY.find(m => m.value === missingDataSensitivity)?.label || missingDataSensitivity || '—'}</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] text-gray-400 mb-1">Primary Method</p>
+                      <select
+                        className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={missingDataPrimary}
+                        onChange={e => setMissingDataPrimary(e.target.value)}
+                      >
+                        <option value="">Select method...</option>
+                        {MISSING_DATA_PRIMARY.map(m => (
+                          <option key={m.value} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 mb-1">Sensitivity Analysis</p>
+                      <select
+                        className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={missingDataSensitivity}
+                        onChange={e => setMissingDataSensitivity(e.target.value)}
+                      >
+                        <option value="">Select method...</option>
+                        {MISSING_DATA_SENSITIVITY.map(m => (
+                          <option key={m.value} value={m.value}>{m.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 mb-1">Missingness Threshold (%)</p>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        className="w-24 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={missingThreshold}
+                        onChange={e => setMissingThreshold(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          {/* Model Card tab */}
+          {/* ── Model Card tab (derived from spec + study def) ── */}
           {activeSpecTab === 'model' && (
             <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest">Model Card — Primary Analysis</h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border text-amber-600 dark:text-amber-300 bg-amber-900/10 border-amber-600/30">Pre-specified</span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border text-amber-600 dark:text-amber-300 bg-amber-900/10 border-amber-600/30">
+                    {primaryModel ? 'Configured' : 'Not Configured'}
+                  </span>
                 </div>
                 <button
                   onClick={() => setShowWorkOpen(true)}
@@ -373,21 +1128,23 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                   <FlaskConical className="h-3 w-3" /> Full Lineage
                 </button>
               </div>
-              <p className="text-[10px] text-amber-600 dark:text-amber-300 mb-3">
-                This is the pre-specified analysis plan. Actual computed results are available via "Full Lineage" after analysis execution.
-              </p>
+              {!primaryModel && (
+                <p className="text-xs text-amber-600 dark:text-amber-300">
+                  Configure the Specification tab to populate this model card.
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-xs">
                 {[
-                  ['Model Type', 'Cox Proportional Hazards'],
-                  ['Estimand', `${estimand} — ${selectedEstimand?.desc || ''}`],
-                  ['Outcome', 'Time to first hospitalization (days)'],
-                  ['Population', `Adults ≥ 18, confirmed Dx, ${selectedStudy.protocol}`],
-                  ['Weighting', 'IPTW via logistic PS model (stabilized)'],
-                  ['Trimming', '1st & 99th percentile weight truncation'],
-                  ['Variance', 'Robust sandwich standard errors'],
-                  ['Software', 'R 4.3.2 — survival, WeightIt, cobalt'],
-                  ['Random Seed', '20240417'],
-                  ['Run ID', 'Assigned at execution'],
+                  ['Model Type', getMethodLabel(primaryModel) || '—'],
+                  ['Estimand', estimand ? `${estimand} — ${selectedEstimand?.desc || ''}` : '—'],
+                  ['Outcome', effectiveEndpoint || '—'],
+                  ['Endpoint Type', effectiveEndpoint ? endpointType : '—'],
+                  ['Population', indication ? `Adults, confirmed Dx, ${selectedStudy.protocol}` : '—'],
+                  ['Weighting', getWeightingLabel(weightingMethod) || '—'],
+                  ['Trimming', getTrimmingLabel(psTrimming) || '—'],
+                  ['Variance', getVarianceLabel(varianceEstimator) || '—'],
+                  ['Covariates', covariates.length > 0 ? `${covariates.length} covariates` : '—'],
+                  ['Missing Data', MISSING_DATA_PRIMARY.find(m => m.value === missingDataPrimary)?.label || '—'],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <p className="text-gray-500 font-semibold">{label}</p>
@@ -395,55 +1152,99 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                   </div>
                 ))}
               </div>
-              <div className="border-t border-gray-300 dark:border-white/8 pt-3">
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">Formula (Plain English)</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  Hazard of first hospitalization is modeled as a function of treatment assignment, adjusted for age, sex, Charlson Comorbidity Index, prior hospitalizations, concomitant medications, insurance type, time since diagnosis, and treating physician specialty — with IPTW weighting to balance treatment groups on observed covariates.
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">Formula (Statistical Notation)</p>
-                <div className="bg-gray-200/60 dark:bg-black/30 rounded-lg px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300 overflow-x-auto">
-                  h(t|X) = h₀(t) · exp(β₁·Treatment + β₂·Age + β₃·Sex + β₄·CCI + β₅·PriorHosp + β₆·ConMeds + β₇·Insurance + β₈·TimeDx + β₉·PhysSpec)
+
+              {covariates.length > 0 && (
+                <div className="border-t border-gray-300 dark:border-white/8 pt-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Covariate Set</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {covariates.map(c => (
+                      <span key={c} className="text-[10px] bg-gray-200/80 dark:bg-white/8 border border-gray-300 dark:border-white/10 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">{c}</span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {primaryModel && covariates.length > 0 && (
+                <div className="border-t border-gray-300 dark:border-white/8 pt-3">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">Formula (Statistical Notation)</p>
+                  <div className="bg-gray-200/60 dark:bg-black/30 rounded-lg px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300 overflow-x-auto">
+                    {(() => {
+                      const terms = covariates.map((c, i) => `\u03B2${String.fromCharCode(0x2081 + i)}\u00B7${c.replace(/\s+/g, '')}`)
+                      const termsOffset = covariates.map((c, i) => `\u03B2${String.fromCharCode(0x2082 + i)}\u00B7${c.replace(/\s+/g, '')}`)
+                      if (primaryModel === 'cox_ph' || primaryModel === 'fine_gray')
+                        return `h(t|X) = h\u2080(t) \u00B7 exp(${terms.join(' + ')})`
+                      if (primaryModel === 'logistic')
+                        return `logit(P(Y=1|X)) = \u03B2\u2080 + ${terms.join(' + ')}`
+                      if (primaryModel === 'ancova' || primaryModel === 'mmrm' || primaryModel === 'lmm')
+                        return `E[Y|X] = \u03B2\u2080 + \u03B2\u2081\u00B7Treatment + ${termsOffset.join(' + ')}`
+                      if (primaryModel === 'neg_binom' || primaryModel === 'poisson')
+                        return `log(E[Y|X]) = \u03B2\u2080 + \u03B2\u2081\u00B7Treatment + ${termsOffset.join(' + ')} + log(t)`
+                      return `f(Y|X) = g(\u03B2\u2080 + ${terms.join(' + ')})`
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Spec vs Execution diff tab */}
+          {/* ── Spec vs Execution diff tab ── */}
           {activeSpecTab === 'diff' && (
             <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-3">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest">Specification vs. Execution Comparison</h3>
-                <span className="text-[10px] text-emerald-400 font-bold">3/3 Consistent</span>
               </div>
               <p className="text-[10px] text-gray-500 mb-3">Automated comparison of pre-specified SAP parameters against actual execution metadata. Any deviation is flagged for review.</p>
-              {[
-                { param: 'Primary Model', specified: 'Cox Proportional Hazards', executed: 'Cox Proportional Hazards', match: true },
-                { param: 'Weighting Method', specified: 'IPTW (Stabilized)', executed: 'IPTW (Stabilized)', match: true },
-                { param: 'Covariate Set', specified: '8 covariates (per SAP v2.1)', executed: '8 covariates (identical to SAP)', match: true },
-              ].map((row, i) => (
-                <div key={i} className="grid grid-cols-4 gap-3 items-center text-xs bg-gray-200/50 dark:bg-white/3 rounded-lg px-4 py-2.5">
-                  <span className="text-gray-900 dark:text-white font-medium">{row.param}</span>
-                  <span className="text-gray-500">{row.specified}</span>
-                  <span className="text-gray-500">{row.executed}</span>
-                  <span className="flex items-center gap-1">
-                    {row.match
-                      ? <><CheckCircle2 className="h-3 w-3 text-emerald-400" /><span className="text-emerald-400 font-semibold">Match</span></>
-                      : <><AlertCircle className="h-3 w-3 text-red-400" /><span className="text-red-400 font-semibold">Deviation</span></>
-                    }
-                  </span>
-                </div>
-              ))}
-              <div className="flex items-center gap-3 mt-2 pt-3 border-t border-gray-300 dark:border-white/8">
-                <div className="text-[10px] text-gray-600 uppercase tracking-widest font-bold">Column Key:</div>
-                <div className="flex gap-4 text-[10px] text-gray-500">
-                  <span>Parameter</span>
-                  <span>SAP Specification</span>
-                  <span>Execution Record</span>
-                  <span>Status</span>
-                </div>
-              </div>
+              {(() => {
+                const specRows = [
+                  { param: 'Primary Model', specified: getMethodLabel(primaryModel) || '—', executed: studyDef?.executionResults?.primaryModel || 'Not yet executed' },
+                  { param: 'Weighting Method', specified: getWeightingLabel(weightingMethod) || '—', executed: studyDef?.executionResults?.weightingMethod || 'Not yet executed' },
+                  { param: 'Covariate Set', specified: covariates.length > 0 ? `${covariates.length} covariates` : '—', executed: studyDef?.executionResults?.covariateCount ? `${studyDef.executionResults.covariateCount} covariates` : 'Not yet executed' },
+                  { param: 'Variance Estimator', specified: getVarianceLabel(varianceEstimator) || '—', executed: studyDef?.executionResults?.varianceEstimator || 'Not yet executed' },
+                  { param: 'PS Trimming', specified: getTrimmingLabel(psTrimming) || '—', executed: studyDef?.executionResults?.psTrimming || 'Not yet executed' },
+                ]
+                const executed = specRows.filter(r => r.executed !== 'Not yet executed')
+                const matches = executed.filter(r => r.specified === r.executed || r.specified === '—')
+                return (
+                  <>
+                    {executed.length > 0 && (
+                      <div className="text-right mb-2">
+                        <span className={`text-[10px] font-bold ${matches.length === executed.length ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {matches.length}/{executed.length} Consistent
+                        </span>
+                      </div>
+                    )}
+                    {specRows.map((row, i) => {
+                      const isExecuted = row.executed !== 'Not yet executed'
+                      const isMatch = !isExecuted || row.specified === row.executed || row.specified === '—'
+                      return (
+                        <div key={i} className="grid grid-cols-4 gap-3 items-center text-xs bg-gray-200/50 dark:bg-white/3 rounded-lg px-4 py-2.5">
+                          <span className="text-gray-900 dark:text-white font-medium">{row.param}</span>
+                          <span className="text-gray-500">{row.specified}</span>
+                          <span className={`${isExecuted ? 'text-gray-500' : 'text-gray-400 italic'}`}>{row.executed}</span>
+                          <span className="flex items-center gap-1">
+                            {!isExecuted ? (
+                              <span className="text-gray-400 text-[10px]">Pending</span>
+                            ) : isMatch ? (
+                              <><CheckCircle2 className="h-3 w-3 text-emerald-400" /><span className="text-emerald-400 font-semibold">Match</span></>
+                            ) : (
+                              <><AlertCircle className="h-3 w-3 text-red-400" /><span className="text-red-400 font-semibold">Deviation</span></>
+                            )}
+                          </span>
+                        </div>
+                      )
+                    })}
+                    <div className="flex items-center gap-3 mt-2 pt-3 border-t border-gray-300 dark:border-white/8">
+                      <div className="text-[10px] text-gray-600 uppercase tracking-widest font-bold">Column Key:</div>
+                      <div className="flex gap-4 text-[10px] text-gray-500">
+                        <span>Parameter</span>
+                        <span>SAP Specification</span>
+                        <span>Execution Record</span>
+                        <span>Status</span>
+                      </div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           )}
         </section>
@@ -457,7 +1258,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                 value={phase} onChange={e => setPhase(e.target.value)}
               >
-                {PHASE_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o}</option>)}
+                {PHASE_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o || 'Select phase...'}</option>)}
               </select>
             </section>
             <section>
@@ -466,7 +1267,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                 value={regBody} onChange={e => setRegBody(e.target.value)}
               >
-                {REGULATORY_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o}</option>)}
+                {REGULATORY_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o || 'Select agency...'}</option>)}
               </select>
             </section>
           </div>
@@ -486,43 +1287,6 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
           </div>
         )}
 
-        {/* BioGPT Insight Panel */}
-        <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 mt-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Brain className="h-4 w-4 text-pink-600" />
-            <h4 className="text-sm font-semibold text-gray-900 dark:text-white">BioGPT Insight</h4>
-            <span className="text-[10px] bg-pink-100 text-pink-700 px-1.5 py-0.5 rounded-full">Local AI</span>
-          </div>
-          <p className="text-xs text-gray-500 mb-2">
-            Generate biomedical context using Microsoft BioGPT (runs locally, no API key needed).
-          </p>
-          <button
-            onClick={async () => {
-              try {
-                setBiogptLoading(true);
-                const result = await apiClient.biogptExplainMechanism(
-                  studyDef?.intervention || indication || 'the intervention',
-                  studyDef?.indication || indication || 'the condition'
-                );
-                setBiogptResult(result.explanation || result.text || 'No result');
-              } catch (e) {
-                setBiogptResult('BioGPT unavailable. Model may be loading...');
-              } finally {
-                setBiogptLoading(false);
-              }
-            }}
-            disabled={biogptLoading}
-            className="text-xs bg-pink-50 hover:bg-pink-100 text-pink-700 px-3 py-1.5 rounded-md font-medium transition-colors disabled:opacity-50"
-          >
-            {biogptLoading ? 'Generating...' : 'Explain Mechanism of Action'}
-          </button>
-          {biogptResult && (
-            <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-              {biogptResult}
-            </div>
-          )}
-        </div>
-
         {/* Next step CTA */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
           <div className="text-xs text-gray-600">
@@ -530,7 +1294,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
           </div>
           <a
             href={`/projects/${selectedStudy.id}/causal-framework`}
-            className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+            className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
           >
             Step 2: Causal Framework <ChevronRight className="h-4 w-4" />
           </a>
@@ -542,13 +1306,13 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
         isOpen={showWorkOpen}
         onClose={() => setShowWorkOpen(false)}
         resultId="run-001"
-        resultLabel="Primary Analysis — IPTW Cox PH"
+        resultLabel="Primary Analysis"
         resultType="estimate"
       />
 
       {/* Save confirmation toast */}
       {saveToast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all animate-in slide-in-from-bottom-4 ${
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
           saveToast.type === 'success'
             ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700'
             : 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700'
@@ -558,7 +1322,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
             : <AlertCircle className="h-4 w-4 shrink-0" />
           }
           {saveToast.message}
-          <button onClick={() => setSaveToast(null)} className="ml-2 opacity-60 hover:opacity-100">×</button>
+          <button onClick={() => setSaveToast(null)} className="ml-2 opacity-60 hover:opacity-100">&times;</button>
         </div>
       )}
     </div>

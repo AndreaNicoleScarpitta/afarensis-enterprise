@@ -1,8 +1,15 @@
-import React, { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
-import { GitBranch, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, Plus, X, Info, Loader2, AlertCircle, FileText } from 'lucide-react'
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  GitBranch, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2,
+  Plus, Info, Loader2, AlertCircle, FileText,
+  RefreshCw, Clock, Play, Database, Users2, BarChart2,
+  TrendingUp, ShieldAlert, FileOutput, Network,
+} from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
+import { apiClient } from '../services/apiClient'
+import { z } from 'zod'
 import LiteratureEvidence from '@/components/ui/LiteratureEvidence'
 
 interface Props {
@@ -11,24 +18,89 @@ interface Props {
   reviewerMode: boolean
 }
 
-// SCHEMA REFERENCE — not shown to users
-// const DEFAULT_COVARIATES = [
-//   { name: 'Age at index date', type: 'Confounder', balance: 'SMD 0.04', status: 'balanced' },
-//   { name: 'Sex', type: 'Confounder', balance: 'SMD 0.02', status: 'balanced' },
-//   { name: 'Comorbidity index (CCI)', type: 'Confounder', balance: 'SMD 0.09', status: 'balanced' },
-//   { name: 'Prior hospitalizations (12 mo)', type: 'Confounder', balance: 'SMD 0.12', status: 'review' },
-//   { name: 'Concomitant medications', type: 'Confounder', balance: 'SMD 0.07', status: 'balanced' },
-//   { name: 'Insurance type', type: 'Selection bias proxy', balance: 'SMD 0.21', status: 'imbalanced' },
-//   { name: 'Time since diagnosis', type: 'Effect modifier', balance: 'SMD 0.05', status: 'balanced' },
-//   { name: 'Treating physician specialty', type: 'Instrumental variable candidate', balance: 'SMD 0.18', status: 'review' },
-// ]
+// ── DAG Types & Constants ──────────────────────────────────────────────────
 
-// SCHEMA REFERENCE — not shown to users
-// const UNMEASURED_CONFOUNDERS = [
-//   { name: 'Disease severity (genetic)', risk: 'High', mitigation: 'E-value computed in Step 7' },
-//   { name: 'Lifestyle factors (BMI, smoking)', risk: 'Moderate', mitigation: 'Proxy variables included (pharmacy claims)' },
-//   { name: 'Socioeconomic status', risk: 'Moderate', mitigation: 'Insurance proxy + area deprivation index' },
-// ]
+interface DAGNode {
+  key: string
+  label: string
+  category: string
+  description: string
+  status: 'pending' | 'in_progress' | 'completed' | 'blocked'
+  order_index: number
+  config: Record<string, unknown>
+  page_route: string
+}
+
+interface DAGEdge {
+  from_node_key: string
+  to_node_key: string
+  edge_type: string
+}
+
+interface DAGData {
+  project_id: string
+  nodes: DAGNode[]
+  edges: DAGEdge[]
+}
+
+const PHASE_CONFIG: { phase: number; label: string; categories: string[] }[] = [
+  { phase: 1, label: 'Data Ingestion',             categories: ['data_ingestion'] },
+  { phase: 2, label: 'Population & Cohort',         categories: ['population'] },
+  { phase: 3, label: 'Primary & Secondary',         categories: ['primary', 'secondary'] },
+  { phase: 4, label: 'Subgroup & Sensitivity',      categories: ['subgroup', 'sensitivity'] },
+  { phase: 5, label: 'Safety',                      categories: ['safety'] },
+  { phase: 6, label: 'Regulatory Output',           categories: ['output'] },
+]
+
+const CATEGORY_META: Record<string, { color: string; icon: React.ElementType }> = {
+  data_ingestion: { color: '#6366f1', icon: Database },
+  population:     { color: '#8b5cf6', icon: Users2 },
+  primary:        { color: '#2563eb', icon: BarChart2 },
+  secondary:      { color: '#0ea5e9', icon: TrendingUp },
+  subgroup:       { color: '#f59e0b', icon: TrendingUp },
+  sensitivity:    { color: '#f97316', icon: ShieldAlert },
+  safety:         { color: '#ef4444', icon: ShieldAlert },
+  output:         { color: '#10b981', icon: FileOutput },
+}
+
+const STATUS_STYLES: Record<string, { bg: string; border: string; text: string; dot: string; label: string }> = {
+  pending:     { bg: 'bg-gray-800/40',   border: 'border-gray-700/50',  text: 'text-gray-500 dark:text-gray-400',   dot: 'bg-gray-500',     label: 'Pending' },
+  in_progress: { bg: 'bg-blue-950/40',   border: 'border-blue-700/40',  text: 'text-blue-300',   dot: 'bg-blue-500',     label: 'In Progress' },
+  completed:   { bg: 'bg-emerald-950/30', border: 'border-emerald-700/40', text: 'text-emerald-300', dot: 'bg-emerald-500', label: 'Completed' },
+  blocked:     { bg: 'bg-red-950/30',     border: 'border-red-700/40',   text: 'text-red-300',    dot: 'bg-red-500',      label: 'Blocked' },
+}
+
+const NEXT_STATUS: Record<string, string> = {
+  pending: 'in_progress',
+  in_progress: 'completed',
+  completed: 'pending',
+  blocked: 'pending',
+}
+
+const DAGNodeSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  category: z.string(),
+  description: z.string().default(''),
+  status: z.enum(['pending', 'in_progress', 'completed', 'blocked']),
+  order_index: z.number(),
+  config: z.record(z.unknown()).default({}),
+  page_route: z.string().default(''),
+})
+
+const DAGEdgeSchema = z.object({
+  from_node_key: z.string(),
+  to_node_key: z.string(),
+  edge_type: z.string().default('dependency'),
+})
+
+const DAGResponseSchema = z.object({
+  project_id: z.string().optional(),
+  nodes: z.array(DAGNodeSchema),
+  edges: z.array(DAGEdgeSchema),
+}).passthrough()
+
+// ── Covariate table status colors ──────────────────────────────────────────
 
 const statusColor: Record<string, string> = {
   balanced:   'text-emerald-400 bg-emerald-900/30 border-emerald-700/40',
@@ -36,14 +108,61 @@ const statusColor: Record<string, string> = {
   imbalanced: 'text-red-400 bg-red-900/20 border-red-700/30',
 }
 
+// ── Demo DAG data ──────────────────────────────────────────────────────────
+
+function getDemoDAGData(projectId: string): DAGData {
+  return {
+    project_id: projectId,
+    nodes: [
+      { key: 'data_ingestion', label: 'Data Ingestion: Source Dataset', category: 'data_ingestion', description: 'Import and validate source trial data', status: 'completed', order_index: 0, config: {}, page_route: `/projects/${projectId}/data-provenance` },
+      { key: 'population_definition', label: 'Population Definition: Cohorts', category: 'population', description: 'Define study populations', status: 'completed', order_index: 1, config: {}, page_route: `/projects/${projectId}/cohort` },
+      { key: 'cohort_attrition', label: 'Cohort Attrition & Weighting', category: 'population', description: 'Apply inclusion/exclusion criteria and IPTW weights', status: 'in_progress', order_index: 2, config: {}, page_route: `/projects/${projectId}/cohort` },
+      { key: 'primary_endpoint', label: 'Primary Endpoint Analysis', category: 'primary', description: 'Primary outcome analysis', status: 'pending', order_index: 3, config: {}, page_route: `/projects/${projectId}/effect-estimation` },
+      { key: 'secondary_cognitive', label: 'Secondary Endpoint', category: 'secondary', description: 'Secondary outcome assessment', status: 'pending', order_index: 4, config: {}, page_route: `/projects/${projectId}/effect-estimation` },
+      { key: 'secondary_functional', label: 'Secondary: Functional', category: 'secondary', description: 'Functional endpoint analysis', status: 'pending', order_index: 5, config: {}, page_route: `/projects/${projectId}/effect-estimation` },
+      { key: 'subgroup_analysis', label: 'Subgroup Analysis', category: 'subgroup', description: 'Stratified analysis by subgroup', status: 'pending', order_index: 6, config: {}, page_route: `/projects/${projectId}/bias-sensitivity` },
+      { key: 'sensitivity_analysis', label: 'Sensitivity Analysis', category: 'sensitivity', description: 'Assess robustness under assumptions', status: 'pending', order_index: 7, config: {}, page_route: `/projects/${projectId}/bias-sensitivity` },
+      { key: 'safety_monitoring', label: 'Safety Monitoring', category: 'safety', description: 'Safety endpoint surveillance', status: 'pending', order_index: 8, config: {}, page_route: `/projects/${projectId}/bias-sensitivity` },
+      { key: 'regulatory_package', label: 'Evidence Package: eCTD', category: 'output', description: 'Compile regulatory submission dossier', status: 'pending', order_index: 9, config: {}, page_route: `/projects/${projectId}/regulatory-output` },
+    ],
+    edges: [
+      { from_node_key: 'data_ingestion', to_node_key: 'population_definition', edge_type: 'dependency' },
+      { from_node_key: 'population_definition', to_node_key: 'cohort_attrition', edge_type: 'dependency' },
+      { from_node_key: 'cohort_attrition', to_node_key: 'primary_endpoint', edge_type: 'dependency' },
+      { from_node_key: 'cohort_attrition', to_node_key: 'secondary_cognitive', edge_type: 'dependency' },
+      { from_node_key: 'cohort_attrition', to_node_key: 'secondary_functional', edge_type: 'dependency' },
+      { from_node_key: 'primary_endpoint', to_node_key: 'subgroup_analysis', edge_type: 'dependency' },
+      { from_node_key: 'primary_endpoint', to_node_key: 'sensitivity_analysis', edge_type: 'dependency' },
+      { from_node_key: 'secondary_cognitive', to_node_key: 'sensitivity_analysis', edge_type: 'dependency' },
+      { from_node_key: 'subgroup_analysis', to_node_key: 'safety_monitoring', edge_type: 'dependency' },
+      { from_node_key: 'sensitivity_analysis', to_node_key: 'safety_monitoring', edge_type: 'dependency' },
+      { from_node_key: 'safety_monitoring', to_node_key: 'regulatory_package', edge_type: 'dependency' },
+      { from_node_key: 'secondary_functional', to_node_key: 'regulatory_package', edge_type: 'dependency' },
+    ],
+  }
+}
+
+// ── Component ──────────────────────────────────────────────────────────────
+
 export default function CausalFramework({ selectedStudy, protocolLocked, reviewerMode }: Props) {
-  const { data: covData, loading, error, saving, save, refetch } = useStudyData(selectedStudy?.id, 'covariates')
+  const navigate = useNavigate()
+  const { data: covData, loading, error, save, refetch } = useStudyData(selectedStudy?.id, 'covariates')
 
   const [estimand] = useState(selectedStudy.estimand)
   const [covariates, setCovariates] = useState<any[]>([])
   const [unmeasuredConfounders, setUnmeasuredConfounders] = useState<any[]>([])
   const [newCovariate, setNewCovariate] = useState('')
   const locked = protocolLocked
+
+  // DAG state
+  const [dagData, setDagData] = useState<DAGData | null>(null)
+  const [dagLoading, setDagLoading] = useState(true)
+  const [regenerating, setRegenerating] = useState(false)
+  const [updatingNode, setUpdatingNode] = useState<string | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const nodeRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const [connectorPaths, setConnectorPaths] = useState<{ id: string; d: string; from: string; to: string }[]>([])
+  const svgRef = useRef<SVGSVGElement>(null)
 
   useEffect(() => {
     if (covData) {
@@ -52,7 +171,6 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
     }
   }, [covData])
 
-  // Defensive: ensure state is always an array
   const safeCovariates = Array.isArray(covariates) ? covariates : []
   const safeUnmeasured = Array.isArray(unmeasuredConfounders) ? unmeasuredConfounders : []
 
@@ -63,6 +181,136 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
     setNewCovariate('')
     await save({ covariates: updated, unmeasured: unmeasuredConfounders })
   }
+
+  // ── DAG: Fetch ──────────────────────────────────────────────────────────
+
+  const fetchDAG = useCallback(async () => {
+    if (!selectedStudy?.id) return
+    try {
+      setDagLoading(true)
+      const data = await apiClient.request(
+        `/projects/${selectedStudy.id}/dag`,
+        DAGResponseSchema,
+      )
+      setDagData(data as DAGData)
+    } catch {
+      setDagData(getDemoDAGData(selectedStudy.id))
+    } finally {
+      setDagLoading(false)
+    }
+  }, [selectedStudy?.id])
+
+  useEffect(() => { fetchDAG() }, [fetchDAG])
+
+  // ── DAG: Regenerate ─────────────────────────────────────────────────────
+
+  const handleRegenerate = async () => {
+    if (!selectedStudy?.id) return
+    try {
+      setRegenerating(true)
+      await apiClient.request(
+        `/projects/${selectedStudy.id}/dag/generate`,
+        DAGResponseSchema,
+        { method: 'POST' },
+      )
+      await fetchDAG()
+    } catch {
+      // Silently use existing data
+    } finally {
+      setRegenerating(false)
+    }
+  }
+
+  // ── DAG: Toggle node status ─────────────────────────────────────────────
+
+  const handleStatusToggle = async (nodeKey: string, currentStatus: string) => {
+    if (protocolLocked || !selectedStudy?.id) return
+    const nextStatus = NEXT_STATUS[currentStatus] || 'pending'
+    setUpdatingNode(nodeKey)
+    setDagData(prev => {
+      if (!prev) return prev
+      return { ...prev, nodes: prev.nodes.map(n => n.key === nodeKey ? { ...n, status: nextStatus as DAGNode['status'] } : n) }
+    })
+    try {
+      await apiClient.request(
+        `/projects/${selectedStudy.id}/dag/nodes/${nodeKey}/status`,
+        z.object({ status: z.string() }),
+        { method: 'PATCH', body: JSON.stringify({ status: nextStatus }) },
+      )
+    } catch {
+      setDagData(prev => {
+        if (!prev) return prev
+        return { ...prev, nodes: prev.nodes.map(n => n.key === nodeKey ? { ...n, status: currentStatus as DAGNode['status'] } : n) }
+      })
+    } finally {
+      setUpdatingNode(null)
+    }
+  }
+
+  const handleNodeClick = (node: DAGNode) => {
+    if (node.page_route) {
+      navigate(node.page_route.replace('{id}', selectedStudy.id))
+    }
+  }
+
+  // ── DAG: Organize by phase ──────────────────────────────────────────────
+
+  const phaseColumns = useMemo(() => {
+    if (!dagData) return []
+    return PHASE_CONFIG.map(phase => ({
+      ...phase,
+      nodes: dagData.nodes
+        .filter(n => phase.categories.includes(n.category))
+        .sort((a, b) => a.order_index - b.order_index),
+    }))
+  }, [dagData])
+
+  const progress = useMemo(() => {
+    if (!dagData) return { completed: 0, total: 0 }
+    return { completed: dagData.nodes.filter(n => n.status === 'completed').length, total: dagData.nodes.length }
+  }, [dagData])
+
+  // ── DAG: SVG connector paths ────────────────────────────────────────────
+
+  const computePaths = useCallback(() => {
+    if (!dagData || !containerRef.current) return
+    const containerRect = containerRef.current.getBoundingClientRect()
+    const paths: { id: string; d: string; from: string; to: string }[] = []
+
+    for (const edge of dagData.edges) {
+      const fromEl = nodeRefs.current[edge.from_node_key]
+      const toEl = nodeRefs.current[edge.to_node_key]
+      if (!fromEl || !toEl) continue
+
+      const fromRect = fromEl.getBoundingClientRect()
+      const toRect = toEl.getBoundingClientRect()
+
+      const x1 = fromRect.right - containerRect.left
+      const y1 = fromRect.top + fromRect.height / 2 - containerRect.top
+      const x2 = toRect.left - containerRect.left
+      const y2 = toRect.top + toRect.height / 2 - containerRect.top
+
+      const dx = Math.abs(x2 - x1)
+      const cp = Math.max(dx * 0.4, 40)
+
+      paths.push({
+        id: `${edge.from_node_key}-${edge.to_node_key}`,
+        d: `M ${x1} ${y1} C ${x1 + cp} ${y1}, ${x2 - cp} ${y2}, ${x2} ${y2}`,
+        from: edge.from_node_key,
+        to: edge.to_node_key,
+      })
+    }
+    setConnectorPaths(paths)
+  }, [dagData])
+
+  useEffect(() => {
+    if (!dagData) return
+    const timer = setTimeout(computePaths, 100)
+    window.addEventListener('resize', computePaths)
+    return () => { clearTimeout(timer); window.removeEventListener('resize', computePaths) }
+  }, [dagData, computePaths])
+
+  const progressPct = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] text-gray-900 dark:text-white">
@@ -112,10 +360,10 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
         </div>
       )}
 
-      <div className="px-8 py-6 space-y-6 max-w-4xl">
+      <div className="px-8 py-6 space-y-6">
 
         {/* Estimand summary */}
-        <div className="bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl p-5">
+        <div className="bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl p-5 max-w-4xl">
           <div className="flex items-center gap-2 mb-2">
             <Info className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             <h2 className="text-sm font-bold text-[#2563EB] dark:text-[#60a5fa]">Pre-specified Estimand: {estimand}</h2>
@@ -128,61 +376,179 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
           </p>
         </div>
 
-        {/* DAG visualization — structural reference diagram */}
+        {/* ── Analysis DAG (replaces static reference diagram) ─────────── */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Directed Acyclic Graph (DAG)</h2>
-            <span className="text-[10px] text-amber-500 bg-amber-900/20 border border-amber-700/30 px-2.5 py-1 rounded-full font-semibold">Reference Diagram — Not Data-Driven</span>
+            <div className="flex items-center gap-2">
+              <Network className="h-4 w-4 text-[#2563EB]" />
+              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Analysis Workflow DAG</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Progress indicator */}
+              {dagData && (
+                <div className="flex items-center gap-2.5 px-3 py-1.5 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-lg">
+                  <div className="w-20 h-1.5 bg-gray-300 dark:bg-gray-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
+                  </div>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400 tabular-nums font-medium">
+                    {progress.completed}/{progress.total}
+                  </span>
+                </div>
+              )}
+              <button
+                onClick={handleRegenerate}
+                disabled={regenerating || protocolLocked}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/8 border border-gray-200 dark:border-white/10 rounded-lg text-[10px] font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`h-3 w-3 ${regenerating ? 'animate-spin' : ''}`} />
+                Regenerate
+              </button>
+            </div>
           </div>
-          <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-6 min-h-[220px] flex items-center justify-center">
-            <svg viewBox="0 0 580 200" className="w-full max-w-[560px]" fill="none">
-              {/* Nodes */}
-              {[
-                { x: 60,  y: 100, label: 'L\n(Covariates)', color: '#2563EB' },
-                { x: 230, y: 40,  label: 'A\n(Treatment)', color: '#2563EB' },
-                { x: 230, y: 160, label: 'U\n(Unmeasured)', color: '#dc2626' },
-                { x: 400, y: 100, label: 'Y\n(Outcome)',   color: '#10b981' },
-                { x: 520, y: 100, label: 'C\n(Censoring)', color: '#f59e0b' },
-              ].map(({ x, y, label, color }) => (
-                <g key={label}>
-                  <circle cx={x} cy={y} r={28} fill={color + '20'} stroke={color} strokeWidth="1.5" />
-                  {label.split('\n').map((line, i) => (
-                    <text key={i} x={x} y={y + (i === 0 ? -4 : 10)} textAnchor="middle" fill={color} fontSize="10" fontWeight="700">{line}</text>
-                  ))}
-                </g>
-              ))}
-              {/* Arrows */}
-              <defs>
-                <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                  <path d="M0,0 L6,3 L0,6 Z" fill="#6b7280" />
-                </marker>
-                <marker id="arr-red" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-                  <path d="M0,0 L6,3 L0,6 Z" fill="#dc2626" />
-                </marker>
-              </defs>
-              {/* L → A */}
-              <line x1="88" y1="88" x2="200" y2="50" stroke="#6b7280" strokeWidth="1.5" markerEnd="url(#arr)" />
-              {/* L → Y */}
-              <line x1="88" y1="108" x2="372" y2="104" stroke="#6b7280" strokeWidth="1.5" markerEnd="url(#arr)" />
-              {/* A → Y */}
-              <line x1="258" y1="55" x2="372" y2="90" stroke="#2563EB" strokeWidth="2" markerEnd="url(#arr)" />
-              {/* U → Y (dashed red) */}
-              <line x1="258" y1="154" x2="372" y2="114" stroke="#dc2626" strokeWidth="1.5" strokeDasharray="4,3" markerEnd="url(#arr-red)" />
-              {/* U → A (dashed red) */}
-              <line x1="230" y1="132" x2="230" y2="68" stroke="#dc2626" strokeWidth="1.5" strokeDasharray="4,3" markerEnd="url(#arr-red)" />
-              {/* Y → C */}
-              <line x1="428" y1="100" x2="492" y2="100" stroke="#f59e0b" strokeWidth="1.5" markerEnd="url(#arr)" />
-            </svg>
-          </div>
-          <div className="flex items-center gap-4 mt-2 text-[10px] text-gray-600">
-            <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-[#2563EB] inline-block" /> Treatment pathway</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-red-500 inline-block border-dashed border-t border-red-500" /> Unmeasured (dashed)</span>
-            <span className="flex items-center gap-1.5"><span className="w-4 h-0.5 bg-gray-600 inline-block" /> Covariate / confounder</span>
-          </div>
+
+          {dagLoading && (
+            <div className="flex items-center justify-center py-12 bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl">
+              <Loader2 className="h-6 w-6 animate-spin text-[#2563EB] mr-2" />
+              <span className="text-sm text-gray-500">Loading analysis workflow...</span>
+            </div>
+          )}
+
+          {!dagLoading && dagData && (
+            <>
+              <div className="overflow-x-auto bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-4">
+                <div ref={containerRef} className="relative min-w-[1000px]">
+                  {/* SVG connector layer */}
+                  <svg ref={svgRef} className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
+                    <defs>
+                      <marker id="cf-arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                        <polygon points="0 0, 8 3, 0 6" fill="#4b5563" />
+                      </marker>
+                      <marker id="cf-arrowhead-active" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+                        <polygon points="0 0, 8 3, 0 6" fill="#2563EB" />
+                      </marker>
+                    </defs>
+                    {connectorPaths.map(path => {
+                      const fromNode = dagData.nodes.find(n => n.key === path.from)
+                      const toNode = dagData.nodes.find(n => n.key === path.to)
+                      const isActive = fromNode?.status === 'completed' && toNode?.status !== 'blocked'
+                      return (
+                        <path
+                          key={path.id}
+                          d={path.d}
+                          fill="none"
+                          stroke={isActive ? '#2563EB' : '#374151'}
+                          strokeWidth={isActive ? 2 : 1.5}
+                          strokeDasharray={isActive ? 'none' : '4 3'}
+                          markerEnd={isActive ? 'url(#cf-arrowhead-active)' : 'url(#cf-arrowhead)'}
+                          opacity={isActive ? 0.7 : 0.4}
+                          className="transition-all duration-300"
+                        />
+                      )
+                    })}
+                  </svg>
+
+                  {/* Phase columns */}
+                  <div className="flex gap-3 relative" style={{ zIndex: 2 }}>
+                    {phaseColumns.map(phase => (
+                      <div key={phase.phase} className="flex-1 min-w-[150px]">
+                        <div className="mb-2 px-1">
+                          <span className="text-[9px] font-black text-gray-600 tabular-nums">PHASE {phase.phase}</span>
+                          <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">{phase.label}</p>
+                        </div>
+                        <div className="space-y-2">
+                          {phase.nodes.length === 0 && (
+                            <div className="px-2 py-4 border border-dashed border-gray-300 dark:border-gray-800 rounded-lg text-center">
+                              <p className="text-[9px] text-gray-500 dark:text-gray-700">No steps</p>
+                            </div>
+                          )}
+                          {phase.nodes.map(node => {
+                            const meta = (CATEGORY_META[node.category] ?? CATEGORY_META.primary)!
+                            const status = (STATUS_STYLES[node.status] ?? STATUS_STYLES.pending)!
+                            const IconComp = meta.icon
+                            const isUpdating = updatingNode === node.key
+
+                            return (
+                              <div
+                                key={node.key}
+                                ref={el => { nodeRefs.current[node.key] = el }}
+                                className={`group relative rounded-xl border ${status.border} ${status.bg} backdrop-blur-sm transition-all duration-200 hover:border-opacity-80 hover:shadow-lg hover:shadow-black/20 cursor-pointer`}
+                                onClick={() => handleNodeClick(node)}
+                              >
+                                {node.status === 'in_progress' && (
+                                  <div className="absolute -inset-px rounded-xl border-2 border-blue-500/30 animate-pulse pointer-events-none" />
+                                )}
+                                <div className="p-2.5">
+                                  <div className="flex items-center justify-between mb-1.5">
+                                    <span
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider"
+                                      style={{ backgroundColor: `${meta.color}20`, color: meta.color }}
+                                    >
+                                      <IconComp className="h-2.5 w-2.5" />
+                                      {node.category.replace(/_/g, ' ')}
+                                    </span>
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleStatusToggle(node.key, node.status) }}
+                                      disabled={protocolLocked || isUpdating}
+                                      className="p-0.5 rounded-md hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title={`Status: ${status.label}. Click to change.`}
+                                    >
+                                      {isUpdating ? <Loader2 className="h-3 w-3 animate-spin text-gray-400" />
+                                        : node.status === 'completed' ? <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                                        : node.status === 'in_progress' ? <Play className="h-3 w-3 text-blue-400" />
+                                        : node.status === 'blocked' ? <Lock className="h-3 w-3 text-red-400" />
+                                        : <Clock className="h-3 w-3 text-gray-500" />}
+                                    </button>
+                                  </div>
+                                  <p className="text-[11px] font-semibold text-gray-900 dark:text-white leading-snug mb-0.5 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-200 transition-colors">
+                                    {node.label}
+                                  </p>
+                                  {node.description && (
+                                    <p className="text-[9px] text-gray-500 leading-relaxed line-clamp-2">{node.description}</p>
+                                  )}
+                                  <div className="mt-1.5 flex items-center justify-between">
+                                    <div className="flex items-center gap-1">
+                                      <span className={`w-1.5 h-1.5 rounded-full ${status.dot} ${node.status === 'in_progress' ? 'animate-pulse' : ''}`} />
+                                      <span className={`text-[9px] font-medium ${status.text}`}>{status.label}</span>
+                                    </div>
+                                    <ChevronRight className="h-2.5 w-2.5 text-gray-700 group-hover:text-gray-400 transition-colors" />
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-5 mt-2 px-1">
+                <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">Status</span>
+                {Object.entries(STATUS_STYLES).map(([key, style]) => (
+                  <div key={key} className="flex items-center gap-1">
+                    <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+                    <span className="text-[9px] text-gray-500 dark:text-gray-400 capitalize">{style.label}</span>
+                  </div>
+                ))}
+                <div className="ml-auto flex items-center gap-3">
+                  <div className="flex items-center gap-1">
+                    <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke="#2563EB" strokeWidth="2" /></svg>
+                    <span className="text-[9px] text-gray-500 dark:text-gray-400">Active</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke="#374151" strokeWidth="1.5" strokeDasharray="4 3" /></svg>
+                    <span className="text-[9px] text-gray-500 dark:text-gray-400">Pending</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </section>
 
         {/* Covariate table */}
-        <section>
+        <section className="max-w-4xl">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-900 dark:text-white">Pre-specified Covariate Set</h2>
             <span className="text-[10px] text-gray-500">{safeCovariates.length} variables registered</span>
@@ -198,7 +564,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
               </thead>
               <tbody>
                 {safeCovariates.map((cov, i) => (
-                  <tr key={i} className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:bg-white/3 transition-colors">
+                  <tr key={i} className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/3 transition-colors">
                     <td className="px-4 py-2.5 text-gray-900 dark:text-white font-medium">{cov.name}</td>
                     <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">{cov.type}</td>
                     <td className="px-4 py-2.5 font-mono text-gray-600 dark:text-gray-400">{cov.balance}</td>
@@ -241,7 +607,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
         </section>
 
         {/* Unmeasured confounders */}
-        <section>
+        <section className="max-w-4xl">
           <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Unmeasured Confounders — Pre-specified Risk Register</h2>
           {safeUnmeasured.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
@@ -268,11 +634,11 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
         </section>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/study`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8 max-w-4xl">
+          <Link to={`/projects/${selectedStudy.id}/study`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 1: Study Definition
           </Link>
-          <Link to={`/projects/${selectedStudy.id}/data-provenance`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/data-provenance`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
             Step 3: Data Provenance <ChevronRight className="h-4 w-4" />
           </Link>
         </div>

@@ -13,6 +13,8 @@ import {
   Plus,
   FolderOpen,
   Archive,
+  ArchiveRestore,
+  Trash2,
   Calendar,
   FileText,
   Loader2,
@@ -133,6 +135,28 @@ export default function EnhancedDashboard() {
       method: 'PATCH',
       body: JSON.stringify({ status: 'archived' }),
     })
+    void fetchProjects()
+  }
+
+  /* ---------- Unarchive project ---------- */
+
+  const handleUnarchive = async (id: string) => {
+    await apiClient.request(`/projects/${id}`, z.any(), {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'unarchive' }),
+    })
+    void fetchProjects()
+  }
+
+  /* ---------- Delete project ---------- */
+
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+
+  const handleDelete = async (id: string) => {
+    await apiClient.request(`/projects/${id}`, z.any(), {
+      method: 'DELETE',
+    })
+    setDeleteConfirmId(null)
     void fetchProjects()
   }
 
@@ -262,7 +286,7 @@ export default function EnhancedDashboard() {
                     <src.icon className="h-3 w-3" />
                   </span>
                 ))}
-                <span className="text-[10px] text-gray-500 dark:text-gray-400 ml-1">5 sources</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 ml-1">{(project as any).source_count ?? 0} sources</span>
               </div>
 
               {/* Actions */}
@@ -273,13 +297,45 @@ export default function EnhancedDashboard() {
                 >
                   <FolderOpen className="h-4 w-4" /> Open
                 </button>
-                {project.status !== 'archived' && (
+                {project.status !== 'archived' ? (
                   <button
                     onClick={() => void handleArchive(project.id)}
                     className="inline-flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1.5 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition"
                   >
                     <Archive className="h-4 w-4" /> Archive
                   </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => void handleUnarchive(project.id)}
+                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 text-sm font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition"
+                    >
+                      <ArchiveRestore className="h-4 w-4" /> Unarchive
+                    </button>
+                    {deleteConfirmId === project.id ? (
+                      <div className="inline-flex items-center gap-1">
+                        <button
+                          onClick={() => void handleDelete(project.id)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-red-600 text-white px-3 py-1.5 text-sm font-medium hover:bg-red-700 transition"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => setDeleteConfirmId(null)}
+                          className="inline-flex items-center gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1.5 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setDeleteConfirmId(project.id)}
+                        className="inline-flex items-center gap-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-1.5 text-sm font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition"
+                      >
+                        <Trash2 className="h-4 w-4" /> Delete
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>

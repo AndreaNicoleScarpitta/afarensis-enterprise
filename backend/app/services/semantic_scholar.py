@@ -93,24 +93,39 @@ class SemanticScholarService:
         if open_access_only:
             params["openAccessPdf"] = ""  # filter to OA only
 
-        try:
-            resp = await self.client.get("/paper/search", params=params)
-            resp.raise_for_status()
-            data = resp.json()
-            papers = data.get("data", [])
-            return {
-                "total": data.get("total", len(papers)),
-                "offset": offset,
-                "papers": [self._normalize_paper(p) for p in papers],
-                "source": "semantic_scholar",
-                "query": query,
-            }
-        except httpx.HTTPStatusError as e:
-            logger.error("Semantic Scholar search error: %s", e)
-            return {"total": 0, "offset": 0, "papers": [], "source": "semantic_scholar", "error": str(e)}
-        except Exception as e:
-            logger.error("Semantic Scholar unexpected error: %s", e)
-            return {"total": 0, "offset": 0, "papers": [], "source": "semantic_scholar", "error": str(e)}
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                resp = await self.client.get("/paper/search", params=params)
+                if resp.status_code == 429:
+                    # Rate limited — wait and retry
+                    retry_after = int(resp.headers.get("Retry-After", 2 ** (attempt + 1)))
+                    wait = min(retry_after, 10)
+                    logger.warning("Semantic Scholar 429 (attempt %d/%d) — waiting %ds", attempt + 1, max_retries, wait)
+                    await asyncio.sleep(wait)
+                    continue
+                resp.raise_for_status()
+                data = resp.json()
+                papers = data.get("data", [])
+                return {
+                    "total": data.get("total", len(papers)),
+                    "offset": offset,
+                    "papers": [self._normalize_paper(p) for p in papers],
+                    "source": "semantic_scholar",
+                    "query": query,
+                }
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code == 429 and attempt < max_retries - 1:
+                    wait = 2 ** (attempt + 1)
+                    logger.warning("Semantic Scholar 429 (attempt %d/%d) — waiting %ds", attempt + 1, max_retries, wait)
+                    await asyncio.sleep(wait)
+                    continue
+                logger.error("Semantic Scholar search error: %s", e)
+                return {"total": 0, "offset": 0, "papers": [], "source": "semantic_scholar", "error": str(e)}
+            except Exception as e:
+                logger.error("Semantic Scholar unexpected error: %s", e)
+                return {"total": 0, "offset": 0, "papers": [], "source": "semantic_scholar", "error": str(e)}
+        return {"total": 0, "offset": 0, "papers": [], "source": "semantic_scholar", "error": "Rate limited after retries"}
 
     # ── Paper Lookup ───────────────────────────────────────────────────────────
 
