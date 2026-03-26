@@ -29,36 +29,87 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 class CircuitBreaker:
-    """Per-service circuit breaker: CLOSED → OPEN (after N failures) → HALF-OPEN."""
+    """Per-service circuit breaker: CLOSED → OPEN (after N failures) → HALF-OPEN.
+
+    Fix 6 enhancements:
+    * ``status`` property for monitoring endpoint.
+    * ``total_failures`` / ``total_trips`` counters for observability.
+    * ``half_open`` state tracking — allows exactly one probe request.
+    """
 
     def __init__(self, failure_threshold: int = 5, recovery_seconds: float = 60.0):
         self.failure_threshold = failure_threshold
         self.recovery_seconds = recovery_seconds
         self._consecutive_failures = 0
         self._opened_at: Optional[float] = None
+        self._half_open = False
+        # Counters for monitoring
+        self._total_failures = 0
+        self._total_successes = 0
+        self._total_trips = 0
+        self._last_failure_at: Optional[float] = None
+        self._last_success_at: Optional[float] = None
+
+    @property
+    def state(self) -> str:
+        """Current state: 'closed', 'open', or 'half_open'."""
+        if self._opened_at is None:
+            return "closed"
+        elapsed = datetime.now().timestamp() - self._opened_at
+        if elapsed >= self.recovery_seconds:
+            return "half_open"
+        return "open"
 
     @property
     def is_open(self) -> bool:
-        if self._opened_at is None:
+        s = self.state
+        if s == "closed":
             return False
-        elapsed = datetime.now().timestamp() - self._opened_at
-        if elapsed >= self.recovery_seconds:
-            # Transition to HALF-OPEN: allow one probe
+        if s == "half_open":
+            # Allow exactly one probe, then flip back
+            self._half_open = True
             return False
         return True
 
     def record_success(self):
         self._consecutive_failures = 0
         self._opened_at = None
+        self._half_open = False
+        self._total_successes += 1
+        self._last_success_at = datetime.now().timestamp()
 
     def record_failure(self):
         self._consecutive_failures += 1
-        if self._consecutive_failures >= self.failure_threshold:
+        self._total_failures += 1
+        self._last_failure_at = datetime.now().timestamp()
+        if self._half_open:
+            # Probe failed — reopen immediately
             self._opened_at = datetime.now().timestamp()
+            self._half_open = False
+            self._total_trips += 1
+            logger.warning("Circuit breaker re-opened after failed half-open probe")
+        elif self._consecutive_failures >= self.failure_threshold:
+            self._opened_at = datetime.now().timestamp()
+            self._total_trips += 1
             logger.warning(
                 "Circuit breaker OPEN after %d consecutive failures (recovery in %ds)",
                 self._consecutive_failures, self.recovery_seconds,
             )
+
+    @property
+    def status(self) -> dict:
+        """Monitoring-friendly status snapshot."""
+        return {
+            "state": self.state,
+            "consecutive_failures": self._consecutive_failures,
+            "total_failures": self._total_failures,
+            "total_successes": self._total_successes,
+            "total_trips": self._total_trips,
+            "failure_threshold": self.failure_threshold,
+            "recovery_seconds": self.recovery_seconds,
+            "last_failure_at": self._last_failure_at,
+            "last_success_at": self._last_success_at,
+        }
 
 
 class ExternalAPIService:
@@ -87,7 +138,48 @@ class ExternalAPIService:
             'clinicaltrials': CircuitBreaker(),
             'fda': CircuitBreaker(),
             'openalex': CircuitBreaker(),
+            'semantic_scholar': CircuitBreaker(failure_threshold=3, recovery_seconds=120.0),
+            'ema': CircuitBreaker(),
         }
+
+    # ── Fix 6: Circuit breaker status + graceful degradation ─────────
+
+    def get_circuit_breaker_status(self) -> Dict[str, dict]:
+        """Return status of all circuit breakers for the /health/circuit-breakers endpoint."""
+        return {name: cb.status for name, cb in self._circuit_breakers.items()}
+
+    def is_service_available(self, service: str) -> bool:
+        """Check if a service is available (circuit breaker not open)."""
+        cb = self._circuit_breakers.get(service)
+        if cb is None:
+            return True
+        return not cb.is_open
+
+    async def search_with_degradation(
+        self,
+        service: str,
+        search_func,
+        *args,
+        **kwargs,
+    ) -> list:
+        """Execute a search function with graceful degradation.
+
+        If the circuit breaker is open, returns an empty list instead of
+        raising an error.  This allows multi-source discovery to continue
+        even when one upstream is down.
+        """
+        cb = self._circuit_breakers.get(service)
+        if cb and cb.is_open:
+            logger.warning(
+                "Circuit breaker OPEN for %s — returning empty results (graceful degradation)",
+                service,
+            )
+            return []
+        try:
+            return await search_func(*args, **kwargs)
+        except ProcessingError as exc:
+            logger.warning("Degraded response for %s: %s", service, exc)
+            return []
 
     async def _rate_limit_wait(self, service: str):
         """Enforce rate limiting for external APIs"""

@@ -1128,6 +1128,44 @@ class DAGEdge(Base):
 
 
 # ============================================================================
+# BACKGROUND TASK PERSISTENCE (Fix 9 — survive process restarts)
+# ============================================================================
+
+class BackgroundTask(Base):
+    """Persisted task metadata — mirrors in-memory TaskResult to the DB.
+
+    This table allows:
+    * Task status queries to survive process restarts.
+    * Orphaned-task detection on startup (tasks stuck in ``running``).
+    * Historical audit of long-running operations.
+    * Checkpoint data for multi-phase tasks (Fix 10).
+    """
+    __tablename__ = "background_tasks"
+
+    id = Column(String(36), primary_key=True)  # = task_id from TaskResult
+    task_type = Column(String(100), nullable=False, index=True)
+    state = Column(String(20), nullable=False, default="pending", index=True)
+    progress = Column(Float, default=0.0)
+    message = Column(Text, default="Queued")
+    error = Column(Text, nullable=True)
+    error_traceback = Column(Text, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    started_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+
+    # Fix 10: Checkpoint data — JSON dict of {phase_name: {completed_at, data}}
+    checkpoints = Column(JSON, default=dict)
+    current_phase = Column(String(100), nullable=True)
+
+    __table_args__ = (
+        Index("idx_bg_tasks_type_state", "task_type", "state"),
+        Index("idx_bg_tasks_created", "created_at"),
+    )
+
+
+# ============================================================================
 # UPDATE EXISTING MODELS WITH NEW RELATIONSHIPS
 # ============================================================================
 

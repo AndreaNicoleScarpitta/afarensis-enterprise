@@ -773,9 +773,14 @@ async def resend_verification(body: ResendVerificationRequest, request: Request,
 
 @api_router.get("/tasks/{task_id}")
 async def get_task_status(task_id: str, current_user=Depends(get_current_user)):
-    """Poll background task status. Returns progress, state, and result when complete."""
+    """Poll background task status. Returns progress, state, checkpoints, and result.
+
+    Fix 9: Falls back to DB for tasks from previous process lifetimes.
+    Fix 10: Includes checkpoint data for multi-phase tasks.
+    """
     from app.services.task_queue import task_queue
-    status = task_queue.get_status(task_id)
+    # Try in-memory first, then DB fallback (Fix 9)
+    status = await task_queue.get_status_with_fallback(task_id)
     if status is None:
         raise HTTPException(404, "Task not found")
     return status
@@ -785,7 +790,7 @@ async def get_task_status(task_id: str, current_user=Depends(get_current_user)):
 async def get_task_result(task_id: str, current_user=Depends(get_current_user)):
     """Get the full result of a completed task."""
     from app.services.task_queue import task_queue
-    status = task_queue.get_status(task_id)
+    status = await task_queue.get_status_with_fallback(task_id)
     if status is None:
         raise HTTPException(404, "Task not found")
     if status["state"] != "completed":
@@ -798,11 +803,38 @@ async def get_task_result(task_id: str, current_user=Depends(get_current_user)):
 async def list_tasks(
     task_type: Optional[str] = None,
     limit: int = Query(default=20, ge=1, le=100),
+    include_history: bool = Query(default=False, description="Include tasks from previous process lifetimes"),
     current_user=Depends(get_current_user),
 ):
-    """List recent background tasks."""
+    """List recent background tasks.
+
+    Fix 9: Set include_history=true to include DB-persisted tasks from prior restarts.
+    """
     from app.services.task_queue import task_queue
-    return {"tasks": task_queue.list_tasks(task_type=task_type, limit=limit)}
+    if include_history:
+        tasks = await task_queue.list_tasks_with_history(task_type=task_type, limit=limit)
+    else:
+        tasks = task_queue.list_tasks(task_type=task_type, limit=limit)
+    return {"tasks": tasks}
+
+
+# Fix 6: Circuit breaker status endpoint
+@api_router.get("/health/circuit-breakers")
+async def get_circuit_breaker_status(current_user=Depends(get_current_user)):
+    """Return the status of all external API circuit breakers.
+
+    Shows state (closed/open/half_open), failure counts, and trip history
+    for each upstream service (PubMed, ClinicalTrials, FDA, OpenAlex, etc.).
+    """
+    from app.services.external_apis import ExternalAPIService
+    svc = ExternalAPIService()
+    return {
+        "circuit_breakers": svc.get_circuit_breaker_status(),
+        "summary": {
+            name: cb_status["state"]
+            for name, cb_status in svc.get_circuit_breaker_status().items()
+        },
+    }
 
 
 @api_router.post("/tasks/{task_id}/cancel")
@@ -1227,6 +1259,18 @@ async def discover_evidence(
 
     from app.services.task_queue import task_queue
 
+    # Fix 8: Deduplication — reject if a discovery task is already running
+    running = task_queue.list_tasks(task_type="evidence_discovery")
+    active = [t for t in running if t["state"] in ("pending", "running")]
+    if active:
+        return JSONResponse(
+            status_code=200,
+            content={
+                "task_id": active[0]["task_id"],
+                "message": "Evidence discovery already in progress.",
+            },
+        )
+
     async def _discover_evidence(task_status=None):
         """Background worker for evidence discovery."""
         from sqlalchemy import select as sa_select
@@ -1238,12 +1282,13 @@ async def discover_evidence(
         api_service = ExternalAPIService()
         records_created = 0
 
+        DISCOVERY_PHASES = 5  # PubMed, ClinicalTrials, OpenAlex, SemanticScholar, Save
+
         # Use a fresh DB session for the background task
         async with AsyncSessionLocal() as bg_db:
             # Search PubMed
             if task_status:
-                task_status.progress = 25.0
-                task_status.message = "Searching PubMed..."
+                task_status.begin_phase("pubmed_search", 0, DISCOVERY_PHASES, "Searching PubMed...")
             try:
                 pubmed_results = await api_service.search_pubmed(
                     query=search_query,
@@ -1282,8 +1327,8 @@ async def discover_evidence(
                 pass  # PubMed unavailable; continue with ClinicalTrials
 
             if task_status:
-                task_status.progress = 45.0
-                task_status.message = "Searching ClinicalTrials.gov..."
+                task_status.checkpoint("pubmed_search", data={"records_found": records_created})
+                task_status.begin_phase("clinicaltrials_search", 1, DISCOVERY_PHASES, "Searching ClinicalTrials.gov...")
 
             # Search ClinicalTrials.gov
             try:
@@ -1325,8 +1370,8 @@ async def discover_evidence(
 
             # Search OpenAlex (no API key required)
             if task_status:
-                task_status.progress = 65.0
-                task_status.message = "Searching OpenAlex..."
+                task_status.checkpoint("clinicaltrials_search", data={"records_found": records_created})
+                task_status.begin_phase("openalex_search", 2, DISCOVERY_PHASES, "Searching OpenAlex...")
             try:
                 openalex_results = await api_service.search_openalex(
                     query=search_query,
@@ -1368,8 +1413,8 @@ async def discover_evidence(
 
             # Search Semantic Scholar (no API key required)
             if task_status:
-                task_status.progress = 80.0
-                task_status.message = "Searching Semantic Scholar..."
+                task_status.checkpoint("openalex_search", data={"records_found": records_created})
+                task_status.begin_phase("semantic_scholar_search", 3, DISCOVERY_PHASES, "Searching Semantic Scholar...")
             try:
                 # Wait 3s before SS call to avoid rate limiting from prior API calls
                 import asyncio as _aio
@@ -1424,8 +1469,8 @@ async def discover_evidence(
                 logging.getLogger(__name__).warning(f"Semantic Scholar search failed: {e}")
 
             if task_status:
-                task_status.progress = 90.0
-                task_status.message = "Saving results..."
+                task_status.checkpoint("semantic_scholar_search", data={"records_found": records_created})
+                task_status.begin_phase("save_results", 4, DISCOVERY_PHASES, "Saving results...")
 
             if records_created > 0:
                 await bg_db.commit()
@@ -6519,9 +6564,10 @@ async def _run_analysis_background(
     from app.models import ValidationRecord as _VR, AnalysisResult as _AR
 
     _log = _logging.getLogger("analyze_dataset")
+    TOTAL_PHASES = 7
+
     if task_status:
-        task_status.progress = 5.0
-        task_status.message = "Preparing dataset isolation..."
+        task_status.begin_phase("dataset_isolation", 0, TOTAL_PHASES, "Preparing dataset isolation...")
 
     async with AsyncSessionLocal() as db:
         # ── Phase 1: Dataset isolation (optimistic-locked config update) ──
@@ -6540,8 +6586,8 @@ async def _run_analysis_background(
             _log.warning("Could not clear prior analysis state: %s", exc)
 
         if task_status:
-            task_status.progress = 15.0
-            task_status.message = "Running pre-analysis validation..."
+            task_status.checkpoint("dataset_isolation")
+            task_status.begin_phase("pre_analysis_validation", 1, TOTAL_PHASES, "Running pre-analysis validation...")
 
         # ── Phase 2: Pre-analysis validation ──
         validator = PreAnalysisValidator()
@@ -6597,8 +6643,12 @@ async def _run_analysis_background(
             )
 
         if task_status:
-            task_status.progress = 30.0
-            task_status.message = "Running statistical analysis (Cox PH, IPTW, KM)..."
+            task_status.checkpoint("pre_analysis_validation", data={
+                "verdict": "BLOCKED" if validation_verdict.blocked else "PASS",
+                "validation_record_id": _validation_record_id,
+                "dataset_hash": _ds_hash,
+            })
+            task_status.begin_phase("statistical_computation", 2, TOTAL_PHASES, "Running statistical analysis (Cox PH, IPTW, KM)...")
 
         # ── Phase 3: CPU-bound statistical computation in thread pool ──
         _analysis_started = datetime.utcnow()
@@ -6614,8 +6664,8 @@ async def _run_analysis_background(
         analysis_results["pre_analysis_validation"] = verdict_dict
 
         if task_status:
-            task_status.progress = 75.0
-            task_status.message = "Persisting results..."
+            task_status.checkpoint("statistical_computation")
+            task_status.begin_phase("serialization", 3, TOTAL_PHASES, "Serializing results...")
 
         # ── Phase 4: Serialize numpy → JSON-safe ──
         class _NumpyEncoder(_json2.JSONEncoder):
@@ -6632,6 +6682,10 @@ async def _run_analysis_background(
         json_str = _re.sub(r'\b-?Infinity\b', 'null', json_str)
         safe_results = _json2.loads(json_str)
 
+        if task_status:
+            task_status.checkpoint("serialization")
+            task_status.begin_phase("persist_config", 4, TOTAL_PHASES, "Persisting to processing_config...")
+
         # ── Phase 5: Persist to processing_config (optimistic-locked) ──
         try:
             await update_processing_config(
@@ -6646,6 +6700,10 @@ async def _run_analysis_background(
         except Exception as exc:
             _log.exception("Failed to store analysis results in processing_config")
             safe_results["_storage_warning"] = str(exc)
+
+        if task_status:
+            task_status.checkpoint("persist_config")
+            task_status.begin_phase("persist_result_row", 5, TOTAL_PHASES, "Creating AnalysisResult record...")
 
         # ── Phase 6: AnalysisResult row (unique-constrained) ──
         try:
@@ -6669,6 +6727,10 @@ async def _run_analysis_background(
         except Exception as exc:
             _log.warning("Failed to store AnalysisResult row (may be duplicate): %s", exc)
 
+        if task_status:
+            task_status.checkpoint("persist_result_row")
+            task_status.begin_phase("audit_log", 6, TOTAL_PHASES, "Writing audit log...")
+
         # ── Phase 7: Audit log ──
         await write_audit_log(
             db, user_id=user_id, action="analyze_dataset",
@@ -6685,6 +6747,7 @@ async def _run_analysis_background(
         await db.commit()
 
         if task_status:
+            task_status.checkpoint("audit_log")
             task_status.progress = 100.0
             task_status.message = "Analysis complete"
 

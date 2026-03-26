@@ -70,6 +70,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Database health check error on startup: {e}")
 
+    # Fix 9: Mark any tasks stuck in 'running' as failed (orphaned by previous crash)
+    try:
+        from app.services.task_queue import task_queue
+        await task_queue.mark_stale_running_tasks()
+    except Exception as e:
+        logger.warning(f"Stale task cleanup on startup failed: {e}")
+
     logger.info("Afarensis Enterprise ready for regulatory evidence review")
 
     # Schedule periodic cleanup of expired session tokens
@@ -126,13 +133,17 @@ def create_application() -> FastAPI:
     from app.core.observability import MetricsMiddleware
     app.add_middleware(MetricsMiddleware)
 
+    # Fix 7: Idempotency-Key middleware — deduplicates retried POST/PUT/PATCH
+    from app.core.idempotency import IdempotencyMiddleware
+    app.add_middleware(IdempotencyMiddleware)
+
     # CORS middleware
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins_list,
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-        allow_headers=["Content-Type", "Authorization", "X-Request-ID", "Accept"],
+        allow_headers=["Content-Type", "Authorization", "X-Request-ID", "Accept", "Idempotency-Key"],
     )
 
     # Trusted host middleware
