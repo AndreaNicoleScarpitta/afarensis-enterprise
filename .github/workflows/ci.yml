@@ -1,0 +1,128 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: afarensis_test
+          POSTGRES_USER: afarensis
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Run linting
+        working-directory: backend
+        run: |
+          pip install ruff
+          ruff check app/ --select E,W,F --ignore E501
+
+      - name: Run tests (SQLite)
+        working-directory: backend
+        env:
+          DATABASE_URL: "sqlite+aiosqlite://"
+          ENV: testing
+          SECRET_KEY: test-secret-key-for-ci-only
+        run: |
+          python -m pytest tests/ -v --tb=short -x --cov=app --cov-report=term-missing --cov-fail-under=20
+
+      - name: Run tests (PostgreSQL)
+        working-directory: backend
+        env:
+          DATABASE_URL: "postgresql+asyncpg://afarensis:test_password@localhost:5432/afarensis_test"
+          ENV: testing
+          SECRET_KEY: test-secret-key-for-ci-only
+        run: |
+          python -m pytest tests/ -v --tb=short -x
+
+      - name: Verify migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: "sqlite:///./ci_migration_test.db"
+          ENV: development
+          SECRET_KEY: test-secret-key-for-ci-only
+        run: |
+          python -m alembic upgrade head
+          python -c "import sqlite3; conn=sqlite3.connect('ci_migration_test.db'); tables=[r[0] for r in conn.execute(\"SELECT name FROM sqlite_master WHERE type='table'\").fetchall()]; print(f'Tables: {len(tables)}'); assert len(tables) >= 20, f'Expected 20+ tables, got {len(tables)}'"
+
+  frontend-build:
+    name: Frontend Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Type check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: frontend
+        run: npx vite build
+
+      - name: Verify build output
+        working-directory: frontend
+        run: |
+          test -f dist/index.html || (echo "Missing index.html" && exit 1)
+          echo "Frontend build successful"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Run Bandit security scan
+        working-directory: backend
+        run: |
+          pip install bandit
+          bandit -r app/ -ll -ii --skip B101

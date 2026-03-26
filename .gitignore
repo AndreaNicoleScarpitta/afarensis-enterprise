@@ -1,8 +1,12 @@
 # Environment & secrets
+.env
 backend/.env
+frontend/.env
 backend/.secret_key
 backend/afarensis.db
 backend/.deps_installed
+tmp_*.json
+.claude/
 
 # Python
 __pycache__/

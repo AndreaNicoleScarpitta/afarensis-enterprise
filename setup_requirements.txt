@@ -1,0 +1,21 @@
+# Requirements for Afarensis Enterprise Setup Script
+# Install with: pip install -r setup_requirements.txt
+
+# Core dependencies for setup script
+asyncpg>=0.28.0
+redis>=4.5.0
+httpx>=0.24.0
+passlib[bcrypt]>=1.7.4
+sqlalchemy[asyncio]>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Build dependencies
+pyinstaller>=5.13.0
+setuptools>=68.0.0
+wheel>=0.41.0
+
+# Optional dependencies for enhanced setup
+docker>=6.1.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+requests>=2.31.0
