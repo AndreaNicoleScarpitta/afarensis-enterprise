@@ -63,7 +63,7 @@ const EvidenceReview: React.FC = () => {
       case 'in_review': return <AlertTriangle className="h-4 w-4 text-yellow-500" />
       case 'rejected': return <XCircle className="h-4 w-4 text-red-500" />
       case 'screening': return <Eye className="h-4 w-4 text-blue-500" />
-      default: return <FileText className="h-4 w-4 text-gray-400" />
+      default: return <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />
     }
   }
 
@@ -91,7 +91,7 @@ const EvidenceReview: React.FC = () => {
   }
 
   const getQualityColor = (score: number | null) => {
-    if (score == null) return 'text-gray-400'
+    if (score == null) return 'text-gray-500 dark:text-gray-400'
     if (score >= 85) return 'text-green-600'
     if (score >= 70) return 'text-blue-600'
     if (score >= 55) return 'text-yellow-600'
@@ -148,7 +148,7 @@ const EvidenceReview: React.FC = () => {
       <div className="bg-white rounded-lg shadow-sm border p-4">
         <div className="flex flex-col lg:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
             <input
               type="text"
               placeholder="Search evidence by title or source..."
@@ -240,7 +240,7 @@ const EvidenceReview: React.FC = () => {
       {/* Evidence list */}
       {items.length === 0 ? (
         <div className="bg-white rounded-lg border shadow-sm p-16 text-center">
-          <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <FileText className="h-12 w-12 text-gray-600 dark:text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No evidence found</h3>
           <p className="text-gray-500">
             {searchQuery || statusFilter !== 'all'
@@ -324,7 +324,7 @@ const EvidenceReview: React.FC = () => {
                   <div className={`text-lg font-bold ${getQualityColor(item.qualityScore)}`}>
                     {item.qualityScore != null ? `${item.qualityScore}` : '—'}
                   </div>
-                  <div className="text-xs text-gray-400">/ 100</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">/ 100</div>
                 </div>
 
                 {/* Source badge */}

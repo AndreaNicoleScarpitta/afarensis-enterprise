@@ -46,14 +46,14 @@ function ForestRow({ row, xMin, xMax }: { row: typeof FOREST_PLOT_DATA[0]; xMin:
   const hiPct  = ((row.hi  - xMin) / range) * 100
   const nullPct = ((NULL_LINE - xMin) / range) * 100
 
-  const sigColor = row.hi < 1 ? 'text-emerald-400' : row.lo > 1 ? 'text-red-400' : 'text-gray-300'
+  const sigColor = row.hi < 1 ? 'text-emerald-400' : row.lo > 1 ? 'text-red-400' : 'text-gray-600 dark:text-gray-300'
 
   return (
-    <div className={`px-4 py-3 border-b border-white/5 hover:bg-white/3 transition-colors ${row.primary ? 'bg-[#2563EB]/8' : ''}`}>
+    <div className={`px-4 py-3 border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:bg-white/3 transition-colors ${row.primary ? 'bg-[#2563EB]/8' : ''}`}>
       <div className="flex items-center gap-3">
         {/* Label */}
         <div className="w-52 shrink-0">
-          <p className={`text-xs ${row.primary ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-400'}`}>{row.label}</p>
+          <p className={`text-xs ${row.primary ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>{row.label}</p>
           {row.note && <p className="text-[9px] text-gray-600">{row.note}</p>}
         </div>
 
@@ -196,13 +196,13 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-[#60a5fa]" />
+              <TrendingUp className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 06</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Effect Estimation</h1>
               <p className="text-gray-500 text-xs mt-0.5">Primary result · forest plot · subgroup analyses</p>
@@ -239,7 +239,7 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
         {safeData.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
             <BarChart3 className="h-10 w-10 text-gray-600 mb-3" />
-            <p className="text-sm font-medium text-gray-400">No data available</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
             <p className="text-xs text-gray-600 mt-1">Run statistical analysis on uploaded data to see effect estimates.</p>
           </div>
         )}
@@ -248,9 +248,9 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
         <div className="bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl p-6">
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-[10px] text-[#60a5fa] font-bold uppercase tracking-widest mb-1">Primary Analysis — {selectedStudy.estimand}</p>
+              <p className="text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-bold uppercase tracking-widest mb-1">Primary Analysis — {selectedStudy.estimand}</p>
               <h2 className="text-3xl font-black text-gray-900 dark:text-white">HR {primaryResult?.est?.toFixed(2) ?? '—'}</h2>
-              <p className="text-sm text-gray-400 mt-1">95% CI: [{primaryResult?.lo?.toFixed(2) ?? '—'}, {primaryResult?.hi?.toFixed(2) ?? '—'}]</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">95% CI: [{primaryResult?.lo?.toFixed(2) ?? '—'}, {primaryResult?.hi?.toFixed(2) ?? '—'}]</p>
             </div>
             <div className="text-right">
               {primaryResult && primaryResult.lo != null && primaryResult.hi != null ? (
@@ -273,7 +273,7 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
                 <span className="text-sm text-gray-500">—</span>
               )}
               {reviewerMode && primaryResult && analysisResults?.column_detection && (
-                <p className="text-xs text-[#60a5fa] mt-2 font-semibold">
+                <p className="text-xs text-[#2563EB] dark:text-[#60a5fa] mt-2 font-semibold">
                   N={analysisResults.column_detection.n_records_analyzed ?? '—'} patients analyzed.
                   {analysisResults.column_detection.n_records_dropped > 0 && (
                     <> {analysisResults.column_detection.n_records_dropped} excluded.</>
@@ -304,7 +304,7 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
             <span className="text-[10px] text-gray-500">Full reproducibility trace available for this result</span>
             <button
               onClick={() => { setSelectedResult('primary'); setShowWorkOpen(true) }}
-              className="flex items-center gap-1.5 text-xs text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors bg-[#2563EB]/15 border border-[#2563EB]/30 px-3 py-1.5 rounded-lg"
+              className="flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors bg-[#2563EB]/15 border border-[#2563EB]/30 px-3 py-1.5 rounded-lg"
             >
               <Layers className="h-3.5 w-3.5" /> Show Your Work
             </button>
@@ -352,10 +352,10 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
         <section className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
           <button
             onClick={() => setMultiplicityOpen(!multiplicityOpen)}
-            className="w-full flex items-center justify-between px-5 py-4 bg-gray-100/80 dark:bg-white/4 hover:bg-gray-200/80 dark:hover:bg-white/6 transition-colors"
+            className="w-full flex items-center justify-between px-5 py-4 bg-gray-100/80 dark:bg-white/4 hover:bg-gray-200/80 dark:hover:bg-gray-100 dark:bg-white/6 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <Layers className="h-4 w-4 text-[#60a5fa]" />
+              <Layers className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
               <div className="text-left">
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white">Multiplicity Adjustment</h2>
                 <p className="text-[10px] text-gray-500 mt-0.5">Adjust p-values for multiple comparisons across {safeData.length} hypotheses</p>
@@ -368,7 +368,7 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
             <div className="p-5 space-y-4">
               {/* Method selector */}
               <div className="flex items-center gap-3">
-                <label className="text-xs font-semibold text-gray-400 whitespace-nowrap">Adjustment Method:</label>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 whitespace-nowrap">Adjustment Method:</label>
                 <select
                   value={multiplicityMethod}
                   onChange={(e) => setMultiplicityMethod(e.target.value)}
@@ -389,10 +389,10 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
                   <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider text-center">Rejected</span>
                 </div>
                 {safeData.map((row, i) => (
-                  <div key={i} className={`grid grid-cols-4 gap-3 items-center px-4 py-2.5 text-xs border-b border-gray-200/50 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/3 transition-colors ${row.primary ? 'bg-[#2563EB]/5' : ''}`}>
-                    <span className={`${row.primary ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-400'} truncate`}>{row.label}</span>
-                    <span className="text-right font-mono text-gray-300">{rawPValues[i]?.toFixed(4)}</span>
-                    <span className={`text-right font-mono ${adjustedPValues[i] < alpha ? 'text-emerald-400 font-bold' : 'text-gray-400'}`}>
+                  <div key={i} className={`grid grid-cols-4 gap-3 items-center px-4 py-2.5 text-xs border-b border-gray-200/50 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors ${row.primary ? 'bg-[#2563EB]/5' : ''}`}>
+                    <span className={`${row.primary ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'} truncate`}>{row.label}</span>
+                    <span className="text-right font-mono text-gray-600 dark:text-gray-300">{rawPValues[i]?.toFixed(4)}</span>
+                    <span className={`text-right font-mono ${adjustedPValues[i] < alpha ? 'text-emerald-400 font-bold' : 'text-gray-500 dark:text-gray-400'}`}>
                       {adjustedPValues[i]?.toFixed(4)}
                     </span>
                     <span className="text-center">
@@ -407,7 +407,7 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
 
               <div className="bg-gray-200/40 dark:bg-white/2 rounded-lg px-4 py-3">
                 <p className="text-[10px] text-gray-500">
-                  <strong className="text-gray-300">Method:</strong> {MULTIPLICITY_METHODS.find(m => m.value === multiplicityMethod)?.label} correction applied at alpha = {alpha}. {adjustedPValues.filter(p => p < alpha).length} of {safeData.length} hypotheses rejected after adjustment.
+                  <strong className="text-gray-600 dark:text-gray-300">Method:</strong> {MULTIPLICITY_METHODS.find(m => m.value === multiplicityMethod)?.label} correction applied at alpha = {alpha}. {adjustedPValues.filter(p => p < alpha).length} of {safeData.length} hypotheses rejected after adjustment.
                 </p>
               </div>
             </div>
@@ -418,22 +418,22 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
         {primaryResult && (
           <section>
             <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Pre-specified Interpretation Framework</h2>
-            <div className="bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-3">
+            <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-3">
               {primaryResult.est < 1 ? (
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <p className="text-sm text-gray-300">Point estimate (HR {primaryResult.est?.toFixed(2)}) is consistent with a <strong className="text-white">{Math.round((1 - primaryResult.est) * 100)}% relative risk reduction</strong> in the primary endpoint.</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Point estimate (HR {primaryResult.est?.toFixed(2)}) is consistent with a <strong className="text-white">{Math.round((1 - primaryResult.est) * 100)}% relative risk reduction</strong> in the primary endpoint.</p>
                 </div>
               ) : (
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                  <p className="text-sm text-gray-300">Point estimate (HR {primaryResult.est?.toFixed(2)}) suggests a <strong className="text-white">{Math.round((primaryResult.est - 1) * 100)}% relative risk increase</strong> in the primary endpoint.</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Point estimate (HR {primaryResult.est?.toFixed(2)}) suggests a <strong className="text-white">{Math.round((primaryResult.est - 1) * 100)}% relative risk increase</strong> in the primary endpoint.</p>
                 </div>
               )}
               {primaryResult.lo != null && primaryResult.hi != null && primaryResult.lo <= 1 && primaryResult.hi >= 1 && (
                 <div className="flex items-start gap-3">
                   <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-300 shrink-0 mt-0.5" />
-                  <p className="text-sm text-gray-300">Wide confidence interval ({primaryResult.lo?.toFixed(2)}–{primaryResult.hi?.toFixed(2)}) — <strong className="text-white">cannot exclude chance or harm</strong>.</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">Wide confidence interval ({primaryResult.lo?.toFixed(2)}–{primaryResult.hi?.toFixed(2)}) — <strong className="text-white">cannot exclude chance or harm</strong>.</p>
                 </div>
               )}
               {safeData.length > 1 && (
@@ -441,12 +441,12 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
                   {safeData.every((r: any) => r.est < 1 === (primaryResult.est < 1)) ? (
                     <>
                       <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
-                      <p className="text-sm text-gray-300">Results are <strong className="text-white">directionally consistent</strong> across all {safeData.length - 1} sensitivity/subgroup analyses.</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Results are <strong className="text-white">directionally consistent</strong> across all {safeData.length - 1} sensitivity/subgroup analyses.</p>
                     </>
                   ) : (
                     <>
                       <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                      <p className="text-sm text-gray-300">Results show <strong className="text-white">directional inconsistency</strong> across sensitivity analyses. Interpret with caution.</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Results show <strong className="text-white">directional inconsistency</strong> across sensitivity analyses. Interpret with caution.</p>
                     </>
                   )}
                 </div>
@@ -457,7 +457,7 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/comparability`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/comparability`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 5: Comparability & Balance
           </Link>
           <Link to={`/projects/${selectedStudy.id}/bias-sensitivity`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">

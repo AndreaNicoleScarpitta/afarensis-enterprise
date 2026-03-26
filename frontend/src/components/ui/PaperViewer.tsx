@@ -199,7 +199,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
             )}
           </div>
           <div className="flex items-center gap-1.5">
-            <button onClick={copyRef} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-white/8 transition-colors">
+            <button onClick={copyRef} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700 dark:text-gray-200 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-white/8 transition-colors">
               {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
               {copied ? 'Copied!' : 'Copy ref'}
             </button>
@@ -213,10 +213,10 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                 <ExternalLink className="h-3.5 w-3.5" /> Open in New Tab
               </a>
             )}
-            <button onClick={() => setExpanded(v => !v)} className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-white/8 transition-colors">
+            <button onClick={() => setExpanded(v => !v)} className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700 dark:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-white/8 transition-colors">
               {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
-            <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-red-500 rounded hover:bg-gray-100 dark:hover:bg-white/8 transition-colors">
+            <button onClick={onClose} className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-500 rounded hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-white/8 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -257,7 +257,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
               className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
                 tab === t.id
                   ? 'border-[#2563EB] text-[#2563EB]'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700 dark:text-gray-200'
               }`}
             >
               <t.icon className="h-3.5 w-3.5" /> {t.label}
@@ -281,7 +281,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
               {paper.abstract ? (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Abstract</p>
+                    <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Abstract</p>
                     <button
                       onClick={() => setTab('anchors')}
                       className="flex items-center gap-1 text-[10px] text-[#2563EB] font-semibold hover:underline"
@@ -295,7 +295,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-sm text-gray-400">No abstract available.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No abstract available.</p>
                   {sourceUrl && (
                     <a href={sourceUrl} target="_blank" rel="noopener noreferrer"
                        className="mt-3 inline-flex items-center gap-2 text-sm text-[#2563EB] font-semibold hover:underline">
@@ -307,7 +307,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
 
               {paper.meshTerms && paper.meshTerms.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">MeSH Terms</p>
+                  <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">MeSH Terms</p>
                   <div className="flex flex-wrap gap-1.5">
                     {paper.meshTerms.map(t => (
                       <span key={t} className="text-[10px] bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700/30 px-2 py-0.5 rounded">{t}</span>
@@ -318,7 +318,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
 
               {paper.eligibilityCriteria && (
                 <div>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Eligibility Criteria</p>
+                  <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Eligibility Criteria</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-line bg-gray-50 dark:bg-white/3 rounded-lg p-4">{paper.eligibilityCriteria}</p>
                 </div>
               )}
@@ -376,9 +376,9 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center flex-1 gap-4 p-8 text-center min-h-[300px]">
-                  <FileText className="h-10 w-10 text-gray-300 dark:text-gray-600" />
+                  <FileText className="h-10 w-10 text-gray-600 dark:text-gray-300 dark:text-gray-600" />
                   <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Full text not available in-app</p>
-                  <p className="text-xs text-gray-400 max-w-sm">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
                     This paper is not open-access or no PDF URL was returned. Open the paper at its source to read the full text.
                   </p>
                   {sourceUrl && (
@@ -404,7 +404,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
               </div>
 
               {anchors.length === 0 ? (
-                <div className="text-center py-8 text-sm text-gray-400">No anchors detected in this paper's abstract.</div>
+                <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">No anchors detected in this paper's abstract.</div>
               ) : (
                 anchors.map(anchor => {
                   const saved = isAlreadySaved(anchor.text) || justSaved.has(anchor.id)
@@ -424,7 +424,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                             anchor.relevance === 'medium' ? 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-600/30 bg-blue-100 dark:bg-blue-900/20' :
                                                             'text-gray-500 border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/8'
                           }`}>{anchor.relevance}</span>
-                          <span className="text-[10px] text-gray-400 dark:text-gray-500">{anchor.section}</span>
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500">{anchor.section}</span>
                         </div>
                       </div>
 
@@ -439,7 +439,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                               key={cat.id}
                               onClick={() => setAnchorCategories(prev => ({ ...prev, [anchor.id]: cat.id }))}
                               className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border transition-colors ${
-                                selectedCat === cat.id ? cat.color : 'text-gray-400 bg-transparent border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
+                                selectedCat === cat.id ? cat.color : 'text-gray-500 dark:text-gray-400 bg-transparent border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
                               }`}
                             >
                               {cat.label}
@@ -467,7 +467,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
               )}
 
               {anchors.length > 0 && (
-                <p className="text-[10px] text-gray-400 text-center pt-2">
+                <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center pt-2">
                   Saved anchors appear in relevant workflow pages (Study Definition, Causal Framework, Effect Estimation, Bias & Sensitivity).
                 </p>
               )}
@@ -493,7 +493,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                   { label: 'Conditions',     value: paper.conditions?.slice(0, 3).join(', ') ?? '—' },
                 ].map(({ label, value }) => (
                   <div key={label}>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mb-0.5">{label}</p>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest font-semibold mb-0.5">{label}</p>
                     <p className="text-sm text-gray-800 dark:text-gray-200 font-medium break-words">{value}</p>
                   </div>
                 ))}

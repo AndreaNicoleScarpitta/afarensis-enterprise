@@ -427,19 +427,19 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
                     <span className="text-xs text-gray-500 font-medium w-12">{strength.label}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-1 text-[11px]">
-                    <span className={`flex items-center gap-1 ${newPassword.length >= 8 ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 ${newPassword.length >= 8 ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
                       {newPassword.length >= 8 ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />} 8+ characters
                     </span>
-                    <span className={`flex items-center gap-1 ${/[A-Z]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 ${/[A-Z]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
                       {/[A-Z]/.test(newPassword) ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />} Uppercase letter
                     </span>
-                    <span className={`flex items-center gap-1 ${/[a-z]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 ${/[a-z]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
                       {/[a-z]/.test(newPassword) ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />} Lowercase letter
                     </span>
-                    <span className={`flex items-center gap-1 ${/[0-9]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 ${/[0-9]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
                       {/[0-9]/.test(newPassword) ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />} Number
                     </span>
-                    <span className={`flex items-center gap-1 ${/[^A-Za-z0-9]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 ${/[^A-Za-z0-9]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
                       {/[^A-Za-z0-9]/.test(newPassword) ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />} Special character
                     </span>
                   </div>
@@ -639,16 +639,16 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
                     <span className="text-xs text-gray-500 font-medium w-12">{regStrength.label}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-1 text-[11px]">
-                    <span className={regPassword.length >= 8 ? 'text-emerald-600' : 'text-gray-400'}>
+                    <span className={regPassword.length >= 8 ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}>
                       {regPassword.length >= 8 ? 'Yes' : 'No'} 8+ characters
                     </span>
-                    <span className={/[A-Z]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-400'}>
+                    <span className={/[A-Z]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}>
                       {/[A-Z]/.test(regPassword) ? 'Yes' : 'No'} Uppercase
                     </span>
-                    <span className={/[0-9]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-400'}>
+                    <span className={/[0-9]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}>
                       {/[0-9]/.test(regPassword) ? 'Yes' : 'No'} Number
                     </span>
-                    <span className={/[^A-Za-z0-9]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-400'}>
+                    <span className={/[^A-Za-z0-9]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}>
                       {/[^A-Za-z0-9]/.test(regPassword) ? 'Yes' : 'No'} Special char
                     </span>
                   </div>
@@ -759,9 +759,9 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
         </form>
         <div className="border-t border-gray-200 pt-6">
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-gray-500 font-medium uppercase tracking-widest">
-            <span>Role-based access</span><span className="text-gray-300">·</span>
-            <span>Audit logging</span><span className="text-gray-300">·</span>
-            <span>Validated environment</span><span className="text-gray-300">·</span>
+            <span>Role-based access</span><span className="text-gray-600 dark:text-gray-300">·</span>
+            <span>Audit logging</span><span className="text-gray-600 dark:text-gray-300">·</span>
+            <span>Validated environment</span><span className="text-gray-600 dark:text-gray-300">·</span>
             <span>Electronic record traceability</span>
           </div>
         </div>
@@ -792,10 +792,10 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
         <div className="space-y-8">
           <div className="space-y-4">
             <div>
-              <p className="text-gray-400 text-[13px] font-medium uppercase tracking-widest mb-2">Platform</p>
+              <p className="text-gray-500 dark:text-gray-400 text-[13px] font-medium uppercase tracking-widest mb-2">Platform</p>
               <h2 className="text-white text-xl font-semibold leading-tight">Regulatory evidence review platform</h2>
             </div>
-            <p className="text-gray-400 text-sm leading-relaxed">
+            <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
               Version-controlled evidence evaluation, reproducible analysis artifacts, and attributed review workflows for teams operating under high scrutiny.
             </p>
           </div>
@@ -803,7 +803,7 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
             {trustBullets.map((bullet, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#2563EB] shrink-0 mt-1.5" />
-                <p className="text-gray-300 text-sm">{bullet}</p>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">{bullet}</p>
               </div>
             ))}
           </div>
@@ -1139,7 +1139,7 @@ function App() {
                     <Route path="*" element={
                       <div className="flex flex-col items-center justify-center min-h-screen text-center gap-4 bg-gray-50 dark:bg-[#0d0d0e]">
                         <div className="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center">
-                          <AlertTriangle className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                          <AlertTriangle className="h-8 w-8 text-gray-500 dark:text-gray-400 dark:text-gray-500" />
                         </div>
                         <div>
                           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Page Not Found</h1>

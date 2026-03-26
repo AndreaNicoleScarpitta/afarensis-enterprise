@@ -107,11 +107,11 @@ const SmartWorkflowGuide: React.FC<SmartWorkflowGuideProps> = ({
       case 'current':
         return <Circle className="w-5 h-5 text-primary-600 fill-current" />
       case 'pending':
-        return <Circle className="w-5 h-5 text-gray-400" />
+        return <Circle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
       case 'blocked':
         return <AlertTriangle className="w-5 h-5 text-error-600" />
       default:
-        return <Circle className="w-5 h-5 text-gray-400" />
+        return <Circle className="w-5 h-5 text-gray-500 dark:text-gray-400" />
     }
   }
 
@@ -191,7 +191,7 @@ const SmartWorkflowGuide: React.FC<SmartWorkflowGuideProps> = ({
                     stroke="currentColor"
                     strokeWidth="6"
                     fill="transparent"
-                    className="text-gray-200"
+                    className="text-gray-700 dark:text-gray-200"
                   />
                   <circle
                     cx="40"
@@ -419,7 +419,7 @@ const SmartWorkflowGuide: React.FC<SmartWorkflowGuideProps> = ({
                   </div>
                   
                   <ChevronRight 
-                    className={`w-5 h-5 text-gray-400 transition-transform ${
+                    className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${
                       selectedStep === step.id ? 'rotate-90' : ''
                     }`} 
                   />

@@ -426,7 +426,7 @@ function ModelCardTab({ data }: { data: any }) {
         <ul className="space-y-1">
           {card.covariates.map((c: string, i: number) => (
             <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
-              <span className="text-gray-400 dark:text-gray-500 mt-0.5 text-xs font-mono w-4 text-right shrink-0">{i + 1}.</span>
+              <span className="text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5 text-xs font-mono w-4 text-right shrink-0">{i + 1}.</span>
               {c}
             </li>
           ))}
@@ -550,7 +550,7 @@ function InputsTab({ data }: { data: any }) {
       <ul className="space-y-1">
         {inputs.covariates.map((c: string, i: number) => (
           <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
-            <span className="text-gray-400 text-xs font-mono w-4 text-right shrink-0">{i + 1}.</span>
+            <span className="text-gray-500 dark:text-gray-400 text-xs font-mono w-4 text-right shrink-0">{i + 1}.</span>
             {c}
           </li>
         ))}
@@ -697,7 +697,7 @@ function LineageTab({ data }: { data: any }) {
               </div>
               <div className="flex-1 pb-4">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-gray-400">{node.type}</span>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{node.type}</span>
                   {node.version && (
                     <span className="text-[10px] font-mono bg-gray-100 dark:bg-white/5 px-1.5 py-0.5 rounded text-gray-500">
                       {node.version}
@@ -807,7 +807,7 @@ export default function ShowYourWork({ isOpen, onClose, resultId, resultLabel, r
                 'flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap',
                 activeTab === tab.key
                   ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300',
+                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300',
               )}
             >
               {tab.icon}
@@ -823,7 +823,7 @@ export default function ShowYourWork({ isOpen, onClose, resultId, resultLabel, r
 
         {/* Footer */}
         <div className="border-t border-gray-200 dark:border-white/10 px-5 py-3 bg-gray-50 dark:bg-white/5">
-          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500">
             All values derived from the current analysis run. No hardcoded or cached data is displayed.
           </p>
         </div>

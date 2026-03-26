@@ -267,7 +267,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
   }
 
   const typeIcon = (t: string) => {
-    if (t === 'numeric') return <Hash className="h-3 w-3 text-[#60a5fa]" />
+    if (t === 'numeric') return <Hash className="h-3 w-3 text-[#2563EB] dark:text-[#60a5fa]" />
     if (t === 'categorical') return <Tag className="h-3 w-3 text-amber-600 dark:text-amber-300" />
     return <Calendar className="h-3 w-3 text-emerald-400" />
   }
@@ -279,13 +279,13 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <BookOpen className="h-4 w-4 text-[#60a5fa]" />
+              <BookOpen className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Variable Notebook</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Variable Construction & Derivation</h1>
               <p className="text-gray-500 text-xs mt-0.5">Derivation recipes &middot; code lists &middot; unit normalization &middot; row-level trace</p>
@@ -303,8 +303,8 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
         {/* Reviewer Mode Banner */}
         {reviewerMode && (
           <div className="flex items-center gap-3 bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl px-5 py-3">
-            <Eye className="h-4 w-4 text-[#60a5fa] shrink-0" />
-            <p className="text-xs text-[#60a5fa] font-semibold">Reviewer mode: Displaying locked variable definitions. All derivation logic is pre-specified per SAP.</p>
+            <Eye className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa] shrink-0" />
+            <p className="text-xs text-[#2563EB] dark:text-[#60a5fa] font-semibold">Reviewer mode: Displaying locked variable definitions. All derivation logic is pre-specified per SAP.</p>
           </div>
         )}
 
@@ -344,10 +344,10 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                 {VARIABLES.map((v) => (
                   <React.Fragment key={v.id}>
                     <tr
-                      className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/3 transition-colors cursor-pointer"
+                      className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors cursor-pointer"
                       onClick={() => toggleVar(v.id)}
                     >
-                      <td className="px-4 py-2.5 font-mono font-bold text-[#60a5fa]">{v.id}</td>
+                      <td className="px-4 py-2.5 font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">{v.id}</td>
                       <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300 font-medium">{v.label}</td>
                       <td className="px-4 py-2.5">
                         <span className="flex items-center gap-1.5">
@@ -366,7 +366,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                         )}
                       </td>
                       <td className="px-4 py-2.5">
-                        {expandedVar === v.id ? <ChevronDown className="h-3.5 w-3.5 text-gray-400" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-400" />}
+                        {expandedVar === v.id ? <ChevronDown className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />}
                       </td>
                     </tr>
 
@@ -379,7 +379,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                             <div className="grid grid-cols-2 gap-4">
                               <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <Info className="h-3.5 w-3.5 text-[#60a5fa]" />
+                                  <Info className="h-3.5 w-3.5 text-[#2563EB] dark:text-[#60a5fa]" />
                                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Conceptual Definition</p>
                                 </div>
                                 <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{v.conceptualDef}</p>
@@ -402,7 +402,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                                     {/* Step number connector */}
                                     <div className="flex flex-col items-center shrink-0">
                                       <div className="w-6 h-6 rounded-full bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-                                        <span className="text-[10px] font-bold text-[#60a5fa]">{step.step}</span>
+                                        <span className="text-[10px] font-bold text-[#2563EB] dark:text-[#60a5fa]">{step.step}</span>
                                       </div>
                                       {si < v.derivation.length - 1 && (
                                         <div className="w-px h-full min-h-[40px] bg-[#2563EB]/20 mt-1" />
@@ -415,7 +415,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                                       <div className="flex flex-wrap gap-4 text-[10px]">
                                         <div>
                                           <span className="text-gray-500 uppercase tracking-widest font-semibold">Inputs: </span>
-                                          <span className="font-mono text-[#60a5fa]">{step.inputs.join(', ')}</span>
+                                          <span className="font-mono text-[#2563EB] dark:text-[#60a5fa]">{step.inputs.join(', ')}</span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                           <ArrowRight className="h-2.5 w-2.5 text-gray-500" />
@@ -459,7 +459,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                   className={`text-[10px] px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-colors ${
                     activeCodeList === i
                       ? 'bg-[#2563EB] text-white'
-                      : 'bg-gray-200/60 dark:bg-white/6 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                      : 'bg-gray-200/60 dark:bg-white/6 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300'
                   }`}
                 >
                   {cl.name}
@@ -494,8 +494,8 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                 </thead>
                 <tbody>
                   {CODE_LISTS[activeCodeList].codes.map((c, i) => (
-                    <tr key={i} className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/3 transition-colors">
-                      <td className="px-4 py-2 font-mono font-bold text-[#60a5fa]">{c.code}</td>
+                    <tr key={i} className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors">
+                      <td className="px-4 py-2 font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">{c.code}</td>
                       <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{c.display}</td>
                       <td className="px-4 py-2 text-center text-gray-500">{CODE_LISTS[activeCodeList].system}</td>
                       <td className="px-4 py-2 text-center text-gray-500">{CODE_LISTS[activeCodeList].version}</td>
@@ -531,10 +531,10 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
               </thead>
               <tbody>
                 {UNIT_RULES.map((r, i) => (
-                  <tr key={i} className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/3 transition-colors">
-                    <td className="px-4 py-2.5 font-mono font-bold text-[#60a5fa]">{r.variable}</td>
+                  <tr key={i} className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors">
+                    <td className="px-4 py-2.5 font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">{r.variable}</td>
                     <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{r.sourceUnit}</td>
-                    <td className="px-4 py-2.5 text-center"><ArrowRight className="h-3 w-3 text-gray-400 mx-auto" /></td>
+                    <td className="px-4 py-2.5 text-center"><ArrowRight className="h-3 w-3 text-gray-500 dark:text-gray-400 mx-auto" /></td>
                     <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{r.targetUnit}</td>
                     <td className="px-4 py-2.5 font-mono text-gray-600 dark:text-gray-400">{r.formula}</td>
                     <td className="px-4 py-2.5 text-center">
@@ -558,11 +558,11 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
             {/* Query bar */}
             <div className="flex items-center gap-3">
               <div className="flex-1 flex items-center gap-2 bg-gray-200/60 dark:bg-black/30 border border-gray-300 dark:border-white/8 rounded-lg px-3 py-2">
-                <Search className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                <Search className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0" />
                 <span className="text-xs text-gray-500">For record </span>
                 <span className="text-xs font-mono font-bold text-gray-900 dark:text-white">#4821</span>
                 <span className="text-xs text-gray-500">, show inputs for </span>
-                <span className="text-xs font-mono font-bold text-[#60a5fa]">BSID_III_MOTOR_CHG</span>
+                <span className="text-xs font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">BSID_III_MOTOR_CHG</span>
               </div>
               <button
                 onClick={() => setShowTrace(!showTrace)}
@@ -576,9 +576,9 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
             {showTrace && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <FlaskConical className="h-3.5 w-3.5 text-[#60a5fa]" />
+                  <FlaskConical className="h-3.5 w-3.5 text-[#2563EB] dark:text-[#60a5fa]" />
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
-                    Derivation trace for record <span className="text-gray-900 dark:text-white font-bold">#4821</span> &mdash; <span className="text-[#60a5fa]">BSID_III_MOTOR_CHG</span>
+                    Derivation trace for record <span className="text-gray-900 dark:text-white font-bold">#4821</span> &mdash; <span className="text-[#2563EB] dark:text-[#60a5fa]">BSID_III_MOTOR_CHG</span>
                   </p>
                 </div>
 
@@ -596,9 +596,9 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                     <tbody>
                       {TRACE_DATA.map((t, i) => (
                         <tr key={i} className={`border-b border-gray-200 dark:border-white/5 ${i === TRACE_DATA.length - 1 ? 'bg-[#2563EB]/5' : ''}`}>
-                          <td className="px-4 py-2.5 font-mono font-bold text-[#60a5fa]">{t.input}</td>
+                          <td className="px-4 py-2.5 font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">{t.input}</td>
                           <td className="px-4 py-2.5 text-center font-mono text-gray-900 dark:text-white font-semibold">{t.value}</td>
-                          <td className="px-4 py-2.5 text-center"><ArrowRight className="h-3 w-3 text-gray-400 mx-auto" /></td>
+                          <td className="px-4 py-2.5 text-center"><ArrowRight className="h-3 w-3 text-gray-500 dark:text-gray-400 mx-auto" /></td>
                           <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{t.transformation}</td>
                           <td className="px-4 py-2.5 text-center font-mono font-bold text-emerald-400">{t.output}</td>
                         </tr>
@@ -609,11 +609,11 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
 
                 {/* Provenance pointer */}
                 <div className="flex items-center gap-2 bg-gray-200/40 dark:bg-white/[0.02] border border-gray-200 dark:border-white/8 rounded-lg px-4 py-2.5">
-                  <Info className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                  <Info className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0" />
                   <p className="text-[10px] text-gray-500">
                     <span className="uppercase tracking-widest font-semibold">Provenance: </span>
                     Source record <span className="font-mono font-bold text-gray-900 dark:text-white">#4821</span> from
-                    <span className="font-mono text-[#60a5fa]"> assessments</span> table, rows
+                    <span className="font-mono text-[#2563EB] dark:text-[#60a5fa]"> assessments</span> table, rows
                     <span className="font-mono text-gray-900 dark:text-white"> 12,408</span> (baseline) and
                     <span className="font-mono text-gray-900 dark:text-white"> 15,223</span> (Month 12).
                     Traceable to source data extract v3.1, dated 2024-09-15.

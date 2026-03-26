@@ -69,13 +69,13 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <Archive className="h-4 w-4 text-[#60a5fa]" />
+              <Archive className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 08</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Reproducibility</h1>
               <p className="text-gray-500 text-xs mt-0.5">Code manifest · environment lock · Docker image · lineage chain</p>
@@ -102,7 +102,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
         {safeManifest.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
             <FileText className="h-10 w-10 text-gray-600 mb-3" />
-            <p className="text-sm font-medium text-gray-400">No data available</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
             <p className="text-xs text-gray-600 mt-1">Generate analysis artifacts to populate the reproducibility manifest.</p>
           </div>
         )}
@@ -111,7 +111,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
         <div className="grid grid-cols-3 gap-4">
           {[
             { label: 'Signed Artifacts', value: `${signedCount} / ${safeManifest.length}`, color: signedCount === safeManifest.length ? 'text-emerald-400' : 'text-amber-600 dark:text-amber-300' },
-            { label: 'Docker Image Hash', value: reproData?.docker_image_hash ?? '—', color: reproData?.docker_image_hash ? 'text-[#60a5fa]' : 'text-gray-500' },
+            { label: 'Docker Image Hash', value: reproData?.docker_image_hash ?? '—', color: reproData?.docker_image_hash ? 'text-[#2563EB] dark:text-[#60a5fa]' : 'text-gray-500' },
             { label: 'renv Lockfile', value: reproData?.renv_version ? `${reproData.renv_version} · ${safeEnvPackages.length} packages` : '—', color: reproData?.renv_version ? 'text-emerald-400' : 'text-gray-500' },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-4">
@@ -125,7 +125,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-900 dark:text-white">Reproducibility Manifest</h2>
-            <button className="flex items-center gap-1.5 text-xs text-[#60a5fa] font-semibold hover:text-blue-300 transition-colors">
+            <button className="flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] font-semibold hover:text-blue-300 transition-colors">
               <Copy className="h-3.5 w-3.5" /> Copy all hashes
             </button>
           </div>
@@ -141,7 +141,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
               </thead>
               <tbody>
                 {safeManifest.map((m, i) => (
-                  <tr key={i} className={`border-b border-white/5 hover:bg-white/3 transition-colors`}>
+                  <tr key={i} className={`border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:bg-white/3 transition-colors`}>
                     <td className="px-4 py-2.5 text-gray-900 dark:text-white font-medium font-mono text-xs">{m.artifact}</td>
                     <td className="px-4 py-2.5 font-mono text-gray-500">{m.hash}</td>
                     <td className="px-4 py-2.5 text-center">
@@ -162,7 +162,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
         <section>
           <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Computational Environment</h2>
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+            <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5">
               <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-3">Core Packages (renv lockfile)</p>
               <div className="space-y-1.5">
                 {safeEnvPackages.map(({ pkg, version }) => (
@@ -173,14 +173,14 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                 ))}
               </div>
             </div>
-            <div className="bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+            <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5">
               <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-3">Docker Container</p>
               {reproData?.docker ? (
                 <div className="space-y-2 text-xs font-mono">
                   {reproData.docker.base_image && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Base image</span>
-                      <span className="text-gray-300">{reproData.docker.base_image}</span>
+                      <span className="text-gray-600 dark:text-gray-300">{reproData.docker.base_image}</span>
                     </div>
                   )}
                   {reproData.docker.image_hash && (
@@ -192,13 +192,13 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                   {reproData.docker.built_at && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Built</span>
-                      <span className="text-gray-300">{reproData.docker.built_at}</span>
+                      <span className="text-gray-600 dark:text-gray-300">{reproData.docker.built_at}</span>
                     </div>
                   )}
                   {reproData.docker.registry && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Registry</span>
-                      <span className="text-[#60a5fa]">{reproData.docker.registry}</span>
+                      <span className="text-[#2563EB] dark:text-[#60a5fa]">{reproData.docker.registry}</span>
                     </div>
                   )}
                 </div>
@@ -228,15 +228,15 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                     {i < reproData.lineage_chain.length - 1 && <div className="w-px h-5 bg-emerald-800/50" />}
                   </div>
                   <div className="flex items-center justify-between flex-1 py-1">
-                    <p className="text-sm text-gray-300">{item.step}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">{item.step}</p>
                     <span className="text-[10px] font-mono text-gray-600">{item.hash ?? '—'}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-6 text-center">
-              <p className="text-sm font-medium text-gray-400">Lineage Chain Not Available</p>
+            <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-6 text-center">
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Lineage Chain Not Available</p>
               <p className="text-xs text-gray-600 mt-1">Run analysis to generate provenance lineage.</p>
             </div>
           )}
@@ -244,7 +244,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/bias-sensitivity`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/bias-sensitivity`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 7: Bias & Sensitivity
           </Link>
           <Link to={`/projects/${selectedStudy.id}/audit`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">

@@ -285,7 +285,7 @@ const BiasAnalysis: React.FC = () => {
       {/* Empty State */}
       {assessments.length === 0 && (
         <div className="text-center py-12">
-          <Shield className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <Shield className="mx-auto h-12 w-12 text-gray-500 dark:text-gray-400 mb-4" />
           <h3 className="heading-3 text-gray-900 mb-2">No bias assessments yet</h3>
           <p className="body-large text-gray-600 mb-8">
             Run systematic bias risk analysis on your clinical evidence studies.

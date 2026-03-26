@@ -25,7 +25,7 @@ interface Props {
 
 const impactColor: Record<string, string> = {
   low:        'text-emerald-400 bg-emerald-900/20 border-emerald-700/30',
-  reassuring: 'text-[#60a5fa] bg-[#2563EB]/10 border-[#2563EB]/30',
+  reassuring: 'text-[#2563EB] dark:text-[#60a5fa] bg-[#2563EB]/10 border-[#2563EB]/30',
   high:       'text-red-400 bg-red-900/20 border-red-700/30',
   tbd:        'text-gray-500 bg-gray-100/80 dark:bg-white/4 border-gray-200 dark:border-white/10',
 }
@@ -153,13 +153,13 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <ShieldAlert className="h-4 w-4 text-[#60a5fa]" />
+              <ShieldAlert className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 07</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Bias & Sensitivity</h1>
               <p className="text-gray-500 text-xs mt-0.5">E-value · unmeasured confounding · stress tests · negative controls</p>
@@ -192,7 +192,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
         {safeSensitivityAnalyses.length === 0 && !eValue && !loading && (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
             <Shield className="h-10 w-10 text-gray-600 mb-3" />
-            <p className="text-sm font-medium text-gray-400">No data available</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
             <p className="text-xs text-gray-600 mt-1">Run bias analysis to see sensitivity results and E-values.</p>
           </div>
         )}
@@ -223,10 +223,10 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
               </p>
             </div>
           </div>
-          <div className="mt-3 p-4 bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl">
+          <div className="mt-3 p-4 bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl">
             <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-[#60a5fa] shrink-0 mt-0.5" />
-              <p className="text-xs text-gray-400 leading-relaxed">
+              <Info className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa] shrink-0 mt-0.5" />
+              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
                 <strong className="text-white">Interpretation:</strong>{' '}
                 {eValue?.point != null
                   ? `An unmeasured confounder would need an association of at least RR=${eValue.point.toFixed(2)} with both treatment and outcome to explain away the observed effect. `
@@ -247,7 +247,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
           {Array.isArray(biasData?.bias_register) && biasData.bias_register.length > 0 ? (
             <div className="space-y-2">
               {biasData.bias_register.map((b: any, i: number) => (
-                <div key={i} className="bg-white/3 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 grid grid-cols-4 gap-3 text-xs">
+                <div key={i} className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 grid grid-cols-4 gap-3 text-xs">
                   <p className="text-white font-medium">{b.bias}</p>
                   <p className="text-gray-500">{b.direction ?? '—'}</p>
                   <span className={`font-bold text-[10px] uppercase tracking-wider self-center px-2 py-0.5 rounded border w-fit ${
@@ -260,9 +260,9 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
               ))}
             </div>
           ) : (
-            <div className="bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-6 text-center">
+            <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-6 text-center">
               <AlertCircle className="h-6 w-6 text-gray-600 mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-400">Bias Risk Register Not Available</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Bias Risk Register Not Available</p>
               <p className="text-xs text-gray-600 mt-1">Run bias assessment to generate a study-specific risk register from analysis results.</p>
             </div>
           )}
@@ -278,7 +278,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
           </div>
           <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
             {safeSensitivityAnalyses.map((sa, i) => (
-              <div key={i} className={`flex items-start justify-between px-4 py-3 ${i < safeSensitivityAnalyses.length - 1 ? 'border-b border-white/5' : ''} hover:bg-white/3 transition-colors`}>
+              <div key={i} className={`flex items-start justify-between px-4 py-3 ${i < safeSensitivityAnalyses.length - 1 ? 'border-b border-gray-200 dark:border-white/5' : ''} hover:bg-gray-50 dark:bg-white/3 transition-colors`}>
                 <div className="flex items-start gap-3">
                   {sa.status === 'complete'
                     ? <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
@@ -306,7 +306,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
             </div>
             <button
               onClick={() => setShowWorkOpen(true)}
-              className="flex items-center gap-1.5 text-[10px] text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors"
+              className="flex items-center gap-1.5 text-[10px] text-[#2563EB] dark:text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors"
             >
               <Activity className="h-3 w-3" /> Full Lineage
             </button>
@@ -328,8 +328,8 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
                 onClick={() => { setDiagTab(tab.key); if (tab.key === 'missing' && !missingData) fetchMissingSummary() }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   diagTab === tab.key
-                    ? 'bg-[#2563EB]/15 text-[#60a5fa] border border-[#2563EB]/30'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+                    ? 'bg-[#2563EB]/15 text-[#2563EB] dark:text-[#60a5fa] border border-[#2563EB]/30'
+                    : 'text-gray-500 hover:text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-white/5'
                 }`}
               >
                 {tab.icon} {tab.label}
@@ -361,7 +361,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
               ].map((row, i) => {
                 const balanced = Math.abs(row.adj) < 0.10
                 return (
-                  <div key={i} className="grid grid-cols-5 gap-3 items-center px-4 py-2.5 text-xs border-b border-gray-200/50 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/3 transition-colors">
+                  <div key={i} className="grid grid-cols-5 gap-3 items-center px-4 py-2.5 text-xs border-b border-gray-200/50 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors">
                     <span className="text-gray-900 dark:text-white font-medium">{row.cov}</span>
                     <span className="text-right font-mono text-red-400">{row.unadj.toFixed(2)}</span>
                     <span className={`text-right font-mono ${balanced ? 'text-emerald-400' : 'text-orange-300'}`}>{row.adj.toFixed(2)}</span>
@@ -464,7 +464,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
                       <p className="text-xs font-medium text-gray-900 dark:text-white">{d.test}</p>
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
                     </div>
-                    <p className="text-xs font-mono text-[#60a5fa]">{d.result}</p>
+                    <p className="text-xs font-mono text-[#2563EB] dark:text-[#60a5fa]">{d.result}</p>
                     <p className="text-[10px] text-gray-500 mt-1">{d.detail}</p>
                   </div>
                 ))}
@@ -556,10 +556,10 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
                         <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider text-right">Missing %</span>
                       </div>
                       {missingData.variables.map((v: any, i: number) => (
-                        <div key={i} className="grid grid-cols-4 gap-3 items-center px-4 py-2.5 text-xs border-b border-gray-200/50 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/3 transition-colors">
+                        <div key={i} className="grid grid-cols-4 gap-3 items-center px-4 py-2.5 text-xs border-b border-gray-200/50 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors">
                           <span className="text-gray-900 dark:text-white font-medium">{v.variable}</span>
-                          <span className="text-right font-mono text-gray-400">{v.total?.toLocaleString()}</span>
-                          <span className="text-right font-mono text-gray-400">{v.missing?.toLocaleString()}</span>
+                          <span className="text-right font-mono text-gray-500 dark:text-gray-400">{v.total?.toLocaleString()}</span>
+                          <span className="text-right font-mono text-gray-500 dark:text-gray-400">{v.missing?.toLocaleString()}</span>
                           <span className={`text-right font-mono ${(v.missing_pct ?? 0) > 10 ? 'text-orange-300' : 'text-emerald-400'}`}>
                             {v.missing_pct?.toFixed(1)}%
                           </span>
@@ -617,7 +617,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
                   <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest">Tipping Point Analysis</h4>
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between"><span className="text-gray-500">Critical Delta</span><span className="font-mono text-gray-900 dark:text-white">{tippingResult.critical_delta ?? '—'}</span></div>
-                    <div className="flex justify-between"><span className="text-gray-500">Interpretation</span><span className="text-gray-300">{tippingResult.interpretation ?? '—'}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Interpretation</span><span className="text-gray-600 dark:text-gray-300">{tippingResult.interpretation ?? '—'}</span></div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Robustness Verdict</span>
                       <span className={`font-bold ${tippingResult.robust ? 'text-emerald-400' : 'text-orange-300'}`}>
@@ -643,9 +643,9 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
                       {mmrmResult.fixed_effects.map((fe: any, i: number) => (
                         <div key={i} className="grid grid-cols-4 gap-3 items-center px-3 py-2 text-xs border-b border-gray-200/50 dark:border-white/5">
                           <span className="text-gray-900 dark:text-white font-medium">{fe.effect}</span>
-                          <span className="text-right font-mono text-gray-300">{fe.estimate?.toFixed(4)}</span>
-                          <span className="text-right font-mono text-gray-300">{fe.se?.toFixed(4)}</span>
-                          <span className={`text-right font-mono ${(fe.p_value ?? 1) < 0.05 ? 'text-emerald-400' : 'text-gray-400'}`}>{fe.p_value?.toFixed(4)}</span>
+                          <span className="text-right font-mono text-gray-600 dark:text-gray-300">{fe.estimate?.toFixed(4)}</span>
+                          <span className="text-right font-mono text-gray-600 dark:text-gray-300">{fe.se?.toFixed(4)}</span>
+                          <span className={`text-right font-mono ${(fe.p_value ?? 1) < 0.05 ? 'text-emerald-400' : 'text-gray-500 dark:text-gray-400'}`}>{fe.p_value?.toFixed(4)}</span>
                         </div>
                       ))}
                     </div>
@@ -811,12 +811,12 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
                     <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider text-right">Alpha Spent</span>
                   </div>
                   {(Array.isArray(boundaryResult.boundaries) ? boundaryResult.boundaries : []).map((b: any, i: number) => (
-                    <div key={i} className="grid grid-cols-5 gap-3 items-center px-4 py-2.5 text-xs border-b border-gray-200/50 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/3 transition-colors">
+                    <div key={i} className="grid grid-cols-5 gap-3 items-center px-4 py-2.5 text-xs border-b border-gray-200/50 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors">
                       <span className="text-gray-900 dark:text-white font-medium">{b.look ?? i + 1}</span>
-                      <span className="text-right font-mono text-gray-400">{b.information_fraction?.toFixed(3) ?? b.info_fraction?.toFixed(3) ?? '—'}</span>
+                      <span className="text-right font-mono text-gray-500 dark:text-gray-400">{b.information_fraction?.toFixed(3) ?? b.info_fraction?.toFixed(3) ?? '—'}</span>
                       <span className="text-right font-mono text-emerald-400">{b.z_efficacy?.toFixed(4) ?? b.efficacy_boundary?.toFixed(4) ?? '—'}</span>
                       <span className="text-right font-mono text-orange-300">{b.z_futility?.toFixed(4) ?? b.futility_boundary?.toFixed(4) ?? '—'}</span>
-                      <span className="text-right font-mono text-gray-400">{b.alpha_spent?.toFixed(5) ?? b.cumulative_alpha?.toFixed(5) ?? '—'}</span>
+                      <span className="text-right font-mono text-gray-500 dark:text-gray-400">{b.alpha_spent?.toFixed(5) ?? b.cumulative_alpha?.toFixed(5) ?? '—'}</span>
                     </div>
                   ))}
                   {boundaryResult.total_alpha_spent != null && (
@@ -859,7 +859,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/effect-estimation`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/effect-estimation`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 6: Effect Estimation
           </Link>
           <Link to={`/projects/${selectedStudy.id}/reproducibility`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">

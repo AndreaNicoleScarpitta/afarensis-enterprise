@@ -42,7 +42,7 @@ const ROLE_BADGE: Record<UserRole, string> = {
   admin: 'bg-blue-500/20 text-blue-400',
   reviewer: 'bg-purple-500/20 text-purple-400',
   analyst: 'bg-emerald-500/20 text-emerald-400',
-  viewer: 'bg-gray-500/20 text-gray-400',
+  viewer: 'bg-gray-500/20 text-gray-500 dark:text-gray-400',
 }
 
 const ROLE_ICON: Record<UserRole, React.ReactNode> = {
@@ -225,7 +225,7 @@ const UserManagement: React.FC = () => {
     return (
       <div className="flex items-center justify-center py-24">
         <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-        <span className="ml-3 text-gray-400">Loading users...</span>
+        <span className="ml-3 text-gray-500 dark:text-gray-400">Loading users...</span>
       </div>
     )
   }
@@ -260,7 +260,7 @@ const UserManagement: React.FC = () => {
               {orgInfo?.name ?? 'Organization'}
             </h1>
           </div>
-          <p className="text-gray-400 mt-1 text-sm">
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
             {orgInfo?.users_count ?? users.length} members
             {orgInfo?.projects_count != null && ` \u00b7 ${orgInfo.projects_count} projects`}
           </p>
@@ -268,7 +268,7 @@ const UserManagement: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={fetchData}
-            className="p-2 rounded-md text-gray-400 hover:bg-gray-800 transition-colors"
+            className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-800 transition-colors"
             title="Refresh"
           >
             <RefreshCw className="w-4 h-4" />
@@ -295,13 +295,13 @@ const UserManagement: React.FC = () => {
             placeholder="Search by name or email..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
         <select
           value={roleFilter}
           onChange={e => setRoleFilter(e.target.value as any)}
-          className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
         >
           <option value="all">All Roles</option>
           {ALL_ROLES.map(r => (
@@ -316,12 +316,12 @@ const UserManagement: React.FC = () => {
           <table className="w-full">
             <thead className="bg-gray-900/60 border-b border-gray-700">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">Department</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider hidden lg:table-cell">Last Login</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">User</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Department</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">Last Login</th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-700/50">
@@ -371,7 +371,7 @@ const UserManagement: React.FC = () => {
                     </td>
 
                     {/* Department */}
-                    <td className="px-6 py-4 hidden md:table-cell text-sm text-gray-400">
+                    <td className="px-6 py-4 hidden md:table-cell text-sm text-gray-500 dark:text-gray-400">
                       {user.department || '\u2014'}
                     </td>
 
@@ -406,7 +406,7 @@ const UserManagement: React.FC = () => {
                           value={user.role}
                           disabled={!!actionLoading[user.id]}
                           onChange={e => changeRole(user.id, e.target.value as UserRole)}
-                          className="bg-gray-900 border border-gray-700 rounded text-xs text-gray-300 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
+                          className="bg-gray-900 border border-gray-700 rounded text-xs text-gray-600 dark:text-gray-300 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
                         >
                           {ALL_ROLES.map(r => (
                             <option key={r} value={r}>{capitalize(r)}</option>
@@ -458,7 +458,7 @@ const UserManagement: React.FC = () => {
                   setTempPassword(null)
                   setInviteError(null)
                 }}
-                className="text-gray-500 hover:text-gray-300"
+                className="text-gray-500 hover:text-gray-600 dark:text-gray-300"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -471,7 +471,7 @@ const UserManagement: React.FC = () => {
                   <p className="text-emerald-400 text-sm font-medium mb-2">
                     User invited successfully!
                   </p>
-                  <p className="text-gray-400 text-xs mb-3">
+                  <p className="text-gray-500 dark:text-gray-400 text-xs mb-3">
                     Share this temporary password with the user. They will be asked to change it on first login.
                   </p>
                   <div className="flex items-center gap-2">
@@ -484,7 +484,7 @@ const UserManagement: React.FC = () => {
                         setCopied(true)
                         setTimeout(() => setCopied(false), 2000)
                       }}
-                      className="p-2 rounded bg-gray-800 border border-gray-700 text-gray-400 hover:text-white transition-colors"
+                      className="p-2 rounded bg-gray-800 border border-gray-700 text-gray-500 dark:text-gray-400 hover:text-white transition-colors"
                       title="Copy to clipboard"
                     >
                       {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
@@ -496,7 +496,7 @@ const UserManagement: React.FC = () => {
                     setShowInvite(false)
                     setTempPassword(null)
                   }}
-                  className="w-full py-2 rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700 text-sm transition-colors"
+                  className="w-full py-2 rounded-lg bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-700 text-sm transition-colors"
                 >
                   Done
                 </button>
@@ -511,7 +511,7 @@ const UserManagement: React.FC = () => {
                 )}
 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">
+                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">
                     Email <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -519,12 +519,12 @@ const UserManagement: React.FC = () => {
                     value={inviteForm.email}
                     onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))}
                     placeholder="user@company.com"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">
+                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">
                     Full Name <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -532,16 +532,16 @@ const UserManagement: React.FC = () => {
                     value={inviteForm.full_name}
                     onChange={e => setInviteForm(f => ({ ...f, full_name: e.target.value }))}
                     placeholder="Jane Smith"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Role</label>
+                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">Role</label>
                   <select
                     value={inviteForm.role}
                     onChange={e => setInviteForm(f => ({ ...f, role: e.target.value as UserRole }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     {ALL_ROLES.map(r => (
                       <option key={r} value={r}>{capitalize(r)}</option>
@@ -550,13 +550,13 @@ const UserManagement: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-400 mb-1">Department</label>
+                  <label className="block text-sm text-gray-500 dark:text-gray-400 mb-1">Department</label>
                   <input
                     type="text"
                     value={inviteForm.department}
                     onChange={e => setInviteForm(f => ({ ...f, department: e.target.value }))}
                     placeholder="e.g. Regulatory Affairs"
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
 

@@ -302,13 +302,13 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <Database className="h-4 w-4 text-[#60a5fa]" />
+              <Database className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 03</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Data Provenance</h1>
               <p className="text-gray-500 text-xs mt-0.5">Data sources · coverage · validation · cryptographic lineage</p>
@@ -333,7 +333,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
           <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-red-400">Failed to load data provenance</p>
-            <p className="text-xs text-gray-400 mt-0.5">{error}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{error}</p>
           </div>
         </div>
       )}
@@ -341,13 +341,13 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       {/* HIPAA Consent Modal */}
       {showConsentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[#1a1a1c] border border-white/10 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+          <div className="bg-white dark:bg-[#1a1a1c] border border-gray-200 dark:border-white/10 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
             <div className="flex items-center gap-2 mb-4">
               <Shield className="h-5 w-5 text-[#2563EB]" />
               <h3 className="text-lg font-bold text-white">HIPAA De-Identification Attestation</h3>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4 max-h-56 overflow-y-auto">
-              <p className="text-xs text-gray-300 leading-relaxed">{ATTESTATION_TEXT}</p>
+            <div className="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-4 mb-4 max-h-56 overflow-y-auto">
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{ATTESTATION_TEXT}</p>
             </div>
             <label className="flex items-start gap-2 mb-4 cursor-pointer">
               <input
@@ -356,12 +356,12 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                 onChange={e => setConsentChecked(e.target.checked)}
                 className="mt-0.5 accent-[#2563EB]"
               />
-              <span className="text-xs text-gray-300">I have read and agree to this attestation</span>
+              <span className="text-xs text-gray-600 dark:text-gray-300">I have read and agree to this attestation</span>
             </label>
             <div className="flex items-center gap-3 justify-end">
               <button
                 onClick={() => { setShowConsentModal(false); setConsentChecked(false) }}
-                className="text-xs text-gray-400 hover:text-white px-4 py-2 rounded-lg border border-white/10 transition-colors"
+                className="text-xs text-gray-500 dark:text-gray-400 hover:text-white px-4 py-2 rounded-lg border border-gray-200 dark:border-white/10 transition-colors"
               >
                 Cancel
               </button>
@@ -381,10 +381,10 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       <div className="px-8 py-6 space-y-6 max-w-4xl">
 
         {/* ==================== Patient Data Upload Section ==================== */}
-        <section className="bg-white/5 border border-white/10 rounded-2xl p-6">
+        <section className="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="w-8 h-8 rounded-lg bg-[#1E3A5F] flex items-center justify-center">
-              <Upload className="h-4 w-4 text-[#60a5fa]" />
+              <Upload className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <h2 className="text-sm font-bold text-white">Patient Data Upload</h2>
@@ -394,10 +394,10 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
 
           {/* Existing Dataset Info Card */}
           {existingDataset && !uploadReport && (
-            <div className="bg-white/4 border border-white/8 rounded-xl p-5 mb-4">
+            <div className="bg-gray-100 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 mb-4">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-[#60a5fa]" />
+                  <FileText className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
                   <span className="text-sm font-bold text-white">{existingDataset.filename || existingDataset.name || 'Uploaded Dataset'}</span>
                 </div>
                 <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
@@ -456,11 +456,11 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                 onDrop={handleFileDrop}
                 onClick={() => fileInputRef.current?.click()}
                 className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                  dragOver ? 'border-[#2563EB] bg-[#2563EB]/10' : 'border-white/20 hover:border-white/40 bg-white/3'
+                  dragOver ? 'border-[#2563EB] bg-[#2563EB]/10' : 'border-white/20 hover:border-white/40 bg-gray-50 dark:bg-white/3'
                 }`}
               >
-                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-3" />
-                <p className="text-sm text-gray-300 mb-1">Drop .csv, .xlsx, .xpt, or .sas7bdat file here, or click to browse</p>
+                <Upload className="h-8 w-8 text-gray-500 dark:text-gray-400 mx-auto mb-3" />
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">Drop .csv, .xlsx, .xpt, or .sas7bdat file here, or click to browse</p>
                 <p className="text-[10px] text-gray-500">Maximum 100MB</p>
                 <input
                   ref={fileInputRef}
@@ -472,9 +472,9 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
               </div>
 
               {selectedFile && (
-                <div className="flex items-center justify-between bg-white/4 border border-white/8 rounded-xl p-4">
+                <div className="flex items-center justify-between bg-gray-100 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-4">
                   <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-[#60a5fa]" />
+                    <FileText className="h-5 w-5 text-[#2563EB] dark:text-[#60a5fa]" />
                     <div>
                       <p className="text-sm text-white font-medium">{selectedFile.name}</p>
                       <p className="text-[10px] text-gray-500">{formatFileSize(selectedFile.size)}</p>
@@ -527,19 +527,19 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
               {findings.length > 0 && (
                 <div>
                   <h3 className="text-xs font-bold text-white mb-2">Compliance Findings</h3>
-                  <div className="border border-white/8 rounded-xl overflow-hidden">
+                  <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
                     <table className="w-full text-xs">
                       <thead>
-                        <tr className="bg-white/5 border-b border-white/8">
-                          <th className="text-left px-4 py-2 text-gray-400 font-semibold">Check Name</th>
-                          <th className="text-left px-4 py-2 text-gray-400 font-semibold">Severity</th>
-                          <th className="text-left px-4 py-2 text-gray-400 font-semibold">Result</th>
-                          <th className="text-left px-4 py-2 text-gray-400 font-semibold">Detail</th>
+                        <tr className="bg-gray-100 dark:bg-white/5 border-b border-gray-200 dark:border-white/8">
+                          <th className="text-left px-4 py-2 text-gray-500 dark:text-gray-400 font-semibold">Check Name</th>
+                          <th className="text-left px-4 py-2 text-gray-500 dark:text-gray-400 font-semibold">Severity</th>
+                          <th className="text-left px-4 py-2 text-gray-500 dark:text-gray-400 font-semibold">Result</th>
+                          <th className="text-left px-4 py-2 text-gray-500 dark:text-gray-400 font-semibold">Detail</th>
                         </tr>
                       </thead>
                       <tbody>
                         {findings.map((f: any, i: number) => (
-                          <tr key={i} className="border-b border-white/5 hover:bg-white/3">
+                          <tr key={i} className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:bg-white/3">
                             <td className="px-4 py-2 text-white">{f.check_name || f.name}</td>
                             <td className="px-4 py-2">
                               <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
@@ -551,8 +551,8 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                                 {f.severity}
                               </span>
                             </td>
-                            <td className="px-4 py-2 text-gray-300">{f.result}</td>
-                            <td className="px-4 py-2 text-gray-400">{f.detail}</td>
+                            <td className="px-4 py-2 text-gray-600 dark:text-gray-300">{f.result}</td>
+                            <td className="px-4 py-2 text-gray-500 dark:text-gray-400">{f.detail}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -567,27 +567,27 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                   <h3 className="text-xs font-bold text-white mb-2">Dataset Summary</h3>
                   <div className="grid grid-cols-4 gap-3">
                     {datasetSummary.total_rows != null && (
-                      <div className="bg-white/4 border border-white/8 rounded-xl p-3">
+                      <div className="bg-gray-100 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-3">
                         <p className="text-[9px] text-gray-500 uppercase tracking-wider">Total Rows</p>
                         <p className="text-lg font-bold text-white">{datasetSummary.total_rows.toLocaleString()}</p>
                       </div>
                     )}
                     {datasetSummary.n_by_arm && (
-                      <div className="bg-white/4 border border-white/8 rounded-xl p-3">
+                      <div className="bg-gray-100 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-3">
                         <p className="text-[9px] text-gray-500 uppercase tracking-wider">N by Arm</p>
                         {Object.entries(datasetSummary.n_by_arm).map(([arm, n]: [string, any]) => (
-                          <p key={arm} className="text-xs text-gray-300"><span className="font-mono text-white font-semibold">{n}</span> {arm}</p>
+                          <p key={arm} className="text-xs text-gray-600 dark:text-gray-300"><span className="font-mono text-white font-semibold">{n}</span> {arm}</p>
                         ))}
                       </div>
                     )}
                     {datasetSummary.columns_detected != null && (
-                      <div className="bg-white/4 border border-white/8 rounded-xl p-3">
+                      <div className="bg-gray-100 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-3">
                         <p className="text-[9px] text-gray-500 uppercase tracking-wider">Columns Detected</p>
                         <p className="text-lg font-bold text-white">{datasetSummary.columns_detected}</p>
                       </div>
                     )}
                     {datasetSummary.missingness != null && (
-                      <div className="bg-white/4 border border-white/8 rounded-xl p-3">
+                      <div className="bg-gray-100 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-3">
                         <p className="text-[9px] text-gray-500 uppercase tracking-wider">Missingness</p>
                         <p className="text-lg font-bold text-white">{typeof datasetSummary.missingness === 'number' ? `${(datasetSummary.missingness * 100).toFixed(1)}%` : datasetSummary.missingness}</p>
                       </div>
@@ -685,7 +685,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
         {safeDataSources.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
             <Database className="h-10 w-10 text-gray-600 mb-3" />
-            <p className="text-sm font-medium text-gray-400">No data available</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
             <p className="text-xs text-gray-600 mt-1">Upload patient data to see data source information.</p>
           </div>
         )}
@@ -700,7 +700,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <p className="text-sm font-bold text-gray-900 dark:text-white">{src.name}</p>
-                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-[#2563EB]/40 bg-[#2563EB]/10 text-[#60a5fa]">
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-[#2563EB]/40 bg-[#2563EB]/10 text-[#2563EB] dark:text-[#60a5fa]">
                         {src.type}
                       </span>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getSourceBadge((src as any).source_id || '', (src as any).source_type || src.type).color}`}>
@@ -720,7 +720,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {src.variables.map(v => (
-                    <span key={v} className="text-[10px] text-gray-400 bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 px-2 py-0.5 rounded">{v}</span>
+                    <span key={v} className="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 px-2 py-0.5 rounded">{v}</span>
                   ))}
                 </div>
               </div>
@@ -738,7 +738,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
           </div>
           <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
             {safeValidationChecks.map((check, i) => (
-              <div key={i} className={`flex items-start gap-3 px-4 py-3 ${i < safeValidationChecks.length - 1 ? 'border-b border-white/5' : ''} hover:bg-white/3 transition-colors`}>
+              <div key={i} className={`flex items-start gap-3 px-4 py-3 ${i < safeValidationChecks.length - 1 ? 'border-b border-gray-200 dark:border-white/5' : ''} hover:bg-gray-50 dark:bg-white/3 transition-colors`}>
                 {statusIcon[check.status]}
                 <div>
                   <p className="text-sm text-gray-900 dark:text-white font-medium">{check.check}</p>
@@ -752,7 +752,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
         {/* Provenance hash */}
         <section>
           <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Cryptographic Provenance Chain</h2>
-          <div className="bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5 font-mono text-xs text-gray-400 space-y-2">
+          <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5 font-mono text-xs text-gray-500 dark:text-gray-400 space-y-2">
             <div className="flex justify-between">
               <span className="text-gray-600">DATASET_MANIFEST_HASH</span>
               <span className="text-emerald-400">sha256:9f2a1b3d4c8e7f6a…</span>
@@ -767,7 +767,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">TIMESTAMP</span>
-              <span className="text-gray-400">2026-03-15T14:22:07Z</span>
+              <span className="text-gray-500 dark:text-gray-400">2026-03-15T14:22:07Z</span>
             </div>
           </div>
         </section>
@@ -791,7 +791,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
               <button
                 onClick={handleValidateSdtm}
                 disabled={sdtmValidating}
-                className="flex items-center gap-1.5 text-xs text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors bg-[#2563EB]/10 border border-[#2563EB]/30 px-3 py-1.5 rounded-lg disabled:opacity-50"
+                className="flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors bg-[#2563EB]/10 border border-[#2563EB]/30 px-3 py-1.5 rounded-lg disabled:opacity-50"
               >
                 {sdtmValidating ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
                 Validate
@@ -816,7 +816,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                 : validationStatus === 'invalid'
                 ? 'bg-red-900/20 border-red-700/30 text-red-400'
                 : validationStatus === 'generated'
-                ? 'bg-[#2563EB]/10 border-[#2563EB]/30 text-[#60a5fa]'
+                ? 'bg-[#2563EB]/10 border-[#2563EB]/30 text-[#2563EB] dark:text-[#60a5fa]'
                 : 'bg-amber-900/20 border-amber-700/30 text-amber-600 dark:text-amber-300'
               return (
                 <div key={ds.domain} className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
@@ -828,7 +828,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                   </div>
                   <p className="text-[10px] text-gray-500 mb-3">{ds.label}</p>
                   {existing?.records_count != null && (
-                    <p className="text-xs text-gray-400 mb-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                       <span className="font-mono text-gray-900 dark:text-white font-semibold">{existing.records_count.toLocaleString()}</span> records
                     </p>
                   )}
@@ -856,7 +856,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
             <button
               onClick={handleValidateAll}
               disabled={adamValidating}
-              className="flex items-center gap-1.5 text-xs text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors bg-[#2563EB]/10 border border-[#2563EB]/30 px-3 py-1.5 rounded-lg disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors bg-[#2563EB]/10 border border-[#2563EB]/30 px-3 py-1.5 rounded-lg disabled:opacity-50"
             >
               {adamValidating ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
               Validate All
@@ -885,7 +885,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                   </div>
                   <p className="text-[10px] text-gray-500 mb-3">{ds.label}</p>
                   {existing?.record_count != null && (
-                    <p className="text-xs text-gray-400 mb-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                       <span className="font-mono text-gray-900 dark:text-white font-semibold">{existing.record_count.toLocaleString()}</span> records
                     </p>
                   )}
@@ -905,7 +905,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/causal-framework`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/causal-framework`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 2: Causal Framework
           </Link>
           <Link to={`/projects/${selectedStudy.id}/cohort`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">

@@ -153,9 +153,9 @@ const SystemSettings: React.FC = () => {
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <section.icon className={`w-4 h-4 flex-shrink-0 ${activeSection === section.id ? 'text-indigo-600' : 'text-gray-400'}`} />
+                <section.icon className={`w-4 h-4 flex-shrink-0 ${activeSection === section.id ? 'text-indigo-600' : 'text-gray-500 dark:text-gray-400'}`} />
                 {section.label}
-                <ChevronRight className={`w-3.5 h-3.5 ml-auto ${activeSection === section.id ? 'text-indigo-400' : 'text-gray-300'}`} />
+                <ChevronRight className={`w-3.5 h-3.5 ml-auto ${activeSection === section.id ? 'text-indigo-400' : 'text-gray-600 dark:text-gray-300'}`} />
               </button>
             ))}
           </div>
@@ -240,7 +240,7 @@ const SystemSettings: React.FC = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        Temperature <span className="text-gray-400">(0 = deterministic)</span>
+                        Temperature <span className="text-gray-500 dark:text-gray-400">(0 = deterministic)</span>
                       </label>
                       <input type="number" min={0} max={1} step={0.05} value={settings.ai_temperature}
                         onChange={e => set('ai_temperature', Number(e.target.value))}
@@ -256,7 +256,7 @@ const SystemSettings: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                      Semantic Scholar API Key <span className="text-gray-400">(optional — 10 req/s with key, 1/s without)</span>
+                      Semantic Scholar API Key <span className="text-gray-500 dark:text-gray-400">(optional — 10 req/s with key, 1/s without)</span>
                     </label>
                     <div className="relative">
                       <input
@@ -266,13 +266,13 @@ const SystemSettings: React.FC = () => {
                         onChange={e => set('semantic_scholar_api_key', e.target.value)}
                         className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
-                      <button onClick={() => setShowApiKey(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <button onClick={() => setShowApiKey(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-600">
                         {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">PubMed API Key <span className="text-gray-400">(optional)</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">PubMed API Key <span className="text-gray-500 dark:text-gray-400">(optional)</span></label>
                     <input type="password" value={settings.pubmed_api_key} placeholder="xxxxxxxxxxxxxxxx"
                       onChange={e => set('pubmed_api_key', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -333,7 +333,7 @@ const SystemSettings: React.FC = () => {
                     </div>
                   ))}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Slack Webhook URL <span className="text-gray-400">(optional)</span></label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Slack Webhook URL <span className="text-gray-500 dark:text-gray-400">(optional)</span></label>
                     <input type="url" value={settings.slack_webhook_url} placeholder="https://hooks.slack.com/services/..."
                       onChange={e => set('slack_webhook_url', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -353,7 +353,7 @@ const SystemSettings: React.FC = () => {
                       <input type="number" min={365} max={5000} value={settings.data_retention_days}
                         onChange={e => set('data_retention_days', Number(e.target.value))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-                      <p className="text-xs text-gray-400 mt-1">FDA requires 7 years (2555 days) for GCP records</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">FDA requires 7 years (2555 days) for GCP records</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">Max Evidence File Size (MB)</label>
@@ -428,7 +428,7 @@ const SystemSettings: React.FC = () => {
                   ))}
                   {settings.ip_allowlist_enabled && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">IP Allowlist <span className="text-gray-400">(one per line)</span></label>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">IP Allowlist <span className="text-gray-500 dark:text-gray-400">(one per line)</span></label>
                       <textarea rows={4} value={settings.ip_allowlist} placeholder="10.0.0.0/8&#10;192.168.1.100"
                         onChange={e => set('ip_allowlist', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500" />

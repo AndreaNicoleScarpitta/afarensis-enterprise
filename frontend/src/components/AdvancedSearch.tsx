@@ -172,7 +172,7 @@ const AdvancedSearchComponent: React.FC = () => {
                 {/* Search Input */}
                 <div className="flex gap-3">
                   <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+                    <Search className="absolute left-3 top-3 h-5 w-5 text-gray-500 dark:text-gray-400" />
                     <input
                       type="text"
                       value={query}
@@ -360,7 +360,7 @@ const AdvancedSearchComponent: React.FC = () => {
                               {reason}
                             </span>
                           ))}
-                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                          <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 px-2 py-1 rounded">
                             {result.search_type}
                           </span>
                         </div>
@@ -439,11 +439,11 @@ const AdvancedSearchComponent: React.FC = () => {
                         <h4 className="font-medium text-gray-900 text-sm">{saved.name}</h4>
                         <p className="text-xs text-gray-600 mt-1 line-clamp-2">{saved.query}</p>
                         <div className="flex items-center gap-2 mt-2">
-                          <Tag className="h-3 w-3 text-gray-400" />
+                          <Tag className="h-3 w-3 text-gray-500 dark:text-gray-400" />
                           <span className="text-xs text-gray-500">{saved.search_type}</span>
                           {saved.last_run && (
                             <>
-                              <Clock className="h-3 w-3 text-gray-400" />
+                              <Clock className="h-3 w-3 text-gray-500 dark:text-gray-400" />
                               <span className="text-xs text-gray-500">
                                 {new Date(saved.last_run).toLocaleDateString()}
                               </span>

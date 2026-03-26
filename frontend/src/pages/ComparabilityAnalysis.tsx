@@ -390,7 +390,7 @@ const ComparabilityAnalysis: React.FC = () => {
       {/* Empty State */}
       {results.length === 0 && (
         <div className="text-center py-12">
-          <BarChart3 className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <BarChart3 className="mx-auto h-12 w-12 text-gray-500 dark:text-gray-400 mb-4" />
           <h3 className="heading-3 text-gray-900 mb-2">No comparability analyses yet</h3>
           <p className="body-large text-gray-600 mb-8">
             Run your first comparability analysis to assess study similarity for regulatory submissions.

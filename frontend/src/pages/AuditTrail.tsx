@@ -27,11 +27,11 @@ interface Props {
 
 const categoryColor: Record<string, string> = {
   lock:     'text-emerald-400 bg-emerald-900/30 border-emerald-700/40',
-  code:     'text-[#60a5fa] bg-[#2563EB]/10 border-[#2563EB]/30',
+  code:     'text-[#2563EB] dark:text-[#60a5fa] bg-[#2563EB]/10 border-[#2563EB]/30',
   analysis: 'text-purple-400 bg-purple-900/20 border-purple-700/30',
   data:     'text-orange-300 bg-orange-900/30 border-orange-600/40',
-  design:   'text-gray-400 bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10',
-  system:   'text-gray-600 bg-white/3 border-gray-200 dark:border-white/8',
+  design:   'text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10',
+  system:   'text-gray-600 bg-gray-50 dark:bg-white/3 border-gray-200 dark:border-white/8',
 }
 
 function formatTs(ts: string) {
@@ -64,13 +64,13 @@ export default function AuditTrail({ selectedStudy, protocolLocked, reviewerMode
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <ClipboardList className="h-4 w-4 text-[#60a5fa]" />
+              <ClipboardList className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 09</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Audit Trail</h1>
               <p className="text-gray-500 text-xs mt-0.5">All transformations · analyst actions · protocol changes · 21 CFR Part 11</p>
@@ -100,7 +100,7 @@ export default function AuditTrail({ selectedStudy, protocolLocked, reviewerMode
         {safeAllEvents.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
             <Activity className="h-10 w-10 text-gray-600 mb-3" />
-            <p className="text-sm font-medium text-gray-400">No data available</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
             <p className="text-xs text-gray-600 mt-1">No audit events recorded yet. Events are logged as you work.</p>
           </div>
         )}
@@ -127,10 +127,10 @@ export default function AuditTrail({ selectedStudy, protocolLocked, reviewerMode
               <p className="text-sm font-bold text-emerald-400">
                 Protocol Locked{auditData?.protocol_lock_timestamp ? ` — ${auditData.protocol_lock_timestamp}` : ''}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 All elements above this timestamp are immutable.
                 {auditData?.protocol_lock_hash ? (
-                  <> Hash: <span className="font-mono text-gray-300">{auditData.protocol_lock_hash}</span> <span className="text-amber-500 text-[10px] font-semibold ml-1">(not independently verified)</span></>
+                  <> Hash: <span className="font-mono text-gray-600 dark:text-gray-300">{auditData.protocol_lock_hash}</span> <span className="text-amber-500 text-[10px] font-semibold ml-1">(not independently verified)</span></>
                 ) : (
                   <span className="text-gray-500 ml-1">No cryptographic hash available.</span>
                 )}
@@ -147,8 +147,8 @@ export default function AuditTrail({ selectedStudy, protocolLocked, reviewerMode
               onClick={() => setFilter(f)}
               className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-colors capitalize ${
                 filter === f
-                  ? 'bg-[#2563EB]/20 border-[#2563EB]/40 text-[#60a5fa]'
-                  : 'bg-gray-100/80 dark:bg-white/4 border-gray-200 dark:border-white/8 text-gray-500 hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/6'
+                  ? 'bg-[#2563EB]/20 border-[#2563EB]/40 text-[#2563EB] dark:text-[#60a5fa]'
+                  : 'bg-gray-100/80 dark:bg-white/4 border-gray-200 dark:border-white/8 text-gray-500 hover:text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-white/6'
               }`}
             >
               {f === 'all' ? `All (${safeAllEvents.length})` : `${f} (${safeAllEvents.filter(e => e.category === f).length})`}
@@ -162,7 +162,7 @@ export default function AuditTrail({ selectedStudy, protocolLocked, reviewerMode
             {events.map((ev, i) => (
               <div
                 key={i}
-                className={`flex items-start gap-4 px-4 py-3.5 ${i < events.length - 1 ? 'border-b border-white/5' : ''} hover:bg-white/3 transition-colors ${ev.category === 'lock' ? 'bg-emerald-900/10' : ''}`}
+                className={`flex items-start gap-4 px-4 py-3.5 ${i < events.length - 1 ? 'border-b border-gray-200 dark:border-white/5' : ''} hover:bg-gray-50 dark:bg-white/3 transition-colors ${ev.category === 'lock' ? 'bg-emerald-900/10' : ''}`}
               >
                 {/* Category badge */}
                 <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border shrink-0 mt-0.5 ${categoryColor[ev.category]}`}>
@@ -191,7 +191,7 @@ export default function AuditTrail({ selectedStudy, protocolLocked, reviewerMode
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/reproducibility`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/reproducibility`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 8: Reproducibility
           </Link>
           <Link to={`/projects/${selectedStudy.id}/regulatory-output`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">

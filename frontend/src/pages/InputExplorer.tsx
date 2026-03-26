@@ -53,7 +53,7 @@ function sourceTypeBadgeColor(type: string): string {
     claims: 'bg-purple-900/40 text-purple-300 border-purple-700/40',
     registry: 'bg-teal-900/40 text-teal-300 border-teal-700/40',
   }
-  return map[type] || 'bg-gray-800/40 text-gray-300 border-gray-700/40'
+  return map[type] || 'bg-gray-800/40 text-gray-600 dark:text-gray-300 border-gray-700/40'
 }
 
 // ─── Demo quality data ───────────────────────────────────────────────────────
@@ -144,13 +144,13 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <Database className="h-4 w-4 text-[#60a5fa]" />
+              <Database className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Input Explorer</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Data Source Inventory & Schema</h1>
               <p className="text-gray-500 text-xs mt-0.5">Source registry &middot; schema browser &middot; variable dictionary &middot; quality metrics</p>
@@ -159,7 +159,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
           <div className="text-right">
             <p className="text-xs font-bold text-gray-900 dark:text-white">{selectedStudy.protocol}</p>
             <p className="text-[10px] text-gray-500">{selectedStudy.indication}</p>
-            <p className="text-[10px] text-gray-500 mt-0.5">Estimand: <span className="text-[#60a5fa] font-semibold">{selectedStudy.estimand}</span></p>
+            <p className="text-[10px] text-gray-500 mt-0.5">Estimand: <span className="text-[#2563EB] dark:text-[#60a5fa] font-semibold">{selectedStudy.estimand}</span></p>
           </div>
         </div>
       </div>
@@ -179,7 +179,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
               className={`flex items-center gap-2 px-5 py-3 text-xs font-semibold border-b-2 transition-colors ${
                 activeTab === tab.key
                   ? 'border-[#2563EB] text-[#2563EB] dark:text-[#60a5fa]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300'
               }`}
             >
               <tab.icon className="h-3.5 w-3.5" />
@@ -228,11 +228,11 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
                 return (
                   <React.Fragment key={source.id}>
                     <div
-                      className={`grid grid-cols-[2fr_1fr_1.2fr_1fr_0.8fr_0.8fr_0.6fr_0.5fr] gap-3 px-5 py-3.5 border-t border-gray-200 dark:border-white/6 hover:bg-gray-200/40 dark:hover:bg-white/[0.03] transition-colors cursor-pointer items-center`}
+                      className={`grid grid-cols-[2fr_1fr_1.2fr_1fr_0.8fr_0.8fr_0.6fr_0.5fr] gap-3 px-5 py-3.5 border-t border-gray-200 dark:border-white/6 hover:bg-gray-200/40 dark:hover:bg-gray-50 dark:bg-white/[0.03] transition-colors cursor-pointer items-center`}
                       onClick={() => setExpandedSource(isExpanded ? null : source.id)}
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <ChevronRight className={`h-3.5 w-3.5 text-gray-400 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                        <ChevronRight className={`h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{source.name}</p>
                           <p className="text-[10px] text-gray-500 truncate">{source.owner}</p>
@@ -269,7 +269,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
                     {isExpanded && dv && (
                       <div className="border-t border-gray-200 dark:border-white/6 bg-gray-50 dark:bg-white/[0.02] px-8 py-5">
                         <div className="flex items-center gap-2 mb-4">
-                          <Table2 className="h-4 w-4 text-[#60a5fa]" />
+                          <Table2 className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
                           <p className="text-sm font-bold text-gray-900 dark:text-white">Schema Browser</p>
                           <span className="text-[10px] text-gray-500 ml-2">{dv.fields.length} fields &middot; v{dv.version} &middot; {dv.rowCount.toLocaleString()} rows &middot; {dv.columnCount} columns</span>
                         </div>
@@ -364,7 +364,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
             {/* Search bar */}
             <div className="flex items-center gap-3 mb-5">
               <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                 <input
                   type="text"
                   value={searchTerm}
@@ -392,7 +392,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
                     className="bg-gray-100/80 dark:bg-white/[0.04] border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden"
                   >
                     <div
-                      className="px-4 py-3.5 cursor-pointer hover:bg-gray-200/40 dark:hover:bg-white/[0.03] transition-colors"
+                      className="px-4 py-3.5 cursor-pointer hover:bg-gray-200/40 dark:hover:bg-gray-50 dark:bg-white/[0.03] transition-colors"
                       onClick={() => setExpandedVar(isExpanded ? null : v.id)}
                     >
                       <div className="flex items-start justify-between mb-2">
@@ -400,7 +400,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
                           <p className="text-xs font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">{v.varId}</p>
                           <p className="text-sm font-semibold text-gray-900 dark:text-white mt-0.5">{v.label}</p>
                         </div>
-                        <ChevronDown className={`h-3.5 w-3.5 text-gray-400 shrink-0 mt-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        <ChevronDown className={`h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0 mt-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                       </div>
 
                       <div className="flex flex-wrap gap-2 mt-2">
@@ -429,7 +429,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
                           {v.derivationSteps.map((step, idx) => (
                             <div key={idx} className="flex items-start gap-3">
                               <div className="flex flex-col items-center">
-                                <div className="w-5 h-5 rounded-full bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center text-[9px] font-bold text-[#60a5fa]">{step.order}</div>
+                                <div className="w-5 h-5 rounded-full bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center text-[9px] font-bold text-[#2563EB] dark:text-[#60a5fa]">{step.order}</div>
                                 {idx < v.derivationSteps.length - 1 && <div className="w-px h-6 bg-gray-300 dark:bg-white/10 mt-1" />}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -508,7 +508,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
                           const dv = datasetVersions.find(d => d.dataSourceId === ds.id)
                           const field = dv?.fields.find(f => f.name === fname)
                           if (!field) {
-                            return <div key={ds.id} className="flex items-center justify-center py-1.5"><span className="w-full h-5 rounded bg-gray-200 dark:bg-white/5 flex items-center justify-center text-[9px] text-gray-400">N/A</span></div>
+                            return <div key={ds.id} className="flex items-center justify-center py-1.5"><span className="w-full h-5 rounded bg-gray-200 dark:bg-white/5 flex items-center justify-center text-[9px] text-gray-500 dark:text-gray-400">N/A</span></div>
                           }
                           const pct = field.missingnessRate * 100
                           const bg = pct === 0 ? 'bg-emerald-500/20 text-emerald-400' : pct < 5 ? 'bg-emerald-500/30 text-emerald-400' : pct < 10 ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300' : pct < 20 ? 'bg-amber-500/30 text-amber-600 dark:text-amber-300' : 'bg-red-500/30 text-red-400'
@@ -671,8 +671,8 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
                   </span>
                   <span className="text-[11px] text-gray-600 dark:text-gray-400 truncate">{rec.source}</span>
                   <div className="flex items-center gap-1.5">
-                    <Fingerprint className="h-3 w-3 text-[#60a5fa]" />
-                    <span className="text-xs font-mono text-[#60a5fa]">{rec.linkageToken}</span>
+                    <Fingerprint className="h-3 w-3 text-[#2563EB] dark:text-[#60a5fa]" />
+                    <span className="text-xs font-mono text-[#2563EB] dark:text-[#60a5fa]">{rec.linkageToken}</span>
                   </div>
                   <span className="text-[11px] text-gray-500">{formatDate(rec.extractionDate)}</span>
                   <div className="flex items-center justify-center">
@@ -690,7 +690,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="bg-gray-100/80 dark:bg-white/[0.04] border border-gray-200 dark:border-white/8 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <Hash className="h-4 w-4 text-[#60a5fa]" />
+                  <Hash className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Traceability Coverage</p>
                 </div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">100%</p>
@@ -699,7 +699,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
 
               <div className="bg-gray-100/80 dark:bg-white/[0.04] border border-gray-200 dark:border-white/8 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <Link2 className="h-4 w-4 text-[#60a5fa]" />
+                  <Link2 className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Linkage Tokens</p>
                 </div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">4,530</p>
@@ -708,7 +708,7 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
 
               <div className="bg-gray-100/80 dark:bg-white/[0.04] border border-gray-200 dark:border-white/8 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <Clock className="h-4 w-4 text-[#60a5fa]" />
+                  <Clock className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Modification Audit</p>
                 </div>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">23</p>
@@ -720,8 +720,8 @@ export default function InputExplorer({ selectedStudy, protocolLocked, reviewerM
             {reviewerMode && (
               <div className="bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl p-5">
                 <div className="flex items-center gap-2 mb-2">
-                  <Eye className="h-4 w-4 text-[#60a5fa]" />
-                  <p className="text-xs font-bold text-[#60a5fa]">Reviewer Note — Provenance Integrity</p>
+                  <Eye className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
+                  <p className="text-xs font-bold text-[#2563EB] dark:text-[#60a5fa]">Reviewer Note — Provenance Integrity</p>
                 </div>
                 <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
                   Every record in this study is traceable from the final analytic dataset back to its originating source system via deterministic provenance pointers.

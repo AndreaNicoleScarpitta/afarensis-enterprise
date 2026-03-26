@@ -51,7 +51,7 @@ const EXPORT_FORMATS = [
 const statusColor: Record<string, string> = {
   complete: 'text-emerald-400 bg-emerald-900/20 border-emerald-700/30',
   review:   'text-amber-600 dark:text-amber-300 bg-amber-900/20 border-amber-700/30',
-  pending:  'text-gray-500 bg-white/4 border-white/8',
+  pending:  'text-gray-500 bg-gray-100 dark:bg-white/4 border-gray-200 dark:border-white/8',
 }
 
 export default function RegulatoryOutput({ selectedStudy, protocolLocked, reviewerMode }: Props) {
@@ -193,17 +193,17 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] text-gray-900 dark:text-white">
       {/* Header */}
-      <div className="border-b border-white/8 px-8 py-5">
+      <div className="border-b border-gray-200 dark:border-white/8 px-8 py-5">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <FileOutput className="h-4 w-4 text-[#60a5fa]" />
+              <FileOutput className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 10</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-white">Regulatory Output</h1>
               <p className="text-gray-500 text-xs mt-0.5">SAR assembly · submission package · eCTD export</p>
@@ -231,7 +231,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
         <div className={`rounded-xl p-6 border ${readinessScore === 100 ? 'bg-emerald-900/20 border-emerald-700/30' : 'bg-amber-900/10 border-amber-700/20'}`}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Submission Readiness Score</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">Submission Readiness Score</p>
               <div className="flex items-end gap-3">
                 <p className={`text-5xl font-black ${readinessScore === 100 ? 'text-emerald-400' : 'text-amber-600 dark:text-amber-300'}`}>{readinessScore}%</p>
                 <p className="text-sm text-gray-500 pb-1">{passChecks} / {safeReadinessChecks.length} checks passed</p>
@@ -246,7 +246,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
             </div>
           </div>
           {/* Progress bar */}
-          <div className="h-2 bg-white/8 rounded-full overflow-hidden">
+          <div className="h-2 bg-gray-100 dark:bg-white/8 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-1000 ${readinessScore === 100 ? 'bg-emerald-400' : 'bg-amber-400'}`}
               style={{ width: `${readinessScore}%` }}
@@ -260,19 +260,19 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
           {safeReadinessChecks.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
               <Shield className="h-10 w-10 text-gray-600 mb-3" />
-              <p className="text-sm font-medium text-gray-400">No data available</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
               <p className="text-xs text-gray-600 mt-1">Complete workflow steps to populate the readiness checklist.</p>
             </div>
           )}
-          <div className="border border-white/8 rounded-xl overflow-hidden">
+          <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
             {safeReadinessChecks.map((item, i) => (
-              <div key={i} className={`flex items-start gap-3 px-4 py-3 ${i < safeReadinessChecks.length - 1 ? 'border-b border-white/5' : ''} hover:bg-white/3 transition-colors`}>
+              <div key={i} className={`flex items-start gap-3 px-4 py-3 ${i < safeReadinessChecks.length - 1 ? 'border-b border-gray-200 dark:border-white/5' : ''} hover:bg-gray-50 dark:bg-white/3 transition-colors`}>
                 {item.pass
                   ? <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                   : <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-300 shrink-0 mt-0.5" />
                 }
                 <div>
-                  <p className={`text-sm font-medium ${item.pass ? 'text-white' : 'text-gray-300'}`}>{item.check}</p>
+                  <p className={`text-sm font-medium ${item.pass ? 'text-white' : 'text-gray-600 dark:text-gray-300'}`}>{item.check}</p>
                   {!item.pass && item.note && (
                     <p className="text-xs text-amber-500/80 mt-0.5">{item.note}</p>
                   )}
@@ -287,7 +287,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
           {safeSarSections.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
               <FileText className="h-10 w-10 text-gray-600 mb-3" />
-              <p className="text-sm font-medium text-gray-400">No data available</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
               <p className="text-xs text-gray-600 mt-1">Generate regulatory documents to see section status.</p>
             </div>
           )}
@@ -295,9 +295,9 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
             <h2 className="text-sm font-bold text-white">Study Analysis Report (SAR) — Section Status</h2>
             <span className="text-[10px] text-gray-500">{completeSections} / {safeSarSections.length} complete</span>
           </div>
-          <div className="border border-white/8 rounded-xl overflow-hidden">
+          <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
             {safeSarSections.map((sec, i) => (
-              <div key={i} className={`flex items-center justify-between px-4 py-3 ${i < safeSarSections.length - 1 ? 'border-b border-white/5' : ''} hover:bg-white/3 transition-colors`}>
+              <div key={i} className={`flex items-center justify-between px-4 py-3 ${i < safeSarSections.length - 1 ? 'border-b border-gray-200 dark:border-white/5' : ''} hover:bg-gray-50 dark:bg-white/3 transition-colors`}>
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-mono text-gray-600 w-4">{i + 1}</span>
                   <p className={`text-sm ${sec.status === 'complete' ? 'text-white' : sec.status === 'review' ? 'text-amber-300' : 'text-gray-600'}`}>
@@ -317,7 +317,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
 
         {/* SAR Generate */}
         <section>
-          <div className="bg-white/4 border border-white/8 rounded-xl p-5">
+          <div className="bg-gray-100 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="text-sm font-bold text-white">Generate Study Analysis Report</h2>
@@ -348,7 +348,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
 
         {/* SAP Generate */}
         <section>
-          <div className="bg-white/4 border border-white/8 rounded-xl p-5">
+          <div className="bg-gray-100 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <h2 className="text-sm font-bold text-white">Generate Statistical Analysis Plan</h2>
@@ -377,17 +377,17 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
         {/* TFL Preview */}
         <section>
           <h2 className="text-sm font-bold text-white mb-3">Tables, Figures & Listings (TFL)</h2>
-          <div className="bg-white/4 border border-white/8 rounded-xl overflow-hidden">
+          <div className="bg-gray-100 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
             {/* TFL Tabs */}
-            <div className="flex gap-1 p-3 border-b border-white/8 overflow-x-auto">
+            <div className="flex gap-1 p-3 border-b border-gray-200 dark:border-white/8 overflow-x-auto">
               {TFL_TABS.map(tab => (
                 <button
                   key={tab.key}
                   onClick={() => { setActiveTflTab(tab.key); setTflResult(null) }}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                     activeTflTab === tab.key
-                      ? 'bg-[#2563EB]/15 text-[#60a5fa] border border-[#2563EB]/30'
-                      : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+                      ? 'bg-[#2563EB]/15 text-[#2563EB] dark:text-[#60a5fa] border border-[#2563EB]/30'
+                      : 'text-gray-500 hover:text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:bg-white/5'
                   }`}
                 >
                   {tab.type === 'table' ? <BarChart3 className="h-3 w-3" /> : <Image className="h-3 w-3" />}
@@ -416,13 +416,13 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
                   {/* Table results — render HTML */}
                   {tflResult?.html && (
                     <div
-                      className="bg-white/3 border border-white/8 rounded-lg p-4 overflow-x-auto text-sm text-gray-300 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-white/10 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:bg-white/5 [&_th]:text-xs [&_th]:font-bold [&_td]:border [&_td]:border-white/10 [&_td]:px-3 [&_td]:py-2 [&_td]:text-xs"
+                      className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-lg p-4 overflow-x-auto text-sm text-gray-600 dark:text-gray-300 [&_table]:w-full [&_table]:border-collapse [&_th]:border [&_th]:border-gray-200 dark:border-white/10 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:bg-gray-100 dark:bg-white/5 [&_th]:text-xs [&_th]:font-bold [&_td]:border [&_td]:border-gray-200 dark:border-white/10 [&_td]:px-3 [&_td]:py-2 [&_td]:text-xs"
                       dangerouslySetInnerHTML={{ __html: tflResult.html }}
                     />
                   )}
                   {/* Figure results — render base64 PNG */}
                   {tflResult?.png_base64 && (
-                    <div className="bg-white/3 border border-white/8 rounded-lg p-4 flex justify-center">
+                    <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-lg p-4 flex justify-center">
                       <img
                         src={`data:image/png;base64,${tflResult.png_base64}`}
                         alt="Generated figure"
@@ -432,7 +432,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
                   )}
                   {/* Fallback for JSON/message results */}
                   {!tflResult?.html && !tflResult?.png_base64 && tflResult?.message && (
-                    <div className="bg-white/3 border border-white/8 rounded-lg p-4 text-xs text-gray-400">
+                    <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-lg p-4 text-xs text-gray-500 dark:text-gray-400">
                       {tflResult.message}
                     </div>
                   )}
@@ -447,9 +447,9 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
           <h2 className="text-sm font-bold text-white mb-3">Export Package</h2>
           <div className="space-y-2">
             {EXPORT_FORMATS.map((fmt, i) => (
-              <div key={i} className={`flex items-center justify-between px-4 py-3 rounded-lg border ${fmt.available ? 'bg-white/3 border-white/8' : 'bg-white/1 border-white/4 opacity-50'}`}>
+              <div key={i} className={`flex items-center justify-between px-4 py-3 rounded-lg border ${fmt.available ? 'bg-gray-50 dark:bg-white/3 border-gray-200 dark:border-white/8' : 'bg-white/1 border-white/4 opacity-50'}`}>
                 <div className="flex items-center gap-3">
-                  <FileText className="h-4 w-4 text-gray-400" />
+                  <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                   <div>
                     <p className={`text-sm font-medium ${fmt.available ? 'text-white' : 'text-gray-600'}`}>{fmt.format}</p>
                     <p className="text-[10px] text-gray-600">{fmt.size}</p>
@@ -458,7 +458,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
                 {fmt.available ? (
                   <button
                     disabled={!generated}
-                    className="flex items-center gap-1.5 text-xs text-[#60a5fa] font-semibold hover:text-blue-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] font-semibold hover:text-blue-300 disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
                   >
                     <Download className="h-3.5 w-3.5" /> Download
                   </button>
@@ -475,15 +475,15 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
 
         {/* Submission Package */}
         <section>
-          <div className="border border-white/8 rounded-xl overflow-hidden">
+          <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
             <div className="bg-[#1e293b] px-5 py-3 flex items-center gap-2">
-              <Package className="h-4 w-4 text-[#60a5fa]" />
+              <Package className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
               <h2 className="text-sm font-bold text-white">Submission Package</h2>
-              <span className="ml-auto text-[10px] text-gray-400">Phase 3 — eCTD, Define-XML, ADRG, CSR</span>
+              <span className="ml-auto text-[10px] text-gray-500 dark:text-gray-400">Phase 3 — eCTD, Define-XML, ADRG, CSR</span>
             </div>
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-gray-200 dark:divide-white/5">
               {submissionDocs.map((doc) => (
-                <div key={doc.key} className="flex items-center justify-between px-5 py-3.5 hover:bg-white/3 transition-colors">
+                <div key={doc.key} className="flex items-center justify-between px-5 py-3.5 hover:bg-gray-50 dark:bg-white/3 transition-colors">
                   <div className="flex items-center gap-3">
                     <FileText className="h-4 w-4 text-gray-500" />
                     <div>
@@ -506,7 +506,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
                           a.href = url; a.download = `${doc.key}.docx`; a.click()
                           URL.revokeObjectURL(url)
                         }}
-                        className="flex items-center gap-1.5 text-xs text-[#60a5fa] font-semibold hover:text-blue-300 transition-colors px-3 py-1.5 rounded-lg bg-[#2563EB]/10 border border-[#2563EB]/20"
+                        className="flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] font-semibold hover:text-blue-300 transition-colors px-3 py-1.5 rounded-lg bg-[#2563EB]/10 border border-[#2563EB]/20"
                       >
                         <Download className="h-3 w-3" /> Download
                       </button>
@@ -514,7 +514,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
                     {submissionResults[doc.key] && doc.format !== 'docx' && (
                       <button
                         onClick={() => setSubmissionPreview({ key: doc.key, data: submissionResults[doc.key] })}
-                        className="flex items-center gap-1.5 text-xs text-[#60a5fa] font-semibold hover:text-blue-300 transition-colors px-3 py-1.5 rounded-lg bg-[#2563EB]/10 border border-[#2563EB]/20"
+                        className="flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] font-semibold hover:text-blue-300 transition-colors px-3 py-1.5 rounded-lg bg-[#2563EB]/10 border border-[#2563EB]/20"
                       >
                         Preview
                       </button>
@@ -540,19 +540,19 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
 
           {/* Preview panel for JSON/XML results */}
           {submissionPreview && (
-            <div className="mt-4 bg-white/3 border border-white/8 rounded-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/8 bg-white/3">
+            <div className="mt-4 bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 dark:border-white/8 bg-gray-50 dark:bg-white/3">
                 <span className="text-xs font-bold text-white">
                   Preview: {submissionDocs.find(d => d.key === submissionPreview.key)?.label}
                 </span>
                 <button
                   onClick={() => setSubmissionPreview(null)}
-                  className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+                  className="text-xs text-gray-500 hover:text-gray-600 dark:text-gray-300 transition-colors"
                 >
                   Close
                 </button>
               </div>
-              <pre className="p-4 text-xs text-gray-400 overflow-x-auto max-h-96 overflow-y-auto font-mono">
+              <pre className="p-4 text-xs text-gray-500 dark:text-gray-400 overflow-x-auto max-h-96 overflow-y-auto font-mono">
                 {JSON.stringify(submissionPreview.data, null, 2)}
               </pre>
             </div>
@@ -560,7 +560,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
         </section>
 
         {/* Compliance footer */}
-        <div className="flex items-center gap-3 p-4 bg-white/3 border border-white/8 rounded-xl">
+        <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl">
           <Shield className="h-4 w-4 text-gray-500 shrink-0" />
           <p className="text-xs text-gray-500 leading-relaxed">
             All exported documents are accompanied by a cryptographic integrity manifest (SHA-256). The audit trail, protocol lock timestamp, and analyst e-signatures meet FDA 21 CFR Part 11 and ICH E6(R3) requirements for electronic records in regulatory submissions.
@@ -568,8 +568,8 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between pt-4 border-t border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/audit`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
+          <Link to={`/projects/${selectedStudy.id}/audit`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 9: Audit Trail
           </Link>
           <div className="text-right">

@@ -87,13 +87,13 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <Users2 className="h-4 w-4 text-[#60a5fa]" />
+              <Users2 className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 04</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Cohort Construction</h1>
               <p className="text-gray-500 text-xs mt-0.5">Attrition funnel · inclusion/exclusion · weighting method</p>
@@ -118,7 +118,7 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
           <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-red-400">Failed to load cohort data</p>
-            <p className="text-xs text-gray-400 mt-0.5">{error}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{error}</p>
           </div>
         </div>
       )}
@@ -128,7 +128,7 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
         {safeFunnel.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
             <Users className="h-10 w-10 text-gray-600 mb-3" />
-            <p className="text-sm font-medium text-gray-400">No data available</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
             <p className="text-xs text-gray-600 mt-1">Define cohort criteria to see the attrition funnel.</p>
           </div>
         )}
@@ -168,7 +168,7 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
               {safeInclusion.map((c, i) => (
                 <div key={i} className="flex items-start gap-2 bg-emerald-900/10 border border-emerald-700/20 rounded-lg px-3 py-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-gray-300">{c}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">{c}</p>
                 </div>
               ))}
             </div>
@@ -182,7 +182,7 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
               {safeExclusion.map((c, i) => (
                 <div key={i} className="flex items-start gap-2 bg-red-900/10 border border-red-700/20 rounded-lg px-3 py-2">
                   <X className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-gray-300">{c}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">{c}</p>
                 </div>
               ))}
             </div>
@@ -206,9 +206,9 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
                 {safeFunnel.map((row, i) => (
                   <tr
                     key={i}
-                    className={`border-b border-white/5 hover:bg-white/3 transition-colors ${i === safeFunnel.length - 1 ? 'bg-[#2563EB]/10' : ''}`}
+                    className={`border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:bg-white/3 transition-colors ${i === safeFunnel.length - 1 ? 'bg-[#2563EB]/10' : ''}`}
                   >
-                    <td className={`px-4 py-2.5 font-medium ${i === safeFunnel.length - 1 ? 'text-[#60a5fa] font-bold' : 'text-gray-300'}`}>
+                    <td className={`px-4 py-2.5 font-medium ${i === safeFunnel.length - 1 ? 'text-[#2563EB] dark:text-[#60a5fa] font-bold' : 'text-gray-600 dark:text-gray-300'}`}>
                       {row.label}
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono font-semibold text-gray-900 dark:text-white">{formatN(row.n)}</td>
@@ -217,7 +217,7 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
                         <div className="w-16 h-1.5 bg-gray-100 dark:bg-white/8 rounded-full overflow-hidden">
                           <div className="h-full bg-[#2563EB] rounded-full" style={{ width: `${row.pct}%` }} />
                         </div>
-                        <span className="font-mono text-gray-400 w-10 text-right">{row.pct.toFixed(1)}%</span>
+                        <span className="font-mono text-gray-500 dark:text-gray-400 w-10 text-right">{row.pct.toFixed(1)}%</span>
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-gray-600">
@@ -236,10 +236,10 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
           <div className="space-y-2">
             {safeWeightingMethods.map((m, i) => (
               <div key={i} className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
-                m.selected ? 'bg-[#2563EB]/15 border-[#2563EB]/40' : 'bg-white/3 border-gray-200 dark:border-white/8'
+                m.selected ? 'bg-[#2563EB]/15 border-[#2563EB]/40' : 'bg-gray-50 dark:bg-white/3 border-gray-200 dark:border-white/8'
               }`}>
                 <p className={`text-sm ${m.selected ? 'text-white font-semibold' : 'text-gray-500'}`}>{m.method}</p>
-                {m.selected && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-bold"><CheckCircle2 className="h-3.5 w-3.5" /> Primary analysis</span>}
+                {m.selected && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-bold"><CheckCircle2 className="h-3.5 w-3.5" /> Primary analysis</span>}
                 {!m.selected && <span className="text-[10px] text-gray-600 font-medium">Sensitivity analysis</span>}
               </div>
             ))}
@@ -248,7 +248,7 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/data-provenance`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/data-provenance`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 3: Data Provenance
           </Link>
           <Link to={`/projects/${selectedStudy.id}/comparability`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">

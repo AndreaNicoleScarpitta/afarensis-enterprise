@@ -372,7 +372,7 @@ const EvidenceNetworkVisualization: React.FC<EvidenceNetworkVisualizationProps> 
       <div className="card">
         <div className="card-body">
           <div className="text-center py-12">
-            <Network className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <Network className="w-12 h-12 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
             <h3 className="heading-4 mb-2">No Evidence Network Available</h3>
             <p className="body-normal text-gray-600">
               Unable to load evidence network data.

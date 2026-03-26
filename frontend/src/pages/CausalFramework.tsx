@@ -131,7 +131,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
             <h2 className="text-sm font-bold text-gray-900 dark:text-white">Directed Acyclic Graph (DAG)</h2>
             <span className="text-[10px] text-amber-500 bg-amber-900/20 border border-amber-700/30 px-2.5 py-1 rounded-full font-semibold">Reference Diagram — Not Data-Driven</span>
           </div>
-          <div className="bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-6 min-h-[220px] flex items-center justify-center">
+          <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-6 min-h-[220px] flex items-center justify-center">
             <svg viewBox="0 0 580 200" className="w-full max-w-[560px]" fill="none">
               {/* Nodes */}
               {[
@@ -195,7 +195,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
               </thead>
               <tbody>
                 {safeCovariates.map((cov, i) => (
-                  <tr key={i} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                  <tr key={i} className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:bg-white/3 transition-colors">
                     <td className="px-4 py-2.5 text-gray-900 dark:text-white font-medium">{cov.name}</td>
                     <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">{cov.type}</td>
                     <td className="px-4 py-2.5 font-mono text-gray-600 dark:text-gray-400">{cov.balance}</td>
@@ -249,7 +249,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
           )}
           <div className="space-y-2">
             {safeUnmeasured.map((u, i) => (
-              <div key={i} className="flex items-start justify-between bg-white/3 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3">
+              <div key={i} className="flex items-start justify-between bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">{u.name}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{u.mitigation}</p>
@@ -266,7 +266,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/study`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/study`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 1: Study Definition
           </Link>
           <Link to={`/projects/${selectedStudy.id}/data-provenance`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">

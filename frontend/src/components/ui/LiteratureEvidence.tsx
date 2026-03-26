@@ -53,7 +53,7 @@ export default function LiteratureEvidence({ categories, stepLabel }: Literature
                 key={anchor.id}
                 className="flex items-start gap-3 bg-white dark:bg-[#111112] border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3"
               >
-                <Hash className="h-3.5 w-3.5 text-gray-400 shrink-0 mt-0.5" />
+                <Hash className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${cat.color}`}>
@@ -66,7 +66,7 @@ export default function LiteratureEvidence({ categories, stepLabel }: Literature
                         ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/30'
                         : 'text-gray-500 bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'
                     }`}>{anchor.relevance}</span>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate">{anchor.section}</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500 truncate">{anchor.section}</span>
                   </div>
                   <p className="text-sm text-gray-800 dark:text-gray-200 italic leading-snug mb-1">
                     "{anchor.text}"
@@ -90,7 +90,7 @@ export default function LiteratureEvidence({ categories, stepLabel }: Literature
                 </div>
                 <button
                   onClick={() => removeAnchor(anchor.id)}
-                  className="shrink-0 text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-0.5"
+                  className="shrink-0 text-gray-600 dark:text-gray-300 dark:text-gray-600 hover:text-red-400 transition-colors p-0.5"
                   title="Remove anchor"
                 >
                   <X className="h-3.5 w-3.5" />

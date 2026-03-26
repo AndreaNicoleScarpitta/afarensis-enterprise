@@ -203,7 +203,7 @@ export default function EnhancedDashboard() {
       {/* Empty state */}
       {!loading && filtered.length === 0 && !error && (
         <div className="flex flex-col items-center justify-center py-20">
-          <FolderOpen className="h-16 w-16 text-gray-300 dark:text-gray-600 mb-4" />
+          <FolderOpen className="h-16 w-16 text-gray-600 dark:text-gray-300 dark:text-gray-600 mb-4" />
           <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No projects yet</h2>
           <button
             onClick={() => setModalOpen(true)}
@@ -241,7 +241,7 @@ export default function EnhancedDashboard() {
               </p>
 
               {/* Stats row */}
-              <div className="flex items-center gap-4 text-xs text-gray-400 dark:text-gray-500 mb-2">
+              <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-2">
                 <span className="inline-flex items-center gap-1">
                   <FileText className="h-3.5 w-3.5" />
                   {project.evidence_count ?? 0} evidence
@@ -259,7 +259,7 @@ export default function EnhancedDashboard() {
                     <src.icon className="h-3 w-3" />
                   </span>
                 ))}
-                <span className="text-[10px] text-gray-400 ml-1">5 sources</span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 ml-1">5 sources</span>
               </div>
 
               {/* Actions */}
@@ -326,7 +326,7 @@ function CreateProjectModal({
       <div className="w-full max-w-lg rounded-xl bg-white dark:bg-gray-800 shadow-xl p-6 mx-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Create Project</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+          <button onClick={onClose} className="text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-700 dark:text-gray-200">
             <X className="h-5 w-5" />
           </button>
         </div>

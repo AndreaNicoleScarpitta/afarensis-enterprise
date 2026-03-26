@@ -65,13 +65,13 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <BarChart2 className="h-4 w-4 text-[#60a5fa]" />
+              <BarChart2 className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 05</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Comparability & Balance</h1>
               <p className="text-gray-500 text-xs mt-0.5">Standardised mean differences · overlap diagnostics · PS distribution</p>
@@ -96,7 +96,7 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
           <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-red-400">Failed to load balance data</p>
-            <p className="text-xs text-gray-400 mt-0.5">{error}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{error}</p>
           </div>
         </div>
       )}
@@ -106,7 +106,7 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
         {safeCovariates.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
             <BarChart3 className="h-10 w-10 text-gray-600 mb-3" />
-            <p className="text-sm font-medium text-gray-400">No data available</p>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
             <p className="text-xs text-gray-600 mt-1">Run propensity score analysis to see covariate balance.</p>
           </div>
         )}
@@ -135,7 +135,7 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
                 <p className="text-sm font-semibold text-amber-600 dark:text-amber-300">
                   Balance Warning: {failing.length} covariate{failing.length > 1 ? 's' : ''} above threshold
                 </p>
-                <ul className="text-xs text-gray-400 mt-1 space-y-0.5">
+                <ul className="text-xs text-gray-500 dark:text-gray-400 mt-1 space-y-0.5">
                   {failing.map((c, i) => (
                     <li key={i}>{c.name} — post-weighting SMD {(c.smd_matched ?? 0).toFixed(2)}</li>
                   ))}
@@ -160,8 +160,8 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
               </thead>
               <tbody>
                 {safeCovariates.map((cov, i) => (
-                  <tr key={i} className={`border-b border-white/5 hover:bg-white/3 transition-colors`}>
-                    <td className="px-4 py-3 text-gray-300 font-medium">{cov.name}</td>
+                  <tr key={i} className={`border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:bg-white/3 transition-colors`}>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300 font-medium">{cov.name}</td>
                     <td className="px-4 py-3">
                       <SmdBar value={cov.smd_raw} />
                     </td>
@@ -186,7 +186,7 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
         <section>
           <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Propensity Score Overlap</h2>
           {balanceData?.ps_distribution ? (
-            <div className="bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+            <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5">
               {/* Treatment arm histogram — from API data */}
               {balanceData.ps_distribution.treatment_bins && (
                 <div className="flex items-end justify-center gap-0.5 h-32 mb-3">
@@ -223,9 +223,9 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
               )}
             </div>
           ) : (
-            <div className="bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-8 text-center">
+            <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-8 text-center">
               <BarChart3 className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-              <p className="text-sm font-medium text-gray-400">Propensity Score Distribution Not Available</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Propensity Score Distribution Not Available</p>
               <p className="text-xs text-gray-600 mt-1">Run propensity score analysis to generate overlap diagnostics.</p>
             </div>
           )}
@@ -233,7 +233,7 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/cohort`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/cohort`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 4: Cohort Construction
           </Link>
           <Link to={`/projects/${selectedStudy.id}/effect-estimation`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">

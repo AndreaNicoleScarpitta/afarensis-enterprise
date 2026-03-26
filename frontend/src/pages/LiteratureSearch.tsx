@@ -146,12 +146,12 @@ function PaperCard({ paper, onClick }: { paper: Paper; onClick: () => void }) {
   return (
     <div
       onClick={onClick}
-      className="relative bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/8 rounded-xl p-5 hover:border-[#2563EB]/40 hover:shadow-md dark:hover:bg-white/[0.05] transition-all cursor-pointer group"
+      className="relative bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/8 rounded-xl p-5 hover:border-[#2563EB]/40 hover:shadow-md dark:hover:bg-gray-100 dark:bg-white/[0.05] transition-all cursor-pointer group"
     >
       {paper.url && (
         <button
           onClick={e => { e.stopPropagation(); window.open(paper.url, '_blank') }}
-          className="absolute top-3 right-3 p-1.5 text-gray-400 dark:text-gray-600 hover:text-[#2563EB] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+          className="absolute top-3 right-3 p-1.5 text-gray-500 dark:text-gray-400 dark:text-gray-600 hover:text-[#2563EB] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
           title="Open in new tab"
         >
           <ExternalLink className="h-4 w-4" />
@@ -196,7 +196,7 @@ function PaperCard({ paper, onClick }: { paper: Paper; onClick: () => void }) {
       )}
 
       {/* Metadata row */}
-      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-400 dark:text-gray-500">
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500">
         {paper.authors.length > 0 && (
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
@@ -384,7 +384,7 @@ export default function LiteratureSearch() {
         <div className="mb-6">
           <div className="flex gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 dark:text-gray-400" />
               <input
                 className="w-full pl-12 pr-4 py-4 bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/10 rounded-2xl text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-[#2563EB]/60 focus:ring-2 focus:ring-[#2563EB]/20 shadow-sm transition-all"
                 placeholder='Search across all sources — e.g. "SGLT2 inhibitor heart failure outcomes"'
@@ -404,7 +404,7 @@ export default function LiteratureSearch() {
               }
             </button>
           </div>
-          <p className="text-[11px] text-gray-400 dark:text-gray-600 mt-2 ml-1">
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 dark:text-gray-600 mt-2 ml-1">
             Searches PubMed, ClinicalTrials.gov, OpenAlex, and Semantic Scholar simultaneously
           </p>
         </div>
@@ -447,7 +447,7 @@ export default function LiteratureSearch() {
                     isLoading ? 'border-blue-500/20 bg-blue-500/10 text-blue-400' :
                     hasError ? 'border-red-500/20 bg-red-500/10 text-red-400' :
                     hasResults ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' :
-                    'border-gray-200 dark:border-white/10 text-gray-400'
+                    'border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400'
                   }`}>
                     {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}
                     {src.label}
@@ -480,7 +480,7 @@ export default function LiteratureSearch() {
                       className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all ${
                         enabled
                           ? `${src.bgColor} ${src.color} font-semibold`
-                          : 'border-gray-200 dark:border-white/10 text-gray-400 dark:text-gray-600 opacity-60'
+                          : 'border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 dark:text-gray-600 opacity-60'
                       }`}
                     >
                       <Icon className="h-3 w-3" />
@@ -500,7 +500,7 @@ export default function LiteratureSearch() {
                   </span>
                 )}
                 <div className="flex items-center gap-1.5">
-                  <ArrowUpDown className="h-3 w-3 text-gray-400" />
+                  <ArrowUpDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
                   {(['relevance', 'date', 'citations'] as SortMode[]).map(mode => (
                     <button
                       key={mode}
@@ -508,7 +508,7 @@ export default function LiteratureSearch() {
                       className={`text-[11px] px-2 py-1 rounded-md transition-colors ${
                         sortMode === mode
                           ? 'bg-[#2563EB]/15 text-[#2563EB] font-semibold'
-                          : 'text-gray-400 hover:text-gray-300'
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300'
                       }`}
                     >
                       {mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -516,20 +516,20 @@ export default function LiteratureSearch() {
                   ))}
                 </div>
                 <select
-                  className="text-[11px] bg-transparent border border-gray-200 dark:border-white/10 rounded-md px-2 py-1 text-gray-400 focus:outline-none"
+                  className="text-[11px] bg-transparent border border-gray-200 dark:border-white/10 rounded-md px-2 py-1 text-gray-500 dark:text-gray-400 focus:outline-none"
                   value={maxResults}
                   onChange={e => setMaxResults(Number(e.target.value))}
                 >
-                  {[10, 20, 50].map(n => <option key={n} value={n} className="bg-[#1A1A1B]">{n} per source</option>)}
+                  {[10, 20, 50].map(n => <option key={n} value={n} className="bg-white dark:bg-[#1a1a1c]">{n} per source</option>)}
                 </select>
               </div>
             </div>
 
             {/* Results summary */}
             <div className="text-xs text-gray-500 dark:text-gray-500">
-              Showing <span className="font-bold text-gray-300">{mergedResults.length}</span> results
+              Showing <span className="font-bold text-gray-600 dark:text-gray-300">{mergedResults.length}</span> results
               {mergedResults.length !== totalBeforeFilter && (
-                <> from <span className="font-bold text-gray-300">{totalBeforeFilter}</span> total across all sources</>
+                <> from <span className="font-bold text-gray-600 dark:text-gray-300">{totalBeforeFilter}</span> total across all sources</>
               )}
             </div>
           </div>
@@ -567,10 +567,10 @@ export default function LiteratureSearch() {
         {!anyLoading && searched && mergedResults.length === 0 && activeErrors.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
             <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-              <BookOpen className="h-6 w-6 text-gray-400" />
+              <BookOpen className="h-6 w-6 text-gray-500 dark:text-gray-400" />
             </div>
             <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No results found</p>
-            <p className="text-xs text-gray-400 dark:text-gray-600 max-w-sm">
+            <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-600 max-w-sm">
               Try a different query or adjust your search terms.
             </p>
           </div>

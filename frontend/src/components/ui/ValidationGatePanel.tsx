@@ -58,10 +58,10 @@ function PhaseSection({ name, phase }: { name: string; phase: any }) {
     <div className="border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-100 dark:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-3">
-          {expanded ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+          {expanded ? <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />}
           <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{name}</span>
         </div>
         <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium', badge.color)}>
@@ -206,7 +206,7 @@ export default function ValidationGatePanel({ validationReport, onDismiss }: Val
 
       {/* Timestamp */}
       {validationReport.validation_timestamp && (
-        <p className="text-xs text-gray-400 dark:text-gray-500 mt-4 text-right">
+        <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-4 text-right">
           Validated: {new Date(validationReport.validation_timestamp).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}
         </p>
       )}
