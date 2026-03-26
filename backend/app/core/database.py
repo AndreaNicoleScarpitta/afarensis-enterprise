@@ -203,6 +203,60 @@ async def execute_transaction(session: AsyncSession, operations):
         raise
 
 
+async def update_processing_config(
+    session: AsyncSession,
+    project_id: str,
+    updater,
+    *,
+    max_retries: int = 3,
+):
+    """Safely update Project.processing_config with optimistic locking.
+
+    ``updater`` is a callable ``(current_config: dict) -> dict`` that returns
+    the new config.  If another transaction bumped ``config_version`` between
+    our read and write, the update is retried (up to *max_retries* times).
+
+    Raises ``RuntimeError`` on exhausted retries (concurrent-update conflict).
+    """
+    from app.models import Project
+    from sqlalchemy import select as sa_select, update as sa_update
+
+    for attempt in range(max_retries):
+        result = await session.execute(
+            sa_select(
+                Project.processing_config, Project.config_version
+            ).where(Project.id == project_id)
+        )
+        row = result.one_or_none()
+        if row is None:
+            raise ValueError(f"Project {project_id} not found")
+
+        current_cfg, current_version = row
+        new_cfg = updater(dict(current_cfg or {}))
+
+        stmt = (
+            sa_update(Project)
+            .where(Project.id == project_id, Project.config_version == current_version)
+            .values(processing_config=new_cfg, config_version=current_version + 1)
+        )
+        res = await session.execute(stmt)
+        if res.rowcount == 1:
+            await session.commit()
+            return new_cfg
+
+        # Version mismatch — another writer won the race.  Retry.
+        await session.rollback()
+        logger.warning(
+            "Optimistic lock conflict on project %s config (attempt %d/%d)",
+            project_id, attempt + 1, max_retries,
+        )
+
+    raise RuntimeError(
+        f"Could not update processing_config for project {project_id} "
+        f"after {max_retries} attempts — concurrent update conflict."
+    )
+
+
 # Query logging for audit purposes
 class AuditQueryLogger:
     """Log database queries for audit trail"""

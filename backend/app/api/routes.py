@@ -143,7 +143,7 @@ class TokenResponse(_BaseModel):
 async def login(request: LoginRequest, db: AsyncSession = Depends(get_db), _=Depends(rate_limit(max_requests=5, window_seconds=60))):
     """Authenticate user and return JWT tokens"""
     from sqlalchemy import select as sa_select, func as sa_func
-    from app.core.security import verify_password, create_access_token, create_refresh_token, get_password_hash, Roles
+    from app.core.security import verify_password_async, create_access_token, create_refresh_token, get_password_hash_async, Roles
     from app.models import UserRole as UserRoleEnum
     from datetime import timedelta
 
@@ -163,7 +163,7 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db), _=Dep
                 email="admin@afarensis.com",
                 full_name="Admin User",
                 role=UserRoleEnum.ADMIN,
-                hashed_password=get_password_hash(request.password),
+                hashed_password=await get_password_hash_async(request.password),
                 is_active=True,
             )
             db.add(user)
@@ -175,7 +175,7 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db), _=Dep
     if not user.is_active:
         raise HTTPException(status_code=401, detail="Account is disabled")
 
-    if user.hashed_password and not verify_password(request.password, user.hashed_password):
+    if user.hashed_password and not await verify_password_async(request.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     # Block unverified emails
@@ -395,7 +395,7 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
     """Reset the user's password using a verified reset token."""
     import hashlib as _hashlib
     from sqlalchemy import select as sa_select
-    from app.core.security import get_password_hash, verify_password_strength
+    from app.core.security import get_password_hash_async, verify_password_strength
     from app.models import User as UserModel, SessionToken
 
     email = body.email.strip().lower()
@@ -434,7 +434,7 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
         raise HTTPException(422, "; ".join(issues))
 
     # Update password
-    user.hashed_password = get_password_hash(new_password)
+    user.hashed_password = await get_password_hash_async(new_password)
     user.updated_at = datetime.utcnow()
 
     # Revoke the reset token (single-use)
@@ -580,7 +580,7 @@ async def register(body: RegisterRequest, request: Request, db: AsyncSession = D
     """Self-register a new account. Sends a verification email."""
     import re, secrets as _secrets, hashlib as _hashlib, uuid as _uuid
     from sqlalchemy import select as sa_select
-    from app.core.security import get_password_hash, verify_password_strength
+    from app.core.security import get_password_hash_async, verify_password_strength
     from app.models import UserRole as UserRoleEnum, Organization, AuditLog, EmailVerificationToken
     from app.services.email_service import email_service
 
@@ -626,7 +626,7 @@ async def register(body: RegisterRequest, request: Request, db: AsyncSession = D
         email=email_addr,
         full_name=full_name,
         role=UserRoleEnum.ANALYST,
-        hashed_password=get_password_hash(password),
+        hashed_password=await get_password_hash_async(password),
         is_active=True,
         email_verified=False,
         organization=org_name,
@@ -5738,7 +5738,7 @@ async def invite_user(
 ):
     """Invite a new user to the organization. Admin only."""
     from sqlalchemy import select as sa_select
-    from app.core.security import get_password_hash
+    from app.core.security import get_password_hash_async
     import secrets as _secrets
 
     # Require admin role
@@ -5767,7 +5767,7 @@ async def invite_user(
         email=email,
         full_name=full_name,
         role=role,
-        hashed_password=get_password_hash(temp_password),
+        hashed_password=await get_password_hash_async(temp_password),
         is_active=True,
         organization_id=current_user.org_id,
         organization=body.get("organization_display", ""),
@@ -6398,16 +6398,30 @@ async def set_retention_decision(
 # PATIENT DATA ANALYSIS — Real data wiring
 # ============================================================================
 
-@api_router.post("/projects/{project_id}/study/analyze-dataset")
+@api_router.post("/projects/{project_id}/study/analyze-dataset", status_code=202)
 async def analyze_uploaded_dataset(
     project_id: str,
     request: Request,
     db: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """Run full statistical analysis on the project's active uploaded dataset."""
+    """Run full statistical analysis on the project's active uploaded dataset.
+
+    Returns 202 Accepted with a ``task_id`` immediately.  Poll
+    ``GET /tasks/{task_id}`` for progress.  The heavy computation runs
+    in a background task so the HTTP request does not block.
+
+    Resilience:
+    * Optimistic locking on ``processing_config`` (config_version) prevents
+      lost-update when two analyses run concurrently.
+    * The analysis is run via ``run_in_executor`` so CPU-bound numpy/scipy
+      work does not starve the async event loop.
+    * Unique constraint on ``AnalysisResult`` prevents duplicate rows from
+      retried requests.
+    """
     from sqlalchemy import text as sa_text
-    from app.services.statistical_models import StatisticalAnalysisService
+    from app.services.task_queue import task_queue
+    import json as _json
 
     # Parse optional body for column_mapping
     column_mapping = None
@@ -6415,9 +6429,9 @@ async def analyze_uploaded_dataset(
         body = await request.json()
         column_mapping = body.get("column_mapping") if body else None
     except Exception:
-        pass  # No body or not JSON — that's fine
+        pass
 
-    # 1. Find the active dataset
+    # 1. Validate dataset exists BEFORE enqueuing (fast-fail)
     result = await db.execute(
         sa_text(
             "SELECT id, data_content, dataset_name, records_count, columns "
@@ -6437,247 +6451,244 @@ async def analyze_uploaded_dataset(
     dataset_id, data_content, dataset_name, records_count, columns = row
 
     if not data_content:
-        raise HTTPException(
-            status_code=400,
-            detail="Dataset exists but contains no data (may have been purged).",
-        )
+        raise HTTPException(status_code=400, detail="Dataset exists but contains no data (may have been purged).")
 
-    # Parse data_content — SQLite may return it as a JSON string
-    import json as _json
     if isinstance(data_content, str):
         try:
             data_content = _json.loads(data_content)
         except _json.JSONDecodeError:
             raise HTTPException(422, "Stored dataset is malformed (invalid JSON).")
 
-    # 2. Run analysis — DATASET ISOLATION: use a fresh service instance with
-    #    no shared state.  Clear any prior analysis results from processing_config
-    #    BEFORE running, so no findings from a previous dataset can leak into
-    #    the new analysis.
-    import json as _json2
-    import numpy as _np2
-    import logging as _logging
-    _log = _logging.getLogger("analyze_dataset")
+    # 2. Deduplication: reject if an analysis task is already running for this project
+    running = task_queue.list_tasks(task_type=f"analyze_{project_id}")
+    active = [t for t in running if t["state"] in ("pending", "running")]
+    if active:
+        return JSONResponse(
+            status_code=200,
+            content={"task_id": active[0]["task_id"], "message": "Analysis already in progress."},
+        )
 
-    # --- Dataset isolation: wipe prior analysis state ---
-    try:
-        from sqlalchemy.orm.attributes import flag_modified as _fm
-        _project = await get_project_with_org_check(project_id, current_user, db)
-        _cfg = dict(_project.processing_config or {})
-        # Remove ALL keys that could carry state from a prior analysis
+    # 3. Enqueue the heavy work as a background task
+    user_id = str(current_user.id)
+    org_id = getattr(current_user, "org_id", None)
+
+    task_id = await task_queue.enqueue(
+        _run_analysis_background,
+        project_id, dataset_id, data_content, dataset_name,
+        records_count, columns, column_mapping, user_id, org_id,
+        task_type=f"analyze_{project_id}",
+    )
+
+    return JSONResponse(
+        status_code=202,
+        content={"task_id": task_id, "message": "Analysis enqueued."},
+    )
+
+
+async def _run_analysis_background(
+    project_id: str,
+    dataset_id: str,
+    data_content,
+    dataset_name: str,
+    records_count: int,
+    columns,
+    column_mapping,
+    user_id: str,
+    org_id,
+    *,
+    task_status=None,
+):
+    """Background task: validate → compute → persist analysis results.
+
+    Runs inside the InProcessTaskQueue.  Uses its own DB session (not the
+    request session) and ``run_in_executor`` for the CPU-bound statistical
+    computation so the event loop stays responsive.
+    """
+    import asyncio
+    import json as _json2
+    import hashlib as _hashlib
+    import re as _re
+    import logging as _logging
+    import numpy as _np2
+    import scipy, numpy
+
+    from app.core.database import AsyncSessionLocal, update_processing_config
+    from app.services.statistical_models import StatisticalAnalysisService
+    from app.services.pre_analysis_validator import PreAnalysisValidator
+    from app.services.audit_writer import write_audit_log
+    from app.models import ValidationRecord as _VR, AnalysisResult as _AR
+
+    _log = _logging.getLogger("analyze_dataset")
+    if task_status:
+        task_status.progress = 5.0
+        task_status.message = "Preparing dataset isolation..."
+
+    async with AsyncSessionLocal() as db:
+        # ── Phase 1: Dataset isolation (optimistic-locked config update) ──
         isolation_keys = [
             "analysis_results", "analysis_dataset_id", "analysis_timestamp",
             "validation_results", "pre_analysis_checks", "immortal_time_bias",
             "simpson_paradox", "sensitivity_results", "subgroup_results",
         ]
-        _cleared = [k for k in isolation_keys if k in _cfg]
-        for k in isolation_keys:
-            _cfg.pop(k, None)
-        _project.processing_config = _cfg
-        _fm(_project, "processing_config")
-        await db.commit()
-        if _cleared:
-            _log.info("Dataset isolation: cleared prior state keys: %s", _cleared)
-    except Exception as exc:
-        _log.warning("Could not clear prior analysis state: %s", exc)
-
-    # --- HARD GATE: Pre-Analysis Validation (6 phases) ---
-    # Must pass before ANY statistical model is allowed to execute.
-    # BLOCKING-FIX 3: Persist the validation verdict to its own DB row.
-    from app.services.pre_analysis_validator import PreAnalysisValidator
-    import hashlib as _hl
-    validator = PreAnalysisValidator()
-    validation_verdict = validator.validate(data_content, column_mapping=column_mapping)
-    verdict_dict = validation_verdict.to_dict()
-
-    # Compute dataset hash for the validation record
-    _ds_hash_for_val = _hl.sha256(
-        _json2.dumps(data_content, sort_keys=True, default=str).encode()
-    ).hexdigest()
-
-    # Persist validation record (PASS or BLOCKED)
-    _validation_record_id = None
-    try:
-        from app.models import ValidationRecord as _VR
-        _vr = _VR(
-            project_id=project_id,
-            dataset_id=dataset_id,
-            user_id=str(current_user.id),
-            verdict="BLOCKED" if validation_verdict.blocked else "PASS",
-            block_reasons=validation_verdict.block_reasons if validation_verdict.blocked else None,
-            phase_results=verdict_dict,
-            dataset_row_count=records_count,
-            dataset_hash=_ds_hash_for_val,
-        )
-        db.add(_vr)
-        await db.flush()
-        _validation_record_id = _vr.id
-        _log.info("Validation record %s stored (verdict=%s)", _vr.id, _vr.verdict)
-    except Exception as _vr_exc:
-        _log.warning("Failed to persist validation record: %s", _vr_exc)
-
-    # Audit log the validation run (BLOCKING-FIX 1)
-    from app.services.audit_writer import write_audit_log as _write_al
-    await _write_al(
-        db,
-        user_id=str(current_user.id),
-        action="pre_analysis_validation",
-        resource_type="dataset",
-        resource_id=dataset_id,
-        project_id=project_id,
-        details={
-            "verdict": "BLOCKED" if validation_verdict.blocked else "PASS",
-            "validation_record_id": _validation_record_id,
-            "dataset_hash": _ds_hash_for_val,
-            "block_reasons": validation_verdict.block_reasons if validation_verdict.blocked else None,
-        },
-        regulatory=True,
-    )
-    await db.commit()
-
-    if validation_verdict.blocked:
-        _log.warning(
-            "Pre-analysis validation BLOCKED for project %s: %s",
-            project_id, validation_verdict.block_reasons
-        )
-        # Store the validation report in processing_config for UI
         try:
-            from sqlalchemy.orm.attributes import flag_modified as _fm2
-            _project2 = await get_project_with_org_check(project_id, current_user, db)
-            _cfg2 = dict(_project2.processing_config or {})
-            _cfg2["pre_analysis_validation"] = verdict_dict
-            _cfg2["validation_record_id"] = _validation_record_id
-            _project2.processing_config = _cfg2
-            _fm2(_project2, "processing_config")
-            await db.commit()
-        except Exception:
-            pass
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "message": "Pre-analysis validation BLOCKED. Models will not execute.",
-                "block_reasons": validation_verdict.block_reasons,
-                "validation_report": verdict_dict,
+            await update_processing_config(
+                db, project_id,
+                lambda cfg: {k: v for k, v in cfg.items() if k not in isolation_keys},
+            )
+            _log.info("Dataset isolation: cleared prior state keys")
+        except Exception as exc:
+            _log.warning("Could not clear prior analysis state: %s", exc)
+
+        if task_status:
+            task_status.progress = 15.0
+            task_status.message = "Running pre-analysis validation..."
+
+        # ── Phase 2: Pre-analysis validation ──
+        validator = PreAnalysisValidator()
+        validation_verdict = validator.validate(data_content, column_mapping=column_mapping)
+        verdict_dict = validation_verdict.to_dict()
+
+        _ds_hash = _hashlib.sha256(
+            _json2.dumps(data_content, sort_keys=True, default=str).encode()
+        ).hexdigest()
+
+        # Persist validation record
+        _validation_record_id = None
+        try:
+            _vr = _VR(
+                project_id=project_id, dataset_id=dataset_id, user_id=user_id,
+                verdict="BLOCKED" if validation_verdict.blocked else "PASS",
+                block_reasons=validation_verdict.block_reasons if validation_verdict.blocked else None,
+                phase_results=verdict_dict, dataset_row_count=records_count,
+                dataset_hash=_ds_hash,
+            )
+            db.add(_vr)
+            await db.flush()
+            _validation_record_id = _vr.id
+        except Exception as _vr_exc:
+            _log.warning("Failed to persist validation record: %s", _vr_exc)
+
+        await write_audit_log(
+            db, user_id=user_id, action="pre_analysis_validation",
+            resource_type="dataset", resource_id=dataset_id,
+            project_id=project_id,
+            details={
+                "verdict": "BLOCKED" if validation_verdict.blocked else "PASS",
                 "validation_record_id": _validation_record_id,
-            }
+                "dataset_hash": _ds_hash,
+                "block_reasons": validation_verdict.block_reasons if validation_verdict.blocked else None,
+            },
+            regulatory=True,
+        )
+        await db.commit()
+
+        if validation_verdict.blocked:
+            _log.warning("Pre-analysis validation BLOCKED for project %s", project_id)
+            try:
+                await update_processing_config(
+                    db, project_id,
+                    lambda cfg: {**cfg, "pre_analysis_validation": verdict_dict,
+                                 "validation_record_id": _validation_record_id},
+                )
+            except Exception:
+                pass
+            raise RuntimeError(
+                f"Pre-analysis validation BLOCKED: {validation_verdict.block_reasons}"
+            )
+
+        if task_status:
+            task_status.progress = 30.0
+            task_status.message = "Running statistical analysis (Cox PH, IPTW, KM)..."
+
+        # ── Phase 3: CPU-bound statistical computation in thread pool ──
+        _analysis_started = datetime.utcnow()
+        loop = asyncio.get_running_loop()
+        svc = StatisticalAnalysisService()
+        analysis_results = await loop.run_in_executor(
+            None, svc.run_analysis_from_data, data_content, column_mapping,
         )
 
-    _log.info("Pre-analysis validation PASSED for project %s", project_id)
-    _analysis_started = datetime.utcnow()
+        if "error" in analysis_results:
+            raise RuntimeError(analysis_results["error"])
 
-    # Fresh instance — no class-level or instance-level carryover
-    svc = StatisticalAnalysisService()
-    try:
-        analysis_results = svc.run_analysis_from_data(data_content, column_mapping=column_mapping)
-    except Exception as exc:
-        _log.exception("Analysis computation failed")
-        raise HTTPException(status_code=500, detail=f"Analysis failed: {exc}")
+        analysis_results["pre_analysis_validation"] = verdict_dict
 
-    if "error" in analysis_results:
-        raise HTTPException(status_code=422, detail=analysis_results["error"])
+        if task_status:
+            task_status.progress = 75.0
+            task_status.message = "Persisting results..."
 
-    # Attach the validation report to the analysis results
-    analysis_results["pre_analysis_validation"] = verdict_dict
+        # ── Phase 4: Serialize numpy → JSON-safe ──
+        class _NumpyEncoder(_json2.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, (_np2.integer,)): return int(obj)
+                if isinstance(obj, (_np2.floating, float)) and (_np2.isnan(obj) or _np2.isinf(obj)): return None
+                if isinstance(obj, (_np2.floating,)): return float(obj)
+                if isinstance(obj, _np2.ndarray): return obj.tolist()
+                if isinstance(obj, (_np2.bool_,)): return bool(obj)
+                return super().default(obj)
 
-    # 3. Store results in project.processing_config
-    # Convert numpy types to native Python types for JSON serialization
-    class _NumpyEncoder(_json2.JSONEncoder):
-        def default(self, obj):
-            if isinstance(obj, (_np2.integer,)): return int(obj)
-            if isinstance(obj, (_np2.floating, float)) and (_np2.isnan(obj) or _np2.isinf(obj)): return None
-            if isinstance(obj, (_np2.floating,)): return float(obj)
-            if isinstance(obj, _np2.ndarray): return obj.tolist()
-            if isinstance(obj, (_np2.bool_,)): return bool(obj)
-            return super().default(obj)
-
-    try:
-        # Step 1: Serialize with numpy encoder (converts numpy types to Python native)
         json_str = _json2.dumps(analysis_results, cls=_NumpyEncoder, default=str)
-        # Step 2: Replace JavaScript-style NaN/Infinity with null (json.dumps
-        # outputs NaN/Infinity for Python float('nan')/float('inf') which are
-        # not valid JSON and will crash FastAPI's response serializer)
-        import re as _re
         json_str = _re.sub(r'\bNaN\b', 'null', json_str)
         json_str = _re.sub(r'\b-?Infinity\b', 'null', json_str)
         safe_results = _json2.loads(json_str)
-    except Exception as exc:
-        _log.exception("Failed to serialize analysis results")
-        raise HTTPException(status_code=500, detail=f"Result serialization failed: {exc}")
 
-    try:
-        from sqlalchemy.orm.attributes import flag_modified
-        project = await get_project_with_org_check(project_id, current_user, db)
-        cfg = dict(project.processing_config or {})
-        cfg["analysis_results"] = safe_results
-        cfg["analysis_dataset_id"] = dataset_id
-        cfg["analysis_timestamp"] = datetime.utcnow().isoformat()
-        project.processing_config = cfg
-        flag_modified(project, "processing_config")
-        await db.commit()
-    except Exception as exc:
-        _log.exception("Failed to store analysis results in DB")
-        # Still return the results even if storage fails
-        safe_results["_storage_warning"] = f"Results computed but not persisted: {exc}"
+        # ── Phase 5: Persist to processing_config (optimistic-locked) ──
+        try:
+            await update_processing_config(
+                db, project_id,
+                lambda cfg: {
+                    **cfg,
+                    "analysis_results": safe_results,
+                    "analysis_dataset_id": dataset_id,
+                    "analysis_timestamp": datetime.utcnow().isoformat(),
+                },
+            )
+        except Exception as exc:
+            _log.exception("Failed to store analysis results in processing_config")
+            safe_results["_storage_warning"] = str(exc)
 
-    # ── BLOCKING-FIX 5: Store an AnalysisResult row with full metadata ──
-    import hashlib as _hashlib
-    import scipy, numpy
-    _dataset_hash = _hashlib.sha256(
-        _json2.dumps(data_content, sort_keys=True, default=str).encode()
-    ).hexdigest()
+        # ── Phase 6: AnalysisResult row (unique-constrained) ──
+        try:
+            _ar = _AR(
+                project_id=project_id, dataset_id=dataset_id,
+                validation_record_id=_validation_record_id, user_id=user_id,
+                dataset_hash=_ds_hash, column_mapping=column_mapping,
+                dataset_row_count=records_count, random_seed=20240417,
+                software_version="afarensis-2.1",
+                engine_versions={"scipy": scipy.__version__, "numpy": numpy.__version__},
+                convergence_info=safe_results.get("convergence_info"),
+                results=safe_results,
+                started_at=_analysis_started, completed_at=datetime.utcnow(),
+                duration_ms=int((datetime.utcnow() - _analysis_started).total_seconds() * 1000),
+            )
+            db.add(_ar)
+            await db.flush()
+            safe_results["analysis_result_id"] = _ar.id
+            safe_results["dataset_hash"] = _ds_hash
+            safe_results["validation_record_id"] = _validation_record_id
+        except Exception as exc:
+            _log.warning("Failed to store AnalysisResult row (may be duplicate): %s", exc)
 
-    try:
-        from app.models import AnalysisResult as _AR
-        _ar = _AR(
+        # ── Phase 7: Audit log ──
+        await write_audit_log(
+            db, user_id=user_id, action="analyze_dataset",
+            resource_type="project", resource_id=project_id,
             project_id=project_id,
-            dataset_id=dataset_id,
-            validation_record_id=_validation_record_id,
-            user_id=str(current_user.id),
-            dataset_hash=_dataset_hash,
-            column_mapping=column_mapping,
-            dataset_row_count=records_count,
-            random_seed=20240417,
-            software_version="afarensis-2.1",
-            engine_versions={
-                "scipy": scipy.__version__,
-                "numpy": numpy.__version__,
+            details={
+                "dataset_id": dataset_id, "dataset_name": dataset_name,
+                "records_count": records_count,
+                "validation_record_id": _validation_record_id,
+                "dataset_hash": _ds_hash,
             },
-            convergence_info=safe_results.get("convergence_info"),
-            results=safe_results,
-            started_at=_analysis_started,
-            completed_at=datetime.utcnow(),
-            duration_ms=int((datetime.utcnow() - _analysis_started).total_seconds() * 1000),
+            regulatory=True,
         )
-        db.add(_ar)
-        await db.flush()
-        safe_results["analysis_result_id"] = _ar.id
-        safe_results["dataset_hash"] = _dataset_hash
-        safe_results["validation_record_id"] = _validation_record_id
-    except Exception as exc:
-        _log.warning("Failed to store AnalysisResult row: %s", exc)
+        await db.commit()
 
-    # ── BLOCKING-FIX 1: Audit log (concrete writer, not AuditService.log) ──
-    from app.services.audit_writer import write_audit_log
-    await write_audit_log(
-        db,
-        user_id=str(current_user.id),
-        action="analyze_dataset",
-        resource_type="project",
-        resource_id=project_id,
-        project_id=project_id,
-        details={
-            "dataset_id": dataset_id,
-            "dataset_name": dataset_name,
-            "records_count": records_count,
-            "validation_record_id": _validation_record_id,
-            "dataset_hash": _dataset_hash,
-        },
-        regulatory=True,
-    )
+        if task_status:
+            task_status.progress = 100.0
+            task_status.message = "Analysis complete"
 
-    await db.commit()
-
-    return safe_results
+        return safe_results
 
 
 @api_router.get("/projects/{project_id}/datasets")

@@ -7,6 +7,7 @@ import os
 import asyncio
 import logging
 import json
+import random
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime, timedelta
@@ -23,9 +24,56 @@ from app.core.exceptions import ProcessingError, ValidationError
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Circuit breaker — prevents hammering a dead service
+# ---------------------------------------------------------------------------
+
+class CircuitBreaker:
+    """Per-service circuit breaker: CLOSED → OPEN (after N failures) → HALF-OPEN."""
+
+    def __init__(self, failure_threshold: int = 5, recovery_seconds: float = 60.0):
+        self.failure_threshold = failure_threshold
+        self.recovery_seconds = recovery_seconds
+        self._consecutive_failures = 0
+        self._opened_at: Optional[float] = None
+
+    @property
+    def is_open(self) -> bool:
+        if self._opened_at is None:
+            return False
+        elapsed = datetime.now().timestamp() - self._opened_at
+        if elapsed >= self.recovery_seconds:
+            # Transition to HALF-OPEN: allow one probe
+            return False
+        return True
+
+    def record_success(self):
+        self._consecutive_failures = 0
+        self._opened_at = None
+
+    def record_failure(self):
+        self._consecutive_failures += 1
+        if self._consecutive_failures >= self.failure_threshold:
+            self._opened_at = datetime.now().timestamp()
+            logger.warning(
+                "Circuit breaker OPEN after %d consecutive failures (recovery in %ds)",
+                self._consecutive_failures, self.recovery_seconds,
+            )
+
+
 class ExternalAPIService:
-    """Integration with external regulatory and medical databases"""
-    
+    """Integration with external regulatory and medical databases.
+
+    Resilience features
+    ~~~~~~~~~~~~~~~~~~~
+    * **Rate limiting** — per-service sliding window.
+    * **Exponential backoff with jitter** — retries on transient errors and
+      HTTP 429/5xx responses (default 3 attempts).
+    * **Circuit breaker** — after 5 consecutive failures the service is
+      short-circuited for 60 s, returning empty results instantly instead
+      of burning timeout budget on a dead upstream.
+    """
+
     def __init__(self):
         self.session_timeout = aiohttp.ClientTimeout(total=30, connect=10)
         self.rate_limits = {
@@ -34,20 +82,94 @@ class ExternalAPIService:
             'fda': {'calls_per_second': 1, 'last_call': 0},
             'openalex': {'calls_per_second': 10, 'last_call': 0},
         }
-    
+        self._circuit_breakers: Dict[str, CircuitBreaker] = {
+            'pubmed': CircuitBreaker(),
+            'clinicaltrials': CircuitBreaker(),
+            'fda': CircuitBreaker(),
+            'openalex': CircuitBreaker(),
+        }
+
     async def _rate_limit_wait(self, service: str):
         """Enforce rate limiting for external APIs"""
         if service in self.rate_limits:
             current_time = datetime.now().timestamp()
             last_call = self.rate_limits[service]['last_call']
             min_interval = 1.0 / self.rate_limits[service]['calls_per_second']
-            
+
             time_since_last = current_time - last_call
             if time_since_last < min_interval:
                 sleep_time = min_interval - time_since_last
                 await asyncio.sleep(sleep_time)
-            
+
             self.rate_limits[service]['last_call'] = datetime.now().timestamp()
+
+    async def _fetch_with_retry(
+        self,
+        service: str,
+        method: str,
+        url: str,
+        *,
+        params: Optional[Dict[str, Any]] = None,
+        headers: Optional[Dict[str, str]] = None,
+        max_retries: int = 3,
+        parse: str = "json",          # "json" | "text"
+    ) -> Any:
+        """HTTP GET/POST with exponential backoff, jitter and circuit breaker.
+
+        Returns parsed response body on success, raises ProcessingError on
+        exhausted retries.
+        """
+        cb = self._circuit_breakers.get(service)
+        if cb and cb.is_open:
+            logger.warning("Circuit breaker OPEN for %s — returning empty", service)
+            raise ProcessingError(f"{service} circuit breaker is open (recent failures). Try again later.")
+
+        last_exc: Optional[Exception] = None
+        for attempt in range(max_retries):
+            await self._rate_limit_wait(service)
+            try:
+                async with aiohttp.ClientSession(timeout=self.session_timeout) as session:
+                    async with session.request(method, url, params=params, headers=headers) as resp:
+                        # Retry on 429 / 5xx
+                        if resp.status == 429 or resp.status >= 500:
+                            retry_after = int(resp.headers.get("Retry-After", 2 ** attempt))
+                            jitter = random.uniform(0, 1)
+                            wait = min(retry_after + jitter, 30)
+                            logger.warning(
+                                "%s returned %d (attempt %d/%d) — retrying in %.1fs",
+                                service, resp.status, attempt + 1, max_retries, wait,
+                            )
+                            await asyncio.sleep(wait)
+                            continue
+
+                        if resp.status != 200:
+                            raise ProcessingError(f"{service} HTTP {resp.status}")
+
+                        if cb:
+                            cb.record_success()
+
+                        if parse == "json":
+                            return await resp.json(content_type=None)
+                        return await resp.text()
+
+            except (aiohttp.ClientError, asyncio.TimeoutError) as exc:
+                last_exc = exc
+                if attempt < max_retries - 1:
+                    wait = 2 ** attempt + random.uniform(0, 1)
+                    logger.warning(
+                        "%s network error (attempt %d/%d): %s — retrying in %.1fs",
+                        service, attempt + 1, max_retries, exc, wait,
+                    )
+                    await asyncio.sleep(wait)
+                else:
+                    if cb:
+                        cb.record_failure()
+                    raise ProcessingError(f"{service} API error after {max_retries} attempts: {exc}")
+
+        # Shouldn't reach here, but safety net
+        if cb:
+            cb.record_failure()
+        raise ProcessingError(f"{service} API error after {max_retries} attempts: {last_exc}")
 
     # PubMed Integration
     
@@ -96,67 +218,68 @@ class ExternalAPIService:
                 'retmode': 'json',
                 'sort': 'relevance'
             }
-            
+
             if settings.PUBMED_API_KEY:
                 search_params['api_key'] = settings.PUBMED_API_KEY
-            
-            async with aiohttp.ClientSession(timeout=self.session_timeout) as session:
-                # Search request
-                search_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
-                async with session.get(search_url, params=search_params) as response:
-                    if response.status != 200:
-                        raise ProcessingError(f"PubMed search failed: {response.status}")
-                    
-                    search_data = await response.json()
-                    pmids = search_data.get('esearchresult', {}).get('idlist', [])
-                
-                if not pmids:
-                    return []
-                
-                # Step 2: Fetch detailed records
-                return await self._fetch_pubmed_details(session, pmids[:max_results])
-        
+
+            search_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+            search_data = await self._fetch_with_retry(
+                "pubmed", "GET", search_url, params=search_params,
+            )
+            pmids = search_data.get('esearchresult', {}).get('idlist', [])
+
+            if not pmids:
+                return []
+
+            # Step 2: Fetch detailed records (uses its own retry internally)
+            return await self._fetch_pubmed_details_safe(pmids[:max_results])
+
         except Exception as e:
             logger.error(f"PubMed search failed: {e}")
             raise ProcessingError(f"PubMed API error: {str(e)}")
     
-    async def _fetch_pubmed_details(self, session: aiohttp.ClientSession, pmids: List[str]) -> List[Dict[str, Any]]:
-        """Fetch detailed PubMed records"""
-        
-        await self._rate_limit_wait('pubmed')
-        
-        # Batch fetch details (max 200 at a time)
+    async def _fetch_pubmed_details_safe(self, pmids: List[str]) -> List[Dict[str, Any]]:
+        """Fetch detailed PubMed records with per-batch retry and jitter."""
         batch_size = 50
         all_articles = []
-        
+        failed_batches = 0
+
         for i in range(0, len(pmids), batch_size):
             batch_pmids = pmids[i:i + batch_size]
-            
+
             fetch_params = {
                 'db': 'pubmed',
                 'id': ','.join(batch_pmids),
                 'retmode': 'xml'
             }
-            
             if settings.PUBMED_API_KEY:
                 fetch_params['api_key'] = settings.PUBMED_API_KEY
-            
-            fetch_url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
-            
-            async with session.get(fetch_url, params=fetch_params) as response:
-                if response.status != 200:
-                    logger.warning(f"Failed to fetch PubMed batch: {response.status}")
-                    continue
-                
-                xml_content = await response.text()
+
+            fetch_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+
+            try:
+                xml_content = await self._fetch_with_retry(
+                    "pubmed", "GET", fetch_url, params=fetch_params, parse="text",
+                )
                 articles = self._parse_pubmed_xml(xml_content)
                 all_articles.extend(articles)
-            
+            except ProcessingError:
+                failed_batches += 1
+                logger.warning("PubMed batch %d–%d failed after retries, skipping", i, i + batch_size)
+
             # Rate limiting between batches
             if i + batch_size < len(pmids):
                 await asyncio.sleep(0.5)
-        
+
+        if failed_batches:
+            logger.warning("PubMed: %d/%d batches failed", failed_batches,
+                           (len(pmids) + batch_size - 1) // batch_size)
+
         return all_articles
+
+    async def _fetch_pubmed_details(self, session: aiohttp.ClientSession, pmids: List[str]) -> List[Dict[str, Any]]:
+        """Legacy method — delegates to _fetch_pubmed_details_safe."""
+        return await self._fetch_pubmed_details_safe(pmids)
     
     def _parse_pubmed_xml(self, xml_content: str) -> List[Dict[str, Any]]:
         """Parse PubMed XML response"""
@@ -302,13 +425,9 @@ class ExternalAPIService:
             params['filter.overallStatus'] = '|'.join(status)
 
         try:
-            async with aiohttp.ClientSession(timeout=self.session_timeout) as session:
-                url = "https://clinicaltrials.gov/api/v2/studies"
-                async with session.get(url, params=params) as response:
-                    if response.status != 200:
-                        raise ProcessingError(f"ClinicalTrials.gov v2 search failed: {response.status}")
-                    data = await response.json()
-                    return self._parse_clinical_trials_v2(data)
+            url = "https://clinicaltrials.gov/api/v2/studies"
+            data = await self._fetch_with_retry("clinicaltrials", "GET", url, params=params)
+            return self._parse_clinical_trials_v2(data)
         except Exception as e:
             logger.error(f"ClinicalTrials.gov search failed: {e}")
             raise ProcessingError(f"ClinicalTrials.gov API error: {str(e)}")
@@ -605,61 +724,57 @@ class ExternalAPIService:
                 'User-Agent': f'Afarensis-Enterprise/2.1 (mailto:{settings.PUBMED_EMAIL or "admin@afarensis.com"})',
             }
 
-            async with aiohttp.ClientSession(timeout=self.session_timeout) as session:
-                url = "https://api.openalex.org/works"
-                async with session.get(url, params=params, headers=headers) as response:
-                    if response.status != 200:
-                        logger.warning(f"OpenAlex search failed: HTTP {response.status}")
-                        return []
+            url = "https://api.openalex.org/works"
+            data = await self._fetch_with_retry(
+                "openalex", "GET", url, params=params, headers=headers,
+            )
+            results = []
 
-                    data = await response.json()
-                    results = []
+            for work in data.get('results', []):
+                # Extract authors
+                authors = []
+                for authorship in work.get('authorships', [])[:10]:
+                    author = authorship.get('author', {})
+                    name = author.get('display_name', '')
+                    if name:
+                        authors.append(name)
 
-                    for work in data.get('results', []):
-                        # Extract authors
-                        authors = []
-                        for authorship in work.get('authorships', [])[:10]:
-                            author = authorship.get('author', {})
-                            name = author.get('display_name', '')
-                            if name:
-                                authors.append(name)
+                # Extract journal
+                primary_location = work.get('primary_location', {}) or {}
+                source = primary_location.get('source', {}) or {}
+                journal = source.get('display_name', '')
 
-                        # Extract journal
-                        primary_location = work.get('primary_location', {}) or {}
-                        source = primary_location.get('source', {}) or {}
-                        journal = source.get('display_name', '')
+                # Extract year
+                pub_year = work.get('publication_year')
 
-                        # Extract year
-                        pub_year = work.get('publication_year')
+                # Extract DOI
+                doi = work.get('doi', '') or ''
+                if doi.startswith('https://doi.org/'):
+                    doi = doi[16:]
 
-                        # Extract DOI
-                        doi = work.get('doi', '') or ''
-                        if doi.startswith('https://doi.org/'):
-                            doi = doi[16:]
+                # Build structured data
+                structured = {
+                    'openalex_id': work.get('id', ''),
+                    'doi': doi,
+                    'cited_by_count': work.get('cited_by_count', 0),
+                    'type': work.get('type', ''),
+                    'open_access': work.get('open_access', {}).get('is_oa', False),
+                    'concepts': [c.get('display_name', '') for c in work.get('concepts', [])[:5]],
+                }
 
-                        # Build structured data
-                        structured = {
-                            'openalex_id': work.get('id', ''),
-                            'doi': doi,
-                            'cited_by_count': work.get('cited_by_count', 0),
-                            'type': work.get('type', ''),
-                            'open_access': work.get('open_access', {}).get('is_oa', False),
-                            'concepts': [c.get('display_name', '') for c in work.get('concepts', [])[:5]],
-                        }
+                results.append({
+                    'source_id': work.get('id', '').split('/')[-1] if work.get('id') else '',
+                    'title': work.get('title', '') or '',
+                    'abstract': work.get('abstract', '') or work.get('abstract_inverted_index_to_text', '') or '',
+                    'authors': authors,
+                    'journal': journal,
+                    'publication_year': pub_year,
+                    'url': doi and f'https://doi.org/{doi}' or work.get('id', ''),
+                    'structured_data': structured,
+                })
 
-                        results.append({
-                            'source_id': work.get('id', '').split('/')[-1] if work.get('id') else '',
-                            'title': work.get('title', '') or '',
-                            'abstract': work.get('abstract', '') or work.get('abstract_inverted_index_to_text', '') or '',
-                            'authors': authors,
-                            'journal': journal,
-                            'publication_year': pub_year,
-                            'url': doi and f'https://doi.org/{doi}' or work.get('id', ''),
-                            'structured_data': structured,
-                        })
-
-                    logger.info(f"OpenAlex returned {len(results)} results for: {query[:50]}")
-                    return results
+            logger.info(f"OpenAlex returned {len(results)} results for: {query[:50]}")
+            return results
 
         except Exception as e:
             logger.error(f"OpenAlex search failed: {e}")

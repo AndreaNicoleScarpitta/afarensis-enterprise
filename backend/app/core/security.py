@@ -27,6 +27,7 @@ CRITICAL CHANGE: Replaced passlib with direct bcrypt usage to fix compatibility
 with bcrypt 5.0+ which broke passlib's version detection mechanism.
 """
 
+import asyncio
 import secrets
 import hashlib
 import hmac
@@ -49,21 +50,34 @@ from app.core.logging import audit_logger
 # CRITICAL FIX: Replace passlib with direct bcrypt usage
 # This fixes the critical compatibility issue with bcrypt 5.0+
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """
-    Verify password against hash using direct bcrypt
-    
-    CRITICAL FIX: Replaces passlib.verify() which breaks with bcrypt 5.0+
+def _verify_password_sync(plain_password: str, hashed_password: str) -> bool:
+    """CPU-bound bcrypt verification — runs in thread pool via verify_password()."""
+    if isinstance(hashed_password, str):
+        hashed_password = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
+
+
+def _hash_password_sync(password: str) -> str:
+    """CPU-bound bcrypt hashing — runs in thread pool via get_password_hash_async()."""
+    password_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
+
+
+async def verify_password_async(plain_password: str, hashed_password: str) -> bool:
+    """Verify password against bcrypt hash without blocking the event loop.
+
+    bcrypt.checkpw at cost=12 takes ~250ms of pure CPU.  Running it in
+    the default ThreadPoolExecutor prevents the event loop from stalling
+    during concurrent login attempts.
     """
     try:
-        # Handle both string and bytes for hashed_password
-        if isinstance(hashed_password, str):
-            hashed_password = hashed_password.encode('utf-8')
-        
-        # bcrypt.checkpw requires bytes for both arguments
-        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(
+            None, _verify_password_sync, plain_password, hashed_password
+        )
     except Exception as e:
-        # Log the error for debugging but don't expose details
         audit_logger.log_system_event(
             event="password_verification_error",
             event_type="security_error",
@@ -73,25 +87,51 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
-def get_password_hash(password: str) -> str:
-    """
-    Hash password for storage using direct bcrypt
-    
-    CRITICAL FIX: Replaces passlib.hash() which breaks with bcrypt 5.0+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Sync fallback for non-async contexts (migrations, CLI scripts).
+
+    In request handlers, prefer verify_password_async().
     """
     try:
-        # bcrypt requires password as bytes
-        password_bytes = password.encode('utf-8')
-        
-        # Generate salt and hash (cost factor 12 for good security/performance balance)
-        salt = bcrypt.gensalt(rounds=12)
-        hashed = bcrypt.hashpw(password_bytes, salt)
-        
-        # Return as string for database storage
-        return hashed.decode('utf-8')
+        return _verify_password_sync(plain_password, hashed_password)
     except Exception as e:
         audit_logger.log_system_event(
-            event="password_hashing_error", 
+            event="password_verification_error",
+            event_type="security_error",
+            details={"error": str(e)},
+            severity="error"
+        )
+        return False
+
+
+async def get_password_hash_async(password: str) -> str:
+    """Hash password for storage without blocking the event loop."""
+    try:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _hash_password_sync, password)
+    except Exception as e:
+        audit_logger.log_system_event(
+            event="password_hashing_error",
+            event_type="security_error",
+            details={"error": str(e)},
+            severity="error"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to hash password"
+        )
+
+
+def get_password_hash(password: str) -> str:
+    """Sync fallback for non-async contexts.
+
+    In request handlers, prefer get_password_hash_async().
+    """
+    try:
+        return _hash_password_sync(password)
+    except Exception as e:
+        audit_logger.log_system_event(
+            event="password_hashing_error",
             event_type="security_error",
             details={"error": str(e)},
             severity="error"

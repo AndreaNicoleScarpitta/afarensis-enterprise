@@ -116,6 +116,10 @@ class Project(Base):
     max_trials_results = Column(Integer, default=50)
     processing_config = Column(JSON)
 
+    # Optimistic locking — prevents lost-update on concurrent processing_config writes.
+    # Every update must SET config_version = config_version + 1 WHERE config_version = <expected>.
+    config_version = Column(Integer, default=0, nullable=False, server_default="0")
+
     # Relationships
     org = relationship("Organization", back_populates="projects")
     parsed_specifications = relationship("ParsedSpecification", back_populates="project")
@@ -882,6 +886,14 @@ class PatientDataset(Base):
 
     __table_args__ = (
         Index("idx_patient_datasets_project", "project_id"),
+        # Only one active dataset per project — prevents duplicate uploads
+        Index(
+            "uq_one_active_dataset_per_project",
+            "project_id",
+            unique=True,
+            postgresql_where=Column("status") == "active",
+            sqlite_where=Column("status") == "active",
+        ),
     )
 
 
@@ -1060,6 +1072,12 @@ class AnalysisResult(Base):
         Index("idx_analysis_results_project", "project_id"),
         Index("idx_analysis_results_dataset", "dataset_id"),
         Index("idx_analysis_results_validation", "validation_record_id"),
+        # One analysis result per (dataset hash + validation record) — prevents
+        # duplicate results from retried requests on the same validated input.
+        UniqueConstraint(
+            "dataset_id", "dataset_hash", "validation_record_id",
+            name="uq_analysis_per_validated_dataset",
+        ),
     )
 
 
