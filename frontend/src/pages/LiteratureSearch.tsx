@@ -539,12 +539,29 @@ export default function LiteratureSearch() {
         {activeErrors.length > 0 && !anyLoading && (
           <div className="mb-4 space-y-2">
             {activeErrors.map(([src, msg]) => (
-              <div key={src} className="flex items-start gap-3 p-3 bg-red-500/5 border border-red-500/20 rounded-xl">
-                <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-semibold text-red-400">{SOURCE_MAP[src]?.label} error</p>
-                  <p className="text-[11px] text-red-400/80 mt-0.5">{msg}</p>
+              <div key={src} className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-500/5 border border-red-200 dark:border-red-500/20 rounded-xl">
+                <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-red-500 dark:text-red-400">{SOURCE_MAP[src]?.label} error</p>
+                  <p className="text-[11px] text-red-500/80 dark:text-red-400/80 mt-0.5">{msg}</p>
                 </div>
+                <button
+                  onClick={async () => {
+                    setLoading(prev => ({ ...prev, [src]: true }))
+                    setErrors(prev => ({ ...prev, [src]: null }))
+                    try {
+                      const data = await fetchSource(src as Source, query, maxResults)
+                      setResults(prev => ({ ...prev, [src]: data }))
+                    } catch (e: any) {
+                      setErrors(prev => ({ ...prev, [src]: e.message ?? 'Search failed' }))
+                    } finally {
+                      setLoading(prev => ({ ...prev, [src]: false }))
+                    }
+                  }}
+                  className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700/50 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                >
+                  Retry
+                </button>
               </div>
             ))}
           </div>

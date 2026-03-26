@@ -95,7 +95,7 @@ const statusVariant: Record<string, 'approved' | 'pending' | 'review' | 'draft' 
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
-  const { data: projectsData, loading: projectsLoading, error: projectsError } = useProjects({
+  const { data: projectsData, loading: projectsLoading, error: projectsError, refetch: refetchProjects } = useProjects({
     page: 1, page_size: 5,
   })
   const { data: evidenceData, loading: evidenceLoading } = useEvidenceList({
@@ -130,10 +130,13 @@ const Dashboard: React.FC = () => {
         <CardContent className="p-6">
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-error-500 mt-0.5 shrink-0" />
-            <div>
+            <div className="flex-1">
               <p className="font-semibold text-error-800">Failed to load dashboard</p>
               <p className="text-sm text-error-600 mt-0.5">{projectsError.message}</p>
             </div>
+            <button onClick={() => refetchProjects()} className="shrink-0 px-4 py-2 text-sm font-semibold text-error-700 border border-error-300 rounded-lg hover:bg-error-100 transition-colors">
+              Retry
+            </button>
           </div>
         </CardContent>
       </Card>

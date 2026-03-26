@@ -110,12 +110,15 @@ const EvidenceReview: React.FC = () => {
   if (error) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 m-6">
-        <div className="flex items-center gap-3">
-          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0" />
-          <div>
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
             <h3 className="font-medium text-red-800">Error loading evidence</h3>
             <p className="text-sm text-red-700 mt-1">{error.message}</p>
           </div>
+          <button onClick={() => refetch()} className="shrink-0 px-4 py-2 text-sm font-semibold text-red-700 border border-red-300 rounded-lg hover:bg-red-100 transition-colors">
+            Retry
+          </button>
         </div>
       </div>
     )

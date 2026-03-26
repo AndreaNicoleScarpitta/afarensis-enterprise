@@ -178,7 +178,10 @@ export default function EnhancedDashboard() {
       {error && (
         <div className="mb-6 flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 p-4 text-red-700 dark:text-red-300">
           <AlertCircle className="h-5 w-5 flex-shrink-0" />
-          <span>{error}</span>
+          <span className="flex-1">{error}</span>
+          <button onClick={() => void fetchProjects()} className="shrink-0 px-3 py-1.5 text-xs font-semibold border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors">
+            Retry
+          </button>
         </div>
       )}
 

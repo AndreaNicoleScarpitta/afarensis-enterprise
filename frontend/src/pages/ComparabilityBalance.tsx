@@ -38,7 +38,7 @@ function SmdBar({ value, max = 0.7 }: { value: number; max?: number }) {
 }
 
 export default function ComparabilityBalance({ selectedStudy, protocolLocked, reviewerMode }: Props) {
-  const { data: balanceData, loading, error, runComputation } = useStudyData(selectedStudy?.id, 'balance')
+  const { data: balanceData, loading, error, refetch, runComputation } = useStudyData(selectedStudy?.id, 'balance')
 
   const [covariates, setCovariates] = useState<any[]>([])
   const locked = protocolLocked
@@ -92,12 +92,15 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
       )}
 
       {error && (
-        <div className="mx-8 mt-4 flex items-start gap-3 p-4 bg-red-900/20 border border-red-700/30 rounded-xl">
-          <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-red-400">Failed to load balance data</p>
+        <div className="mx-8 mt-4 flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/30 rounded-xl">
+          <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-600 dark:text-red-400">Failed to load balance data</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{error}</p>
           </div>
+          <button onClick={() => refetch()} className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700/50 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+            Retry
+          </button>
         </div>
       )}
 

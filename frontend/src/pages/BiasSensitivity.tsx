@@ -32,7 +32,7 @@ const impactColor: Record<string, string> = {
 
 export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const locked = protocolLocked
-  const { data: biasData, loading, error, runComputation } = useStudyData(selectedStudy?.id, 'bias')
+  const { data: biasData, loading, error, refetch, runComputation } = useStudyData(selectedStudy?.id, 'bias')
 
   const [sensitivityAnalyses, setSensitivityAnalyses] = useState<any[]>([])
   const [eValue, setEValue] = useState<{ point: number; ci: number } | null>(null)
@@ -184,8 +184,12 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
           <div className="text-center py-8 text-gray-500 text-sm">Loading bias & sensitivity data...</div>
         )}
         {error && (
-          <div className="bg-red-900/20 border border-red-700/30 rounded-xl p-4 text-sm text-red-400">
-            Error loading data: {error}
+          <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/30 rounded-xl p-4">
+            <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0" />
+            <p className="flex-1 text-sm text-red-600 dark:text-red-400">Error loading data: {error}</p>
+            <button onClick={() => refetch()} className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700/50 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+              Retry
+            </button>
           </div>
         )}
 

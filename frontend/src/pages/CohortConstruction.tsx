@@ -50,7 +50,7 @@ interface Props {
 // ]
 
 export default function CohortConstruction({ selectedStudy, protocolLocked, reviewerMode }: Props) {
-  const { data: cohortData, loading, error, saving, save, runComputation } = useStudyData(selectedStudy?.id, 'cohort')
+  const { data: cohortData, loading, error, saving, save, refetch, runComputation } = useStudyData(selectedStudy?.id, 'cohort')
 
   const [inclusion, setInclusion] = useState<string[]>([])
   const [exclusion, setExclusion] = useState<string[]>([])
@@ -114,12 +114,15 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
       )}
 
       {error && (
-        <div className="mx-8 mt-4 flex items-start gap-3 p-4 bg-red-900/20 border border-red-700/30 rounded-xl">
-          <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-sm font-semibold text-red-400">Failed to load cohort data</p>
+        <div className="mx-8 mt-4 flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/30 rounded-xl">
+          <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-red-600 dark:text-red-400">Failed to load cohort data</p>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{error}</p>
           </div>
+          <button onClick={() => refetch()} className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700/50 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+            Retry
+          </button>
         </div>
       )}
 

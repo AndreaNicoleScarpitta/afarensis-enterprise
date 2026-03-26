@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { ClipboardList, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, Shield, Activity } from 'lucide-react'
+import { ClipboardList, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, Shield, Activity, AlertCircle } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
 
@@ -41,7 +41,7 @@ function formatTs(ts: string) {
 
 export default function AuditTrail({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const locked = protocolLocked
-  const { data: auditData, loading, error } = useStudyData(selectedStudy?.id, 'audit')
+  const { data: auditData, loading, error, refetch } = useStudyData(selectedStudy?.id, 'audit')
 
   const [allEvents, setAllEvents] = useState<any[]>([])
 
@@ -92,8 +92,12 @@ export default function AuditTrail({ selectedStudy, protocolLocked, reviewerMode
           <div className="text-center py-8 text-gray-500 text-sm">Loading audit trail...</div>
         )}
         {error && (
-          <div className="bg-red-900/20 border border-red-700/30 rounded-xl p-4 text-sm text-red-400">
-            Error loading data: {error}
+          <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/30 rounded-xl p-4">
+            <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0" />
+            <p className="flex-1 text-sm text-red-600 dark:text-red-400">Error loading data: {error}</p>
+            <button onClick={() => refetch()} className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700/50 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+              Retry
+            </button>
           </div>
         )}
 
