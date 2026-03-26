@@ -208,11 +208,21 @@ const ProjectDetail: React.FC = () => {
     <div className="p-6">
       {/* Sample data banner — only shown when using fallback data */}
       {isUsingDemoData && (
-        <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-300 rounded-lg px-4 py-3">
-          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-          <p className="text-sm text-amber-800">
-            <strong>Sample Project View.</strong> {apiError ? 'Could not reach the project API — displaying illustrative data.' : 'This page displays illustrative data. Connect to the project API for live metrics.'}
-          </p>
+        <div className="mb-6 border-2 border-dashed border-amber-400 rounded-xl p-4 bg-amber-50/80">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">
+                Demo Data — Not Real Project Metrics
+              </p>
+              <p className="text-sm text-amber-700 mt-1">
+                {apiError
+                  ? 'Could not reach the project API. All data below is illustrative and does not reflect any real study.'
+                  : 'This page displays fabricated sample data. Connect to the project API for live metrics.'
+                }
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -318,7 +328,7 @@ const ProjectDetail: React.FC = () => {
               </div>
 
               {/* Key Metrics Grid */}
-              <div className="grid grid-cols-2 gap-4 mt-6">
+              <div className={`grid grid-cols-2 gap-4 mt-6 ${isUsingDemoData ? 'opacity-50' : ''}`}>
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">
                     {project.key_metrics.evidence_quality_score}%

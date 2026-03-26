@@ -76,45 +76,38 @@ const TYPE_CONFIG: Record<ResultType, { label: string; color: string }> = {
 }
 
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
-async function fetchSource(source: Source, query: string, maxResults = 20): Promise<Paper[]> {
-  const base = '/api/v1/search'
-  const authHeaders = (): Record<string, string> => {
-    const h: Record<string, string> = { 'Content-Type': 'application/json' }
-    const token = (apiClient as any).accessToken
-    if (token) h['Authorization'] = `Bearer ${token}`
-    return h
-  }
+// All search requests routed through apiClient.request() so they get
+// automatic 401→refresh, Zod validation, and global error dispatch.
+import { z } from 'zod'
 
+const SearchResultSchema = z.any() // Accept any shape — we normalise below
+
+async function fetchSource(source: Source, query: string, maxResults = 20): Promise<Paper[]> {
+  const base = '/search'
   let raw: any[] = []
 
   if (source === 'pubmed') {
-    const r = await fetch(`${base}/pubmed`, {
-      method: 'POST', headers: authHeaders(),
+    const data = await apiClient.request(`${base}/pubmed`, SearchResultSchema, {
+      method: 'POST',
       body: JSON.stringify({ query, max_results: maxResults }),
     })
-    if (!r.ok) throw new Error(`PubMed: ${r.statusText}`)
-    raw = await r.json()
+    raw = Array.isArray(data) ? data : []
   } else if (source === 'clinicaltrials') {
-    const r = await fetch(`${base}/clinical-trials`, {
-      method: 'POST', headers: authHeaders(),
+    const data = await apiClient.request(`${base}/clinical-trials`, SearchResultSchema, {
+      method: 'POST',
       body: JSON.stringify({ query, max_results: maxResults }),
     })
-    if (!r.ok) throw new Error(`ClinicalTrials: ${r.statusText}`)
-    raw = await r.json()
+    raw = Array.isArray(data) ? data : []
   } else if (source === 'openalex') {
-    const r = await fetch(`${base}/openalex`, {
-      method: 'POST', headers: authHeaders(),
+    const data = await apiClient.request(`${base}/openalex`, SearchResultSchema, {
+      method: 'POST',
       body: JSON.stringify({ query, max_results: maxResults }),
     })
-    if (!r.ok) throw new Error(`OpenAlex: ${r.statusText}`)
-    const data = await r.json()
-    raw = data.results ?? data
+    raw = data?.results ?? (Array.isArray(data) ? data : [])
   } else if (source === 'semanticscholar') {
     const params = new URLSearchParams({ query, limit: String(maxResults) })
-    const r = await fetch(`${base}/semantic-scholar?${params}`, { headers: authHeaders() })
-    if (!r.ok) throw new Error(`Semantic Scholar: ${r.statusText}`)
-    const data = await r.json()
-    raw = data.results ?? data
+    const data = await apiClient.request(`${base}/semantic-scholar?${params}`, SearchResultSchema)
+    raw = data?.results ?? (Array.isArray(data) ? data : [])
   }
 
   return (Array.isArray(raw) ? raw : []).map(p => ({ ...p, source }))

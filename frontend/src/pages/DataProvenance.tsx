@@ -98,15 +98,10 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     }
   }, [provData])
 
-  // Auth token helper — apiClient stores JWT in memory, not localStorage
-  const getAuthToken = () => (apiClient as any).accessToken || ''
-
   // Fetch existing ADaM datasets on mount
   useEffect(() => {
     if (selectedStudy?.id) {
-      fetch(`/api/v1/projects/${selectedStudy.id}/adam/datasets`, {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-      }).then(r => r.json()).then(setAdamDatasets).catch(() => {})
+      apiClient.getAdamDatasets(selectedStudy.id).then(setAdamDatasets).catch(() => {})
     }
   }, [selectedStudy?.id])
 
@@ -114,10 +109,8 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     setAdamLoading(true)
     try {
       await apiClient.runStudyComputation(selectedStudy?.id, `../adam/generate/${type}`)
-      const r = await fetch(`/api/v1/projects/${selectedStudy?.id}/adam/datasets`, {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-      })
-      setAdamDatasets(await r.json())
+      const data = await apiClient.getAdamDatasets(selectedStudy?.id!)
+      setAdamDatasets(data)
     } catch (err) { console.error('ADaM generation failed:', err) }
     finally { setAdamLoading(false) }
   }
@@ -126,10 +119,8 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     setAdamValidating(true)
     try {
       await apiClient.runStudyComputation(selectedStudy?.id, '../adam/validate')
-      const r = await fetch(`/api/v1/projects/${selectedStudy?.id}/adam/datasets`, {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-      })
-      setAdamDatasets(await r.json())
+      const data = await apiClient.getAdamDatasets(selectedStudy?.id!)
+      setAdamDatasets(data)
     } catch (err) { console.error('ADaM validation failed:', err) }
     finally { setAdamValidating(false) }
   }
@@ -162,10 +153,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
   useEffect(() => {
     if (selectedStudy?.id) {
       setDatasetLoading(true)
-      fetch(`/api/v1/projects/${selectedStudy.id}/datasets`, {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-      })
-        .then(r => r.json())
+      apiClient.getDatasets(selectedStudy.id)
         .then(data => {
           if (data && (Array.isArray(data) ? data.length > 0 : data.id)) {
             setExistingDataset(Array.isArray(data) ? data[0] : data)
@@ -180,18 +168,10 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     if (!selectedStudy?.id) return
     setConsentSubmitting(true)
     try {
-      const r = await fetch(`/api/v1/projects/${selectedStudy.id}/ingestion/consent`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          attestation_text: ATTESTATION_TEXT,
-          consent_version: 'HIPAA-SH-v1.2',
-        }),
+      const data = await apiClient.submitIngestionConsent(selectedStudy.id, {
+        attestation_text: ATTESTATION_TEXT,
+        consent_version: 'HIPAA-SH-v1.2',
       })
-      const data = await r.json()
       setConsentId(data.consent_id || data.id)
       setShowConsentModal(false)
       setConsentChecked(false)
@@ -223,15 +203,10 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       formData.append('file', selectedFile)
       formData.append('consent_id', consentId)
 
-      const r = await fetch(`/api/v1/projects/${selectedStudy.id}/ingestion/upload`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-        },
-        body: formData,
-      })
-      if (!r.ok) throw new Error(`Upload failed: ${r.statusText}`)
-      const report = await r.json()
+      const report = await apiClient.uploadFile(
+        `/projects/${selectedStudy.id}/ingestion/upload`,
+        formData
+      )
       setUploadReport(report)
       setSelectedFile(null)
     } catch (err: any) {
@@ -248,29 +223,16 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     setValidationGateReport(null)
     setAnalysisError(null)
     try {
-      const response = await fetch(`/api/v1/projects/${selectedStudy.id}/study/analyze-dataset`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${getAuthToken()}`,
-          'Content-Type': 'application/json',
-        },
-      })
-      if (!response.ok) {
-        const errorBody = await response.json().catch(() => null)
-        if (response.status === 422 && errorBody?.detail?.validation_report) {
-          // Pre-analysis validation BLOCKED — show the full report
-          setValidationGateReport(errorBody.detail.validation_report)
-          setAnalysisError(errorBody.detail.message || 'Pre-analysis validation blocked.')
-        } else {
-          setAnalysisError(
-            errorBody?.detail?.message || errorBody?.detail || errorBody?.error || `Analysis failed (${response.status})`
-          )
-        }
-        return
-      }
+      await apiClient.analyzeDataset(selectedStudy.id, {})
       setAnalysisComplete(true)
     } catch (err: any) {
-      setAnalysisError(err.message || 'Analysis failed')
+      // Check for validation gate block (422 with structured report)
+      if (err.statusCode === 422 && err.detail?.validation_report) {
+        setValidationGateReport(err.detail.validation_report)
+        setAnalysisError(err.detail.message || 'Pre-analysis validation blocked.')
+      } else {
+        setAnalysisError(err.message || 'Analysis failed')
+      }
     } finally {
       setAnalyzing(false)
     }
@@ -298,9 +260,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
   // Fetch existing SDTM domains on mount
   useEffect(() => {
     if (selectedStudy?.id) {
-      fetch(`/api/v1/projects/${selectedStudy.id}`, {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-      }).then(r => r.json()).then(proj => {
+      apiClient.getProject(selectedStudy.id).then(proj => {
         if (proj?.processing_config?.sdtm) setSdtmDomains(proj.processing_config.sdtm)
       }).catch(() => {})
     }
@@ -309,11 +269,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
   const handleGenerateSdtm = async (domain: string) => {
     setSdtmLoading(true)
     try {
-      const result = await fetch(`/api/v1/projects/${selectedStudy?.id}/sdtm/generate/${domain}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-      })
-      const data = await result.json()
+      const data = await apiClient.generateSdtmDomain(selectedStudy?.id!, domain)
       setSdtmDomains(prev => ({ ...prev, [domain]: data }))
     } catch (err) { console.error('SDTM generation failed:', err) }
     finally { setSdtmLoading(false) }
@@ -322,15 +278,9 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
   const handleGenerateAllSdtm = async () => {
     setSdtmLoading(true)
     try {
-      await fetch(`/api/v1/projects/${selectedStudy?.id}/sdtm/generate-all`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-      })
+      await apiClient.generateSdtmAll(selectedStudy?.id!)
       // Refresh domains from project config
-      const r = await fetch(`/api/v1/projects/${selectedStudy?.id}`, {
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-      })
-      const proj = await r.json()
+      const proj = await apiClient.getProject(selectedStudy?.id!)
       if (proj?.processing_config?.sdtm) setSdtmDomains(proj.processing_config.sdtm)
     } catch (err) { console.error('SDTM generate-all failed:', err) }
     finally { setSdtmLoading(false) }
@@ -339,11 +289,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
   const handleValidateSdtm = async () => {
     setSdtmValidating(true)
     try {
-      const r = await fetch(`/api/v1/projects/${selectedStudy?.id}/sdtm/validate`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-      })
-      const data = await r.json()
+      const data = await apiClient.validateSdtm(selectedStudy?.id!)
       setSdtmValidationReports(data.reports || [])
     } catch (err) { console.error('SDTM validation failed:', err) }
     finally { setSdtmValidating(false) }

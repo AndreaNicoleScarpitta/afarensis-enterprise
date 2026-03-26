@@ -922,9 +922,21 @@ function App() {
     navigate('/dashboard', { replace: true })
   }, [login, navigate])
 
-  const handleLockProtocol = useCallback(() => {
-    setProtocolLocked(true)
-  }, [])
+  const handleLockProtocol = useCallback(async () => {
+    const confirmed = window.confirm(
+      'Lock this protocol?\n\nThis action cannot be undone and will be recorded in the audit trail. All study definition fields will become read-only.'
+    )
+    if (!confirmed) return
+    try {
+      if (selectedStudy?.id) {
+        await apiClient.lockProtocol(selectedStudy.id)
+      }
+      setProtocolLocked(true)
+    } catch (err) {
+      console.error('Failed to lock protocol:', err)
+      alert('Failed to lock protocol. Please try again.')
+    }
+  }, [selectedStudy?.id])
 
   const handleToggleReviewer = useCallback(() => {
     setReviewerMode(v => !v)

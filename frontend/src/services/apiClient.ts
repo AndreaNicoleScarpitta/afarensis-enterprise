@@ -703,6 +703,97 @@ class ApiClient {
       body: JSON.stringify({ title, abstract }),
     });
   }
+
+  // ============================================================================
+  // DATA PROVENANCE ENDPOINTS
+  // ============================================================================
+
+  async getAdamDatasets(projectId: string): Promise<any> {
+    return this.request(`/projects/${projectId}/adam/datasets`, z.any());
+  }
+
+  async getDatasets(projectId: string): Promise<any> {
+    return this.request(`/projects/${projectId}/datasets`, z.any());
+  }
+
+  async submitIngestionConsent(projectId: string, body: any): Promise<any> {
+    return this.request(`/projects/${projectId}/ingestion/consent`, z.any(), {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  /**
+   * Upload a file — uses FormData so we must NOT set Content-Type (browser sets boundary).
+   * This bypasses the standard `request()` which forces Content-Type: application/json.
+   */
+  async uploadFile(url: string, formData: FormData): Promise<any> {
+    const headers = new Headers();
+    // Do NOT set Content-Type — browser needs to set multipart boundary
+    if (this.accessToken) {
+      headers.set('Authorization', `Bearer ${this.accessToken}`);
+    }
+
+    let response = await fetch(`${this.baseURL}${url}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: 'include',
+    });
+
+    if (response.status === 401) {
+      const refreshed = await this.tryRefreshToken();
+      if (refreshed) {
+        headers.set('Authorization', `Bearer ${this.accessToken}`);
+        response = await fetch(`${this.baseURL}${url}`, {
+          method: 'POST',
+          headers,
+          body: formData,
+          credentials: 'include',
+        });
+      } else {
+        this.clearAccessToken();
+        window.location.href = '/login';
+        throw new ApiError(401, 'Session expired');
+      }
+    }
+
+    if (!response.ok) {
+      const errorBody = await response.json().catch(() => ({ detail: response.statusText }));
+      throw new ApiError(response.status, errorBody.detail || response.statusText);
+    }
+
+    return response.json();
+  }
+
+  async analyzeDataset(projectId: string, body: any): Promise<any> {
+    return this.request(`/projects/${projectId}/study/analyze-dataset`, z.any(), {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async getProject(projectId: string): Promise<any> {
+    return this.request(`/projects/${projectId}`, z.any());
+  }
+
+  async generateSdtmDomain(projectId: string, domain: string): Promise<any> {
+    return this.request(`/projects/${projectId}/sdtm/generate/${domain}`, z.any(), {
+      method: 'POST',
+    });
+  }
+
+  async generateSdtmAll(projectId: string): Promise<any> {
+    return this.request(`/projects/${projectId}/sdtm/generate-all`, z.any(), {
+      method: 'POST',
+    });
+  }
+
+  async validateSdtm(projectId: string): Promise<any> {
+    return this.request(`/projects/${projectId}/sdtm/validate`, z.any(), {
+      method: 'POST',
+    });
+  }
 }
 
 // ============================================================================
