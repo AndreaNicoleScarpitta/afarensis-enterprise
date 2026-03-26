@@ -70,13 +70,13 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <GitBranch className="h-4 w-4 text-[#60a5fa]" />
+              <GitBranch className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 02</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">Causal Framework</h1>
               <p className="text-gray-500 text-xs mt-0.5">Estimand · DAG · covariate selection · unmeasured confounders</p>
@@ -84,7 +84,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
           </div>
           <div className="text-right">
             <p className="text-xs font-bold text-gray-900 dark:text-white">{selectedStudy.protocol}</p>
-            <p className="text-[10px] text-gray-500">Estimand: <span className="text-[#60a5fa] font-semibold">{estimand}</span></p>
+            <p className="text-[10px] text-gray-500">Estimand: <span className="text-[#2563EB] dark:text-[#60a5fa] font-semibold">{estimand}</span></p>
           </div>
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
           <AlertCircle className="h-4 w-4 text-red-400 shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-red-400">Failed to load causal framework data</p>
-            <p className="text-xs text-gray-400 mt-0.5">{error}</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{error}</p>
           </div>
         </div>
       )}
@@ -113,10 +113,10 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
         {/* Estimand summary */}
         <div className="bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl p-5">
           <div className="flex items-center gap-2 mb-2">
-            <Info className="h-4 w-4 text-[#60a5fa]" />
-            <h2 className="text-sm font-bold text-[#60a5fa]">Pre-specified Estimand: {estimand}</h2>
+            <Info className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
+            <h2 className="text-sm font-bold text-[#2563EB] dark:text-[#60a5fa]">Pre-specified Estimand: {estimand}</h2>
           </div>
-          <p className="text-xs text-gray-300 leading-relaxed">
+          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
             {estimand === 'ATT' && 'Average Treatment Effect on the Treated — estimates the effect of treatment among patients who would receive it in practice. This is the target of inference for external comparator study designs.'}
             {estimand === 'ATE' && 'Average Treatment Effect — estimates the effect averaged over the full eligible population, assuming all patients could be assigned to either arm.'}
             {estimand === 'ITT' && 'Intention to Treat — estimates the effect of treatment assignment, regardless of actual adherence. Aligns with randomised trial primary analysis.'}
@@ -196,8 +196,8 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
                 {safeCovariates.map((cov, i) => (
                   <tr key={i} className="border-b border-white/5 hover:bg-white/3 transition-colors">
                     <td className="px-4 py-2.5 text-gray-900 dark:text-white font-medium">{cov.name}</td>
-                    <td className="px-4 py-2.5 text-gray-400">{cov.type}</td>
-                    <td className="px-4 py-2.5 font-mono text-gray-400">{cov.balance}</td>
+                    <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">{cov.type}</td>
+                    <td className="px-4 py-2.5 font-mono text-gray-600 dark:text-gray-400">{cov.balance}</td>
                     <td className="px-4 py-2.5">
                       <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${statusColor[cov.status]}`}>
                         {cov.status}
@@ -212,7 +212,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
           {safeCovariates.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
               <FileText className="h-10 w-10 text-gray-600 mb-3" />
-              <p className="text-sm font-medium text-gray-400">No data available</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
               <p className="text-xs text-gray-600 mt-1">Define covariates in Study Definition, then run balance analysis.</p>
             </div>
           )}
@@ -228,7 +228,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
               />
               <button
                 onClick={addCovariate}
-                className="flex items-center gap-1.5 bg-[#2563EB]/20 hover:bg-[#2563EB]/30 border border-[#2563EB]/40 text-[#60a5fa] text-xs font-bold px-4 py-2 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 bg-[#2563EB]/20 hover:bg-[#2563EB]/30 border border-[#2563EB]/40 text-[#2563EB] dark:text-[#60a5fa] text-xs font-bold px-4 py-2 rounded-lg transition-colors"
               >
                 <Plus className="h-3.5 w-3.5" /> Add
               </button>
@@ -242,7 +242,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
           {safeUnmeasured.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
               <FileText className="h-10 w-10 text-gray-600 mb-3" />
-              <p className="text-sm font-medium text-gray-400">No data available</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
               <p className="text-xs text-gray-600 mt-1">Define covariates in Study Definition, then run balance analysis.</p>
             </div>
           )}
@@ -265,7 +265,7 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <a href={`/projects/${selectedStudy.id}/study`} className="flex items-center gap-2 text-gray-500 hover:text-gray-300 text-sm font-medium transition-colors">
+          <a href={`/projects/${selectedStudy.id}/study`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 1: Study Definition
           </a>
           <a href={`/projects/${selectedStudy.id}/data-provenance`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
