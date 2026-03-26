@@ -59,8 +59,17 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
   }, [studyDef])
 
   const handleSave = async () => {
-    await save({ endpoint, estimand, phase, regBody, comparator, indication, rationale })
+    try {
+      await save({ endpoint, estimand, phase, regBody, comparator, indication, rationale })
+      setSaveToast({ message: 'Definition saved successfully', type: 'success' })
+      setTimeout(() => setSaveToast(null), 3000)
+    } catch {
+      setSaveToast({ message: 'Failed to save — please try again', type: 'error' })
+      setTimeout(() => setSaveToast(null), 5000)
+    }
   }
+
+  const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
 
   const [biogptLoading, setBiogptLoading] = useState(false)
   const [biogptResult, setBiogptResult] = useState<string | null>(null)
@@ -533,6 +542,22 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
         resultLabel="Primary Analysis — IPTW Cox PH"
         resultType="estimate"
       />
+
+      {/* Save confirmation toast */}
+      {saveToast && (
+        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all animate-in slide-in-from-bottom-4 ${
+          saveToast.type === 'success'
+            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700'
+            : 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700'
+        }`}>
+          {saveToast.type === 'success'
+            ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+            : <AlertCircle className="h-4 w-4 shrink-0" />
+          }
+          {saveToast.message}
+          <button onClick={() => setSaveToast(null)} className="ml-2 opacity-60 hover:opacity-100">×</button>
+        </div>
+      )}
     </div>
   )
 }

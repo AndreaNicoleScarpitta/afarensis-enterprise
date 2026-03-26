@@ -1,6 +1,7 @@
 // @ts-nocheck
 /* eslint-disable */
 import React, { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { FileOutput, Lock, Eye, ChevronLeft, CheckCircle2, Download, AlertCircle, Shield, Loader2, FileText, BarChart3, Image, Package } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
@@ -568,9 +569,9 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-white/8">
-          <a href={`/projects/${selectedStudy.id}/audit`} className="flex items-center gap-2 text-gray-500 hover:text-gray-300 text-sm font-medium transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/audit`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 9: Audit Trail
-          </a>
+          </Link>
           <div className="text-right">
             <p className="text-[10px] text-gray-600">End of 10-step workflow</p>
             <p className="text-[10px] text-gray-700">{selectedStudy.protocol} · {selectedStudy.indication}</p>

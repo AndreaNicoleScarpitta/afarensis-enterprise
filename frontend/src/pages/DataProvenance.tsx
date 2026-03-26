@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { Database, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Clock, Loader2, BookOpen, FlaskConical, Globe, GraduationCap, Brain, Upload, FileUp, XCircle, AlertTriangle, Activity, Shield, FileText, Trash2 } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
@@ -958,12 +959,12 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
 
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <a href={`/projects/${selectedStudy.id}/causal-framework`} className="flex items-center gap-2 text-gray-500 hover:text-gray-300 text-sm font-medium transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/causal-framework`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 2: Causal Framework
-          </a>
-          <a href={`/projects/${selectedStudy.id}/cohort`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
+          </Link>
+          <Link to={`/projects/${selectedStudy.id}/cohort`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
             Step 4: Cohort Construction <ChevronRight className="h-4 w-4" />
-          </a>
+          </Link>
         </div>
 
       </div>

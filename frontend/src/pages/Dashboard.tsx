@@ -283,49 +283,52 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* ── System Architecture Status ───────────────────────────────── */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">12-Layer Architecture</CardTitle>
-                <Badge variant="outline" className="gap-1 text-xs text-gray-500 border-gray-300">
-                  Reference View
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {[
-                  { name: 'Research Spec',     requests: 156, operational: true  },
-                  { name: 'Evidence Discovery', requests: 423, operational: true  },
-                  { name: 'Evidence Extract',  requests: 1247, operational: true  },
-                  { name: 'Anchor Generation', requests: 89,  operational: true  },
-                  { name: 'Comparability',     requests: 234, operational: true  },
-                  { name: 'Bias Analysis',     requests: 145, operational: true  },
-                  { name: 'Anchor Evaluation', requests: 67,  operational: true  },
-                  { name: 'Evidence Critique', requests: 34,  operational: true  },
-                  { name: 'Reviewer Decision', requests: 78,  operational: true  },
-                  { name: 'Reg. Artifacts',    requests: 23,  operational: true  },
-                  { name: 'Federated Network', requests: 12,  operational: false },
-                  { name: 'Evidence OS',       requests: 5,   operational: false },
-                ].map((layer) => (
-                  <div
-                    key={layer.name}
-                    className="flex items-center gap-2 p-2.5 rounded-lg bg-gray-50 border border-gray-100"
-                  >
-                    <div className={cn(
-                      'w-2 h-2 rounded-full shrink-0',
-                      layer.operational ? 'bg-success-500' : 'bg-warning-400'
-                    )} />
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-gray-700 truncate">{layer.name}</p>
-                      <p className="text-[10px] text-gray-400">{layer.requests.toLocaleString()} req</p>
+          {/* ── System Architecture Status (Demo) ─────────────────────────── */}
+          <div className="border-2 border-dashed border-amber-300 dark:border-amber-600 rounded-xl p-1">
+            <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+                Demo Data — Not Connected to Live Systems
+              </span>
+            </div>
+            <Card className="border-0 shadow-none">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-gray-400">12-Layer Architecture</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {[
+                    { name: 'Research Spec',     requests: 156, operational: true  },
+                    { name: 'Evidence Discovery', requests: 423, operational: true  },
+                    { name: 'Evidence Extract',  requests: 1247, operational: true  },
+                    { name: 'Anchor Generation', requests: 89,  operational: true  },
+                    { name: 'Comparability',     requests: 234, operational: true  },
+                    { name: 'Bias Analysis',     requests: 145, operational: true  },
+                    { name: 'Anchor Evaluation', requests: 67,  operational: true  },
+                    { name: 'Evidence Critique', requests: 34,  operational: true  },
+                    { name: 'Reviewer Decision', requests: 78,  operational: true  },
+                    { name: 'Reg. Artifacts',    requests: 23,  operational: true  },
+                    { name: 'Federated Network', requests: 12,  operational: false },
+                    { name: 'Evidence OS',       requests: 5,   operational: false },
+                  ].map((layer) => (
+                    <div
+                      key={layer.name}
+                      className="flex items-center gap-2 p-2.5 rounded-lg bg-gray-50 border border-gray-100 opacity-60"
+                    >
+                      <div className={cn(
+                        'w-2 h-2 rounded-full shrink-0',
+                        layer.operational ? 'bg-success-500' : 'bg-warning-400'
+                      )} />
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-gray-700 truncate">{layer.name}</p>
+                        <p className="text-[10px] text-gray-400">{layer.requests.toLocaleString()} req</p>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* ── Right Sidebar (1/3 width) ─────────────────────────────────── */}
@@ -392,47 +395,50 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* System Health */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">System Health</CardTitle>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] text-gray-500 font-semibold border border-gray-300 rounded px-1.5 py-0.5">SAMPLE</span>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-3">
-                {[
-                  { label: 'Database',     value: 'Healthy',       ok: true,  pct: 100 },
-                  { label: 'Analysis Services',  value: 'Operational',   ok: true,  pct: 98  },
-                  { label: 'External APIs',value: 'Connected',     ok: true,  pct: 100 },
-                  { label: 'Compliance',   value: '21 CFR Pt 11 Ready',  ok: true,  pct: 100 },
-                ].map((item) => (
-                  <div key={item.label}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-gray-600 font-medium">{item.label}</span>
-                      <span className={cn('text-xs font-semibold', item.ok ? 'text-success-600' : 'text-error-600')}>
-                        {item.value}
-                      </span>
+          {/* System Health (Demo) */}
+          <div className="border-2 border-dashed border-amber-300 dark:border-amber-600 rounded-xl p-1">
+            <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+                Demo Data
+              </span>
+            </div>
+            <Card className="border-0 shadow-none">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-gray-400">System Health</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 opacity-60">
+                <div className="space-y-3">
+                  {[
+                    { label: 'Database',     value: 'Healthy',       ok: true,  pct: 100 },
+                    { label: 'Analysis Services',  value: 'Operational',   ok: true,  pct: 98  },
+                    { label: 'External APIs',value: 'Connected',     ok: true,  pct: 100 },
+                    { label: 'Compliance',   value: '21 CFR Pt 11 Ready',  ok: true,  pct: 100 },
+                  ].map((item) => (
+                    <div key={item.label}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-600 font-medium">{item.label}</span>
+                        <span className={cn('text-xs font-semibold', item.ok ? 'text-success-600' : 'text-error-600')}>
+                          {item.value}
+                        </span>
+                      </div>
+                      <Progress value={item.pct} className="h-1" />
                     </div>
-                    <Progress value={item.pct} className="h-1" />
-                  </div>
-                ))}
-              </div>
-
-              <Separator className="my-4" />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Shield className="h-3.5 w-3.5 text-primary-500" />
-                  <span className="text-xs text-gray-500">System Uptime</span>
+                  ))}
                 </div>
-                <span className="text-xs font-bold text-gray-800">99.97%</span>
-              </div>
-            </CardContent>
-          </Card>
+
+                <Separator className="my-4" />
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Shield className="h-3.5 w-3.5 text-primary-500" />
+                    <span className="text-xs text-gray-500">System Uptime</span>
+                  </div>
+                  <span className="text-xs font-bold text-gray-800">99.97%</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Recent Evidence Activity */}
           <Card>
