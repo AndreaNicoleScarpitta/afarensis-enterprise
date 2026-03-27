@@ -1048,7 +1048,7 @@ async def update_project_status(
         raise HTTPException(status_code=400, detail="Missing 'status' field")
 
     valid_statuses = {s.value for s in ProjectStatus}
-    if new_status not in valid_statuses:
+    if new_status != "unarchive" and new_status not in valid_statuses:
         raise HTTPException(status_code=400, detail=f"Invalid status: {new_status}. Must be one of {valid_statuses}")
 
     result = await db.execute(

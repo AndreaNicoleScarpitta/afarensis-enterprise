@@ -43,12 +43,13 @@ interface Project {
   created_at: string
 }
 
-type StatusFilter = 'all' | 'draft' | 'in_review' | 'completed' | 'archived'
+type StatusFilter = 'all' | 'draft' | 'processing' | 'review' | 'completed' | 'archived'
 
 const STATUS_TABS: { key: StatusFilter; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'draft', label: 'Draft' },
-  { key: 'in_review', label: 'In Review' },
+  { key: 'processing', label: 'Processing' },
+  { key: 'review', label: 'In Review' },
   { key: 'completed', label: 'Completed' },
   { key: 'archived', label: 'Archived' },
 ]
@@ -162,7 +163,9 @@ export default function EnhancedDashboard() {
 
   /* ---------- Filtered list ---------- */
 
-  const filtered = filter === 'all' ? projects : projects.filter((p) => p.status === filter)
+  const filtered = filter === 'all'
+    ? projects.filter((p) => p.status !== 'archived')
+    : projects.filter((p) => p.status === filter)
 
   /* ---------- Render ---------- */
 
