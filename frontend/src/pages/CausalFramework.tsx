@@ -11,6 +11,9 @@ import { useStudyData } from '../services/hooks'
 import { apiClient } from '../services/apiClient'
 import { z } from 'zod'
 import LiteratureEvidence from '@/components/ui/LiteratureEvidence'
+import { useStalenessCheck } from '../hooks/useStalenessCheck'
+import StalenessBanner from '../components/ui/StalenessBanner'
+import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
 interface Props {
   selectedStudy: Study
@@ -146,12 +149,16 @@ function getDemoDAGData(projectId: string): DAGData {
 
 export default function CausalFramework({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const navigate = useNavigate()
-  const { data: covData, loading, error, save, refetch } = useStudyData(selectedStudy?.id, 'covariates')
+  const { data: covData, loading, error, saving, save, refetch } = useStudyData(selectedStudy?.id, 'covariates')
+  const staleness = useStalenessCheck(selectedStudy?.id, 'covariates')
 
   const [estimand] = useState(selectedStudy.estimand)
   const [covariates, setCovariates] = useState<any[]>([])
   const [unmeasuredConfounders, setUnmeasuredConfounders] = useState<any[]>([])
   const [newCovariate, setNewCovariate] = useState('')
+  const [showImpactDialog, setShowImpactDialog] = useState(false)
+  const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('covariates')
+  const [pendingCovariate, setPendingCovariate] = useState<any[] | null>(null)
   const locked = protocolLocked
 
   // DAG state
@@ -174,12 +181,24 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
   const safeCovariates = Array.isArray(covariates) ? covariates : []
   const safeUnmeasured = Array.isArray(unmeasuredConfounders) ? unmeasuredConfounders : []
 
+  const confirmSave = async () => {
+    const toSave = pendingCovariate || safeCovariates
+    await save({ covariates: toSave, unmeasured: unmeasuredConfounders })
+    setPendingCovariate(null)
+    setShowImpactDialog(false)
+  }
+
   const addCovariate = async () => {
     if (!newCovariate.trim()) return
     const updated = [...safeCovariates, { name: newCovariate.trim(), type: 'Confounder', balance: 'Pending', status: 'review' }]
     setCovariates(updated)
     setNewCovariate('')
-    await save({ covariates: updated, unmeasured: unmeasuredConfounders })
+    if ((directImpacts.length > 0 || transitiveImpacts.length > 0) && !protocolLocked) {
+      setPendingCovariate(updated)
+      setShowImpactDialog(true)
+    } else {
+      await save({ covariates: updated, unmeasured: unmeasuredConfounders })
+    }
   }
 
   // ── DAG: Fetch ──────────────────────────────────────────────────────────
@@ -339,6 +358,11 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
       </div>
 
       <LiteratureEvidence categories={['covariate', 'estimand', 'general']} stepLabel="Causal Framework" />
+
+      <StalenessBanner
+        staleUpstreams={staleness.staleUpstreams}
+        onAcknowledge={staleness.acknowledge}
+      />
 
       {loading && (
         <div className="flex items-center justify-center py-12">
@@ -644,6 +668,16 @@ export default function CausalFramework({ selectedStudy, protocolLocked, reviewe
         </div>
 
       </div>
+
+      <DownstreamImpactDialog
+        open={showImpactDialog}
+        onClose={() => setShowImpactDialog(false)}
+        onConfirm={confirmSave}
+        saving={saving}
+        currentStepLabel="Causal Framework"
+        directImpacts={directImpacts}
+        transitiveImpacts={transitiveImpacts}
+      />
     </div>
   )
 }

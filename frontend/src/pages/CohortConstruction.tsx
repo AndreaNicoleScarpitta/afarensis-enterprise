@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { Users2, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, X, Loader2, AlertCircle, Users } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
+import { useStalenessCheck } from '../hooks/useStalenessCheck'
+import StalenessBanner from '../components/ui/StalenessBanner'
+import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
 interface Props {
   selectedStudy: Study
@@ -51,11 +54,17 @@ interface Props {
 
 export default function CohortConstruction({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const { data: cohortData, loading, error, saving, save, refetch, runComputation } = useStudyData(selectedStudy?.id, 'cohort')
+  const staleness = useStalenessCheck(selectedStudy?.id, 'cohort')
 
   const [inclusion, setInclusion] = useState<string[]>([])
   const [exclusion, setExclusion] = useState<string[]>([])
   const [funnel, setFunnel] = useState<any[]>([])
   const [weightingMethods, setWeightingMethods] = useState<any[]>([])
+  const [indexDateDefinition, setIndexDateDefinition] = useState('')
+  const [washoutPeriod, setWashoutPeriod] = useState<number>(0)
+  const [selectedWeightingMethod, setSelectedWeightingMethod] = useState('IPTW')
+  const [showImpactDialog, setShowImpactDialog] = useState(false)
+  const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('cohort')
   const locked = protocolLocked
 
   useEffect(() => {
@@ -64,8 +73,76 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
       if (Array.isArray(cohortData.exclusion) && cohortData.exclusion.length) setExclusion(cohortData.exclusion)
       if (Array.isArray(cohortData.funnel) && cohortData.funnel.length) setFunnel(cohortData.funnel)
       if (Array.isArray(cohortData.weighting_methods) && cohortData.weighting_methods.length) setWeightingMethods(cohortData.weighting_methods)
+      if (cohortData.index_date_definition) setIndexDateDefinition(cohortData.index_date_definition)
+      if (cohortData.washout_period != null) setWashoutPeriod(cohortData.washout_period)
+      if (cohortData.selected_weighting_method) setSelectedWeightingMethod(cohortData.selected_weighting_method)
     }
   }, [cohortData])
+
+  // ── Editable field helpers ──
+  const persistCohort = (overrides: Record<string, any> = {}) => {
+    save({
+      inclusion,
+      exclusion,
+      index_date_definition: indexDateDefinition,
+      washout_period: washoutPeriod,
+      selected_weighting_method: selectedWeightingMethod,
+      ...overrides,
+    })
+  }
+
+  const confirmSave = () => {
+    persistCohort()
+    setShowImpactDialog(false)
+  }
+
+  const handleSave = () => {
+    if ((directImpacts.length > 0 || transitiveImpacts.length > 0) && !protocolLocked) {
+      setShowImpactDialog(true)
+    } else {
+      persistCohort()
+    }
+  }
+
+  const handleAddInclusion = () => {
+    const updated = [...inclusion, '']
+    setInclusion(updated)
+    persistCohort({ inclusion: updated })
+  }
+
+  const handleRemoveInclusion = (index: number) => {
+    const updated = inclusion.filter((_, i) => i !== index)
+    setInclusion(updated)
+    persistCohort({ inclusion: updated })
+  }
+
+  const handleUpdateInclusion = (index: number, value: string) => {
+    const updated = [...inclusion]
+    updated[index] = value
+    setInclusion(updated)
+  }
+
+  const handleBlurInclusion = () => persistCohort()
+
+  const handleAddExclusion = () => {
+    const updated = [...exclusion, '']
+    setExclusion(updated)
+    persistCohort({ exclusion: updated })
+  }
+
+  const handleRemoveExclusion = (index: number) => {
+    const updated = exclusion.filter((_, i) => i !== index)
+    setExclusion(updated)
+    persistCohort({ exclusion: updated })
+  }
+
+  const handleUpdateExclusion = (index: number, value: string) => {
+    const updated = [...exclusion]
+    updated[index] = value
+    setExclusion(updated)
+  }
+
+  const handleBlurExclusion = () => persistCohort()
 
   // Defensive: ensure state is always an array
   const safeInclusion = Array.isArray(inclusion) ? inclusion : []
@@ -104,6 +181,14 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
             <p className="text-[10px] text-gray-500">{selectedStudy.indication}</p>
           </div>
         </div>
+      </div>
+
+      {/* Staleness detection banner */}
+      <div className="px-8 pt-4">
+        <StalenessBanner
+          staleUpstreams={staleness.staleUpstreams}
+          onAcknowledge={staleness.acknowledge}
+        />
       </div>
 
       {loading && (
@@ -166,12 +251,31 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-400" />
               <h2 className="text-sm font-bold text-gray-900 dark:text-white">Inclusion Criteria</h2>
+              {!locked && !reviewerMode && (
+                <button onClick={handleAddInclusion} className="ml-auto text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors">+ Add</button>
+              )}
             </div>
             <div className="space-y-1.5">
               {safeInclusion.map((c, i) => (
                 <div key={i} className="flex items-start gap-2 bg-emerald-900/10 border border-emerald-700/20 rounded-lg px-3 py-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-gray-600 dark:text-gray-300">{c}</p>
+                  {!locked && !reviewerMode ? (
+                    <input
+                      type="text"
+                      value={c}
+                      onChange={e => handleUpdateInclusion(i, e.target.value)}
+                      onBlur={handleBlurInclusion}
+                      className="flex-1 bg-transparent border-none text-xs text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-0"
+                      placeholder="Enter inclusion criterion"
+                    />
+                  ) : (
+                    <p className="text-xs text-gray-600 dark:text-gray-300">{c}</p>
+                  )}
+                  {!locked && !reviewerMode && (
+                    <button onClick={() => handleRemoveInclusion(i)} className="text-red-400 hover:text-red-300 shrink-0 transition-colors">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -180,15 +284,75 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
             <div className="flex items-center gap-2 mb-2">
               <X className="h-4 w-4 text-red-400" />
               <h2 className="text-sm font-bold text-gray-900 dark:text-white">Exclusion Criteria</h2>
+              {!locked && !reviewerMode && (
+                <button onClick={handleAddExclusion} className="ml-auto text-xs font-semibold text-red-400 hover:text-red-300 transition-colors">+ Add</button>
+              )}
             </div>
             <div className="space-y-1.5">
               {safeExclusion.map((c, i) => (
                 <div key={i} className="flex items-start gap-2 bg-red-900/10 border border-red-700/20 rounded-lg px-3 py-2">
                   <X className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-gray-600 dark:text-gray-300">{c}</p>
+                  {!locked && !reviewerMode ? (
+                    <input
+                      type="text"
+                      value={c}
+                      onChange={e => handleUpdateExclusion(i, e.target.value)}
+                      onBlur={handleBlurExclusion}
+                      className="flex-1 bg-transparent border-none text-xs text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-0"
+                      placeholder="Enter exclusion criterion"
+                    />
+                  ) : (
+                    <p className="text-xs text-gray-600 dark:text-gray-300">{c}</p>
+                  )}
+                  {!locked && !reviewerMode && (
+                    <button onClick={() => handleRemoveExclusion(i)} className="text-red-400 hover:text-red-300 shrink-0 transition-colors">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
+          </section>
+        </div>
+
+        {/* Index Date & Washout Period */}
+        <div className="grid grid-cols-2 gap-4">
+          <section>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Index Date Definition</h2>
+            {!locked && !reviewerMode ? (
+              <input
+                type="text"
+                value={indexDateDefinition}
+                onChange={e => setIndexDateDefinition(e.target.value)}
+                onBlur={() => persistCohort()}
+                placeholder="e.g., First prescription fill of study treatment"
+                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+              />
+            ) : (
+              <p className="text-xs text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-3 py-2">
+                {indexDateDefinition || '—'}
+              </p>
+            )}
+          </section>
+          <section>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Washout Period</h2>
+            {!locked && !reviewerMode ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  value={washoutPeriod}
+                  onChange={e => setWashoutPeriod(Number(e.target.value))}
+                  onBlur={() => persistCohort()}
+                  className="w-24 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                />
+                <span className="text-xs text-gray-500">days</span>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-3 py-2 font-mono">
+                {washoutPeriod > 0 ? `${washoutPeriod} days` : '—'}
+              </p>
+            )}
           </section>
         </div>
 
@@ -236,6 +400,24 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
         {/* Weighting method */}
         <section>
           <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Pre-specified Weighting Method</h2>
+          {!locked && !reviewerMode && (
+            <div className="mb-3">
+              <label className="text-xs text-gray-500 mb-1 block">Select primary weighting method:</label>
+              <select
+                value={selectedWeightingMethod}
+                onChange={e => {
+                  setSelectedWeightingMethod(e.target.value)
+                  persistCohort({ selected_weighting_method: e.target.value })
+                }}
+                className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB] w-full"
+              >
+                <option value="IPTW">Inverse Probability of Treatment Weighting (IPTW)</option>
+                <option value="Matching">Matching on Propensity Score</option>
+                <option value="Overlap Weights">Overlap Weights (OW)</option>
+                <option value="Entropy Balancing">Entropy Balancing</option>
+              </select>
+            </div>
+          )}
           <div className="space-y-2">
             {safeWeightingMethods.map((m, i) => (
               <div key={i} className={`flex items-center justify-between px-4 py-3 rounded-lg border ${
@@ -249,6 +431,20 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
           </div>
         </section>
 
+        {/* Save button */}
+        {!locked && !reviewerMode && (
+          <div className="flex justify-end">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+            >
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving ? 'Saving...' : 'Save Cohort'}
+            </button>
+          </div>
+        )}
+
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
           <Link to={`/projects/${selectedStudy.id}/data-provenance`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
@@ -260,6 +456,16 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
         </div>
 
       </div>
+
+      <DownstreamImpactDialog
+        open={showImpactDialog}
+        onClose={() => setShowImpactDialog(false)}
+        onConfirm={confirmSave}
+        saving={saving}
+        currentStepLabel="Cohort Construction"
+        directImpacts={directImpacts}
+        transitiveImpacts={transitiveImpacts}
+      />
     </div>
   )
 }

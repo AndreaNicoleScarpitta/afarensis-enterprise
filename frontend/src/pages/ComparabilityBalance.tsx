@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { BarChart2, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Loader2, BarChart3 } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
+import { useStalenessCheck } from '../hooks/useStalenessCheck'
+import StalenessBanner from '../components/ui/StalenessBanner'
+import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
 interface Props {
   selectedStudy: Study
@@ -38,16 +41,61 @@ function SmdBar({ value, max = 0.7 }: { value: number; max?: number }) {
 }
 
 export default function ComparabilityBalance({ selectedStudy, protocolLocked, reviewerMode }: Props) {
-  const { data: balanceData, loading, error, refetch, runComputation } = useStudyData(selectedStudy?.id, 'balance')
+  const { data: balanceData, loading, error, saving, save, refetch, runComputation } = useStudyData(selectedStudy?.id, 'balance')
+  const staleness = useStalenessCheck(selectedStudy?.id, 'balance')
 
   const [covariates, setCovariates] = useState<any[]>([])
+  const [smdThreshold, setSmdThreshold] = useState<number>(THRESHOLD)
+  const [psModelType, setPsModelType] = useState('Logistic Regression')
+  const [caliperWidth, setCaliperWidth] = useState<number>(0.2)
+  const [trimmingEnabled, setTrimmingEnabled] = useState(false)
+  const [trimmingThreshold, setTrimmingThreshold] = useState<number>(0.05)
+  const [showImpactDialog, setShowImpactDialog] = useState(false)
+  const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('balance')
   const locked = protocolLocked
 
   useEffect(() => {
-    if (balanceData && Array.isArray(balanceData.covariates) && balanceData.covariates.length) {
-      setCovariates(balanceData.covariates)
+    if (balanceData) {
+      if (Array.isArray(balanceData.covariates) && balanceData.covariates.length) setCovariates(balanceData.covariates)
+      if (balanceData.smd_threshold != null) setSmdThreshold(balanceData.smd_threshold)
+      if (balanceData.ps_model_type) setPsModelType(balanceData.ps_model_type)
+      if (balanceData.caliper_width != null) setCaliperWidth(balanceData.caliper_width)
+      if (balanceData.trimming_enabled != null) setTrimmingEnabled(balanceData.trimming_enabled)
+      if (balanceData.trimming_threshold != null) setTrimmingThreshold(balanceData.trimming_threshold)
     }
   }, [balanceData])
+
+  const persistBalance = (overrides: Record<string, any> = {}) => {
+    save({
+      smd_threshold: smdThreshold,
+      ps_model_type: psModelType,
+      caliper_width: caliperWidth,
+      trimming_enabled: trimmingEnabled,
+      trimming_threshold: trimmingThreshold,
+      covariates,
+      ...overrides,
+    })
+  }
+
+  const confirmSave = () => {
+    persistBalance()
+    setShowImpactDialog(false)
+  }
+
+  const handleSave = () => {
+    if ((directImpacts.length > 0 || transitiveImpacts.length > 0) && !protocolLocked) {
+      setShowImpactDialog(true)
+    } else {
+      persistBalance()
+    }
+  }
+
+  const handleToggleCovariate = (index: number) => {
+    const updated = [...covariates]
+    updated[index] = { ...updated[index], included: !updated[index].included }
+    setCovariates(updated)
+    persistBalance({ covariates: updated })
+  }
 
   // Defensive: ensure state is always an array
   const safeCovariates = Array.isArray(covariates) ? covariates : []
@@ -82,6 +130,14 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
             <p className="text-[10px] text-gray-500">Estimand: {selectedStudy.estimand}</p>
           </div>
         </div>
+      </div>
+
+      {/* Staleness detection banner */}
+      <div className="px-8 pt-4">
+        <StalenessBanner
+          staleUpstreams={staleness.staleUpstreams}
+          onAcknowledge={staleness.acknowledge}
+        />
       </div>
 
       {loading && (
@@ -147,6 +203,107 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
             </div>
           )
         })()}
+
+        {/* Balance Configuration — editable when unlocked */}
+        {!locked && !reviewerMode && (
+          <section className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-4">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Balance Configuration</h2>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold block mb-1">SMD Threshold</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={smdThreshold}
+                  onChange={e => setSmdThreshold(Number(e.target.value))}
+                  onBlur={() => persistBalance()}
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold block mb-1">PS Model Type</label>
+                <select
+                  value={psModelType}
+                  onChange={e => {
+                    setPsModelType(e.target.value)
+                    persistBalance({ ps_model_type: e.target.value })
+                  }}
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                >
+                  <option value="Logistic Regression">Logistic Regression</option>
+                  <option value="GBM">GBM</option>
+                  <option value="CBPS">CBPS</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold block mb-1">Caliper Width</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={caliperWidth}
+                  onChange={e => setCaliperWidth(Number(e.target.value))}
+                  onBlur={() => persistBalance()}
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={trimmingEnabled}
+                  onChange={e => {
+                    setTrimmingEnabled(e.target.checked)
+                    persistBalance({ trimming_enabled: e.target.checked })
+                  }}
+                  className="accent-[#2563EB]"
+                />
+                <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">Enable Trimming</span>
+              </label>
+              {trimmingEnabled && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Threshold:</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={trimmingThreshold}
+                    onChange={e => setTrimmingThreshold(Number(e.target.value))}
+                    onBlur={() => persistBalance()}
+                    className="w-20 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* Covariate Selection — editable when unlocked */}
+        {!locked && !reviewerMode && safeCovariates.length > 0 && (
+          <section>
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Covariate Selection</h2>
+            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-4">
+              <div className="grid grid-cols-2 gap-2">
+                {safeCovariates.map((cov, i) => (
+                  <label key={i} className="flex items-center gap-2 cursor-pointer py-1">
+                    <input
+                      type="checkbox"
+                      checked={cov.included !== false}
+                      onChange={() => handleToggleCovariate(i)}
+                      className="accent-[#2563EB]"
+                    />
+                    <span className={`text-xs ${cov.included !== false ? 'text-gray-900 dark:text-white' : 'text-gray-500 line-through'}`}>{cov.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* SMD Love plot table */}
         <section>
@@ -234,6 +391,20 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
           )}
         </section>
 
+        {/* Save button */}
+        {!locked && !reviewerMode && (
+          <div className="flex justify-end">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+            >
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving ? 'Saving...' : 'Save Balance'}
+            </button>
+          </div>
+        )}
+
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
           <Link to={`/projects/${selectedStudy.id}/cohort`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
@@ -245,6 +416,16 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
         </div>
 
       </div>
+
+      <DownstreamImpactDialog
+        open={showImpactDialog}
+        onClose={() => setShowImpactDialog(false)}
+        onConfirm={confirmSave}
+        saving={saving}
+        currentStepLabel="Comparability & Balance"
+        directImpacts={directImpacts}
+        transitiveImpacts={transitiveImpacts}
+      />
     </div>
   )
 }

@@ -3,10 +3,13 @@ import { Link } from 'react-router-dom'
 import { TrendingUp, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Layers, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
+import { useStalenessCheck } from '../hooks/useStalenessCheck'
+import StalenessBanner from '../components/ui/StalenessBanner'
 import LiteratureEvidence from '@/components/ui/LiteratureEvidence'
 import ShowYourWork from '@/components/ui/ShowYourWork'
 import DatasetContextBar from '@/components/ui/DatasetContextBar'
 import ValidationGatePanel from '@/components/ui/ValidationGatePanel'
+import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
 interface Props {
   selectedStudy: Study
@@ -107,7 +110,8 @@ const MULTIPLICITY_METHODS = [
 
 export default function EffectEstimation({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const locked = protocolLocked
-  const { data: resultsData, loading, error, refetch } = useStudyData(selectedStudy?.id, 'results/forest-plot')
+  const { data: resultsData, loading, error, save, saving, refetch } = useStudyData(selectedStudy?.id, 'results/forest-plot')
+  const staleness = useStalenessCheck(selectedStudy?.id, 'effect_estimation')
   // Fetch full analysis results for ShowYourWork and dynamic binding
   const { data: analysisResults } = useStudyData(selectedStudy?.id, 'analysis-results')
   const { data: validationData } = useStudyData(selectedStudy?.id, 'validation-report')
@@ -130,10 +134,57 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
   const [showWorkOpen, setShowWorkOpen] = useState(false)
   const [selectedResult, setSelectedResult] = useState<string>('primary')
 
+  // Editable configuration state
+  const [alpha, setAlpha] = useState(0.05)
+  const [bootstrapIterations, setBootstrapIterations] = useState(1000)
+  const [analysisSelections, setAnalysisSelections] = useState<Record<string, boolean>>({})
+  const [subgroupToggles, setSubgroupToggles] = useState<Record<string, boolean>>({})
+  const [sensitivityLabels, setSensitivityLabels] = useState<string[]>([])
+  const [runningAnalysis, setRunningAnalysis] = useState(false)
+  const [showImpactDialog, setShowImpactDialog] = useState(false)
+  const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('effect_estimation')
+
+  // Initialize editable state from data
+  useEffect(() => {
+    if (safeData.length > 0 && Object.keys(analysisSelections).length === 0) {
+      const selections: Record<string, boolean> = {}
+      const subgroups: Record<string, boolean> = {}
+      safeData.forEach((row: any) => {
+        selections[row.label] = true
+        if (row.label?.toLowerCase().includes('subgroup')) {
+          subgroups[row.label] = true
+        }
+      })
+      setAnalysisSelections(selections)
+      setSubgroupToggles(subgroups)
+    }
+  }, [safeData])
+
+  const doRunAnalysis = async () => {
+    setRunningAnalysis(true)
+    try {
+      await save({ alpha, bootstrapIterations, analysisSelections, subgroupToggles, sensitivityLabels })
+    } finally {
+      setRunningAnalysis(false)
+      setShowImpactDialog(false)
+    }
+  }
+
+  const handleRunAnalysis = () => {
+    if (directImpacts.length > 0 || transitiveImpacts.length > 0) {
+      setShowImpactDialog(true)
+    } else {
+      doRunAnalysis()
+    }
+  }
+
+  const handleAddSensitivityAnalysis = () => {
+    setSensitivityLabels(prev => [...prev, ''])
+  }
+
   // Multiplicity adjustment state
   const [multiplicityOpen, setMultiplicityOpen] = useState(false)
   const [multiplicityMethod, setMultiplicityMethod] = useState('holm')
-  const alpha = 0.05
 
   const adjustPValues = (pValues: number[], method: string): number[] => {
     const n = pValues.length
@@ -215,6 +266,11 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
         </div>
       </div>
 
+      <StalenessBanner
+        staleUpstreams={staleness.staleUpstreams}
+        onAcknowledge={staleness.acknowledge}
+      />
+
       <LiteratureEvidence categories={['effect', 'general']} stepLabel="Effect Estimation" />
 
       <div className="px-8 py-6 space-y-6 max-w-4xl">
@@ -238,6 +294,144 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
         {/* Validation gate panel */}
         {validationData && validationData.verdict === 'BLOCKED' && (
           <ValidationGatePanel validationReport={validationData} />
+        )}
+
+        {/* Editable configuration — only when unlocked */}
+        {!locked && !reviewerMode && (
+          <section className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-4">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Analysis Configuration</h2>
+
+            <div className="grid grid-cols-2 gap-4">
+              {/* Alpha level */}
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1.5">Alpha Level</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.001"
+                  max="0.5"
+                  value={alpha}
+                  onChange={e => setAlpha(parseFloat(e.target.value) || 0.05)}
+                  className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                />
+              </div>
+
+              {/* Multiplicity adjustment method */}
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1.5">Multiplicity Adjustment Method</label>
+                <select
+                  value={multiplicityMethod}
+                  onChange={e => setMultiplicityMethod(e.target.value)}
+                  className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                >
+                  {MULTIPLICITY_METHODS.map(m => (
+                    <option key={m.value} value={m.value}>{m.label}</option>
+                  ))}
+                  <option value="none">None</option>
+                </select>
+              </div>
+
+              {/* Bootstrap iterations */}
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1.5">Bootstrap Iterations for CI</label>
+                <input
+                  type="number"
+                  step="100"
+                  min="100"
+                  max="100000"
+                  value={bootstrapIterations}
+                  onChange={e => setBootstrapIterations(parseInt(e.target.value) || 1000)}
+                  className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                />
+              </div>
+            </div>
+
+            {/* Analysis selection checkboxes */}
+            {safeData.length > 0 && (
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Include in Forest Plot</label>
+                <div className="space-y-1.5">
+                  {safeData.map((row: any) => (
+                    <label key={row.label} className="flex items-center gap-2 text-xs text-gray-900 dark:text-gray-300 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={analysisSelections[row.label] ?? true}
+                        onChange={e => setAnalysisSelections(prev => ({ ...prev, [row.label]: e.target.checked }))}
+                        className="rounded border-gray-300 dark:border-white/20 text-[#2563EB] focus:ring-[#2563EB]"
+                      />
+                      {row.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Subgroup analysis toggles */}
+            {Object.keys(subgroupToggles).length > 0 && (
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Subgroup Analyses</label>
+                <div className="space-y-1.5">
+                  {Object.entries(subgroupToggles).map(([label, enabled]) => (
+                    <label key={label} className="flex items-center gap-2 text-xs text-gray-900 dark:text-gray-300 cursor-pointer">
+                      <button
+                        onClick={() => setSubgroupToggles(prev => ({ ...prev, [label]: !prev[label] }))}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${enabled ? 'bg-[#2563EB]' : 'bg-gray-300 dark:bg-white/20'}`}
+                      >
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                      </button>
+                      {label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Custom sensitivity analysis labels */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Custom Sensitivity Analyses</label>
+              <div className="space-y-2">
+                {sensitivityLabels.map((label, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={label}
+                      placeholder="Enter sensitivity analysis label..."
+                      onChange={e => {
+                        const updated = [...sensitivityLabels]
+                        updated[i] = e.target.value
+                        setSensitivityLabels(updated)
+                      }}
+                      className="flex-1 bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                    />
+                    <button
+                      onClick={() => setSensitivityLabels(prev => prev.filter((_, j) => j !== i))}
+                      className="text-red-400 hover:text-red-300 text-xs font-semibold px-2 py-1"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={handleAddSensitivityAnalysis}
+                className="mt-2 flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors"
+              >
+                + Add Sensitivity Analysis
+              </button>
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center gap-3 pt-2 border-t border-gray-200 dark:border-white/8">
+              <button
+                onClick={handleRunAnalysis}
+                disabled={saving || runningAnalysis}
+                className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 disabled:bg-[#2563EB]/50 text-white text-xs font-bold px-5 py-2.5 rounded-lg transition-colors"
+              >
+                {(saving || runningAnalysis) && <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                Run Analysis
+              </button>
+            </div>
+          </section>
         )}
 
         {safeData.length === 0 && !loading && (
@@ -478,6 +672,15 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
         resultType="estimate"
         analysisData={analysisResults}
         projectId={selectedStudy?.id}
+      />
+      <DownstreamImpactDialog
+        open={showImpactDialog}
+        onClose={() => setShowImpactDialog(false)}
+        onConfirm={doRunAnalysis}
+        saving={saving || runningAnalysis}
+        currentStepLabel="Effect Estimation"
+        directImpacts={directImpacts}
+        transitiveImpacts={transitiveImpacts}
       />
     </div>
   )

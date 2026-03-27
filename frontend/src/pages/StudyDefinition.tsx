@@ -4,6 +4,9 @@ import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
 import LiteratureEvidence from '@/components/ui/LiteratureEvidence'
 import ShowYourWork from '@/components/ui/ShowYourWork'
+import { useStalenessCheck } from '../hooks/useStalenessCheck'
+import StalenessBanner from '../components/ui/StalenessBanner'
+import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
 interface Props {
   selectedStudy: Study
@@ -250,6 +253,7 @@ const COMPARATOR_OPTIONS = [
 // ─── Component ─────────────────────────────────────────────────────────────────
 export default function StudyDefinition({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const { data: studyDef, loading, error, saving, save, refetch } = useStudyData(selectedStudy?.id, 'definition')
+  const staleness = useStalenessCheck(selectedStudy?.id, 'definition')
 
   // ── Core study definition fields (empty defaults for new studies) ──
   const [endpoint, setEndpoint] = useState('')
@@ -279,6 +283,8 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
 
   // ── UI state ──
   const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+  const [showImpactDialog, setShowImpactDialog] = useState(false)
+  const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('definition')
   const [showWorkOpen, setShowWorkOpen] = useState(false)
   const [activeSpecTab, setActiveSpecTab] = useState<'spec' | 'model' | 'diff'>('spec')
 
@@ -335,7 +341,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
   }, [studyDef])
 
   // ── Save ──
-  const handleSave = async () => {
+  const confirmSave = async () => {
     try {
       await save({
         endpoint: effectiveEndpoint,
@@ -346,11 +352,20 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
         covariates, iceStrategies,
         missingDataPrimary, missingDataSensitivity, missingThreshold,
       })
+      setShowImpactDialog(false)
       setSaveToast({ message: 'Definition saved successfully', type: 'success' })
       setTimeout(() => setSaveToast(null), 3000)
     } catch {
       setSaveToast({ message: 'Failed to save — please try again', type: 'error' })
       setTimeout(() => setSaveToast(null), 5000)
+    }
+  }
+
+  const handleSave = () => {
+    if ((directImpacts.length > 0 || transitiveImpacts.length > 0) && !protocolLocked) {
+      setShowImpactDialog(true)
+    } else {
+      confirmSave()
     }
   }
 
@@ -463,6 +478,11 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
       </div>
 
       <LiteratureEvidence categories={['estimand', 'general']} stepLabel="Study Definition" />
+
+      <StalenessBanner
+        staleUpstreams={staleness.staleUpstreams}
+        onAcknowledge={staleness.acknowledge}
+      />
 
       {loading && (
         <div className="flex items-center justify-center py-12">
@@ -1308,6 +1328,16 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
         resultId="run-001"
         resultLabel="Primary Analysis"
         resultType="estimate"
+      />
+
+      <DownstreamImpactDialog
+        open={showImpactDialog}
+        onClose={() => setShowImpactDialog(false)}
+        onConfirm={confirmSave}
+        saving={saving}
+        currentStepLabel="Study Definition"
+        directImpacts={directImpacts}
+        transitiveImpacts={transitiveImpacts}
       />
 
       {/* Save confirmation toast */}

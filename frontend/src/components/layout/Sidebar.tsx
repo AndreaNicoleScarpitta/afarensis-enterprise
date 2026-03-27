@@ -51,6 +51,13 @@ const STEPS = [
   { num: 10, label: 'Regulatory Output',     slug: 'regulatory-output',  icon: FileOutput,   sub: 'SAR · export · submission' },
 ]
 
+// Map step number to section key for staleness lookup
+const STEP_SECTION_MAP: Record<number, string> = {
+  1: 'definition', 2: 'covariates', 3: 'data_sources', 4: 'cohort',
+  5: 'balance', 6: 'effect_estimation', 7: 'bias', 8: 'reproducibility',
+  9: 'audit', 10: 'regulatory',
+}
+
 /** Build a project-scoped path */
 function projectPath(projectId: string, slug: string) {
   return `/projects/${projectId}/${slug}`
@@ -89,6 +96,7 @@ interface SidebarProps {
   onToggleEvidence?: () => void
   lineageOpen?: boolean
   onToggleLineage?: () => void
+  staleSteps?: Set<string>
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -99,6 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   reviewerMode, onToggleReviewer,
   evidenceOpen, onToggleEvidence,
   lineageOpen, onToggleLineage,
+  staleSteps,
 }) => {
   const studyList = studiesProp ?? STUDIES
   const [studyOpen, setStudyOpen] = useState(false)
@@ -109,6 +118,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const initials = displayName.split(' ').filter(Boolean).map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'
 
   const StatusDot = ({ num }: { num: number }) => {
+    const sectionKey = STEP_SECTION_MAP[num]
+    const isStale = sectionKey && staleSteps?.has(sectionKey)
+    if (isStale) return <div className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-amber-500/30 animate-pulse shrink-0" title="Upstream data changed" />
     const s = stepStatus(num, selectedStudy?.activeStep ?? 1, protocolLocked)
     if (s === 'locked' || s === 'complete') return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
     if (s === 'active') return <div className="w-2.5 h-2.5 rounded-full bg-[#2563EB] ring-2 ring-[#2563EB]/30 shrink-0" />

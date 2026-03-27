@@ -356,6 +356,10 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
     setNewPassword('')
     setConfirmPassword('')
     setResetToken('')
+    setRegName('')
+    setRegEmail('')
+    setRegPassword('')
+    setRegOrg('')
   }
 
   const trustBullets = [
@@ -765,7 +769,7 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
         <div className="text-center">
           <p className="text-sm text-gray-600">
             Don't have an account?{' '}
-            <button type="button" onClick={() => { setView('register'); setError(null) }}
+            <button type="button" onClick={() => { setView('register'); setError(null); setRegName(''); setRegEmail(''); setRegPassword(''); setRegOrg('') }}
               className="text-[#2563EB] hover:text-blue-700 font-medium">
               Create one
             </button>
@@ -853,6 +857,39 @@ function App() {
   const [selectedStudy, setSelectedStudy] = useState<Study | null>(null)
   const [protocolLocked, setProtocolLocked] = useState(false)
   const [reviewerMode, setReviewerMode] = useState(false)
+  const [staleSteps, setStaleSteps] = useState<Set<string>>(new Set())
+
+  // Compute staleness indicators for sidebar
+  useEffect(() => {
+    if (!selectedStudy?.id || !isAuthenticated) { setStaleSteps(new Set()); return }
+    const DEPS: Record<string, string[]> = {
+      definition: [], covariates: ['definition'], data_sources: ['definition', 'covariates'],
+      cohort: ['definition', 'covariates', 'data_sources'],
+      balance: ['definition', 'covariates', 'cohort'],
+      effect_estimation: ['definition', 'covariates', 'data_sources', 'cohort', 'balance'],
+      bias: ['definition', 'covariates', 'cohort', 'balance', 'effect_estimation'],
+      reproducibility: ['data_sources', 'cohort'], audit: [],
+      regulatory: ['definition', 'effect_estimation', 'bias', 'reproducibility', 'audit'],
+    }
+    apiClient.getStalenessMetadata(selectedStudy.id)
+      .then((result: any) => {
+        const sections = result?.sections || {}
+        const stale = new Set<string>()
+        for (const [step, deps] of Object.entries(DEPS)) {
+          const myMeta = sections[step] || {}
+          const myTime = myMeta.updated_at ? new Date(myMeta.updated_at).getTime() : 0
+          const acked = myMeta.staleness_acknowledged_at ? new Date(myMeta.staleness_acknowledged_at).getTime() : 0
+          for (const dep of (deps as string[])) {
+            const depMeta = sections[dep] || {}
+            const depTime = depMeta.updated_at ? new Date(depMeta.updated_at).getTime() : 0
+            const depVersion = depMeta.version || 0
+            if (depVersion > 0 && depTime > myTime && depTime > acked) { stale.add(step); break }
+          }
+        }
+        setStaleSteps(stale)
+      })
+      .catch(() => setStaleSteps(new Set()))
+  }, [selectedStudy?.id, isAuthenticated])
 
   // After authentication, load real projects from the API
   const projectsFetched = useRef(false)
@@ -1089,6 +1126,7 @@ function App() {
           onToggleEvidence={() => { setEvidenceDrawerOpen(v => !v); setLineageDrawerOpen(false) }}
           lineageOpen={lineageDrawerOpen}
           onToggleLineage={() => { setLineageDrawerOpen(v => !v); setEvidenceDrawerOpen(false) }}
+          staleSteps={staleSteps}
         />
 
         {/* ── Global Layer Drawers (ambient, not navigation) ───────────── */}

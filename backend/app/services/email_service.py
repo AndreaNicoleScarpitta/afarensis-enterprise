@@ -175,10 +175,10 @@ class EmailService:
               </a>
             </div>
             <p style="color: #6b7280; font-size: 12px;">
-              Or copy and paste your verification token:
+              Or copy and paste this link into your browser:
             </p>
             <div style="background: #f3f4f6; border-radius: 6px; padding: 12px; text-align: center; margin: 12px 0;">
-              <code style="font-size: 12px; color: #1e3a5f; word-break: break-all;">{token}</code>
+              <a href="{verification_url}" style="font-size: 12px; color: #2563EB; word-break: break-all; text-decoration: underline;">{verification_url}</a>
             </div>
             <p style="color: #6b7280; font-size: 12px;">
               This link expires in 24 hours. If you did not create an account, ignore this email.
@@ -194,7 +194,6 @@ class EmailService:
             f"Hi {full_name},\n\n"
             f"Thank you for creating an account on Afarensis Enterprise.\n\n"
             f"Please verify your email by visiting:\n{verification_url}\n\n"
-            f"Or use this token: {token}\n\n"
             f"This link expires in 24 hours.\n"
             f"If you did not create an account, ignore this email.\n"
         )

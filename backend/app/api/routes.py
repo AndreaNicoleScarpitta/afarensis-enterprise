@@ -662,10 +662,9 @@ async def register(body: RegisterRequest, request: Request, db: AsyncSession = D
     await db.commit()
 
     # Send verification email
-    origin = str(request.base_url).rstrip('/')
-    # Use the Origin or Referer header for the frontend URL, fall back to base_url
-    frontend_origin = request.headers.get('origin') or origin
-    verification_url = f"{frontend_origin}/verify-email?token={token}&email={email_addr}"
+    from urllib.parse import quote as _url_quote
+    frontend_origin = (os.getenv("FRONTEND_URL") or request.headers.get('origin') or str(request.base_url).rstrip('/'))
+    verification_url = f"{frontend_origin}/verify-email?token={token}&email={_url_quote(email_addr, safe='@')}"
     await email_service.send_verification_email(
         to=email_addr,
         full_name=full_name,
@@ -718,7 +717,7 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
 
 
 @api_router.post("/auth/resend-verification")
-async def resend_verification(body: ResendVerificationRequest, request: Request, db: AsyncSession = Depends(get_db), _=Depends(rate_limit(max_requests=3, window_seconds=600))):
+async def resend_verification(body: ResendVerificationRequest, request: Request, db: AsyncSession = Depends(get_db), _=Depends(rate_limit(max_requests=10, window_seconds=60))):
     """Resend the email verification link."""
     import secrets as _secrets, hashlib as _hashlib, uuid as _uuid
     from sqlalchemy import select as sa_select, delete as sa_delete
@@ -756,9 +755,9 @@ async def resend_verification(body: ResendVerificationRequest, request: Request,
     await db.commit()
 
     # Send email
-    origin = str(request.base_url).rstrip('/')
-    frontend_origin = request.headers.get('origin') or origin
-    verification_url = f"{frontend_origin}/verify-email?token={token}&email={email_addr}"
+    from urllib.parse import quote as _url_quote
+    frontend_origin = (os.getenv("FRONTEND_URL") or request.headers.get('origin') or str(request.base_url).rstrip('/'))
+    verification_url = f"{frontend_origin}/verify-email?token={token}&email={_url_quote(email_addr, safe='@')}"
     await email_service.send_verification_email(
         to=email_addr,
         full_name=user.full_name or "User",
@@ -3540,10 +3539,25 @@ async def save_study_definition(
     db: AsyncSession = Depends(get_db),
 ):
     """Save or update the study definition section in processing_config."""
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
-    config["study_definition"] = body.model_dump(exclude_none=True)
+    section_data = body.model_dump(exclude_none=True)
+    config["study_definition"] = section_data
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(section_data, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("definition_meta", {})
+    config["definition_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
     project.processing_config = config
+    flag_modified(project, "processing_config")
     project.updated_at = datetime.utcnow()
     await db.commit()
     return {"status": "saved", "section": "study_definition"}
@@ -3795,10 +3809,25 @@ async def save_study_covariates(
     db: AsyncSession = Depends(get_db),
 ):
     """Save or update the covariates section in processing_config."""
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
-    config["covariates"] = body.model_dump(exclude_none=True)
+    section_data = body.model_dump(exclude_none=True)
+    config["covariates"] = section_data
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(section_data, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("covariates_meta", {})
+    config["covariates_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
     project.processing_config = config
+    flag_modified(project, "processing_config")
     project.updated_at = datetime.utcnow()
     await db.commit()
     return {"status": "saved", "section": "covariates"}
@@ -3828,10 +3857,25 @@ async def save_study_data_sources(
     db: AsyncSession = Depends(get_db),
 ):
     """Save or update the data sources section in processing_config."""
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
-    config["data_sources"] = body.model_dump(exclude_none=True)
+    section_data = body.model_dump(exclude_none=True)
+    config["data_sources"] = section_data
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(section_data, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("data_sources_meta", {})
+    config["data_sources_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
     project.processing_config = config
+    flag_modified(project, "processing_config")
     project.updated_at = datetime.utcnow()
     await db.commit()
     return {"status": "saved", "section": "data_sources"}
@@ -3861,10 +3905,25 @@ async def save_study_cohort(
     db: AsyncSession = Depends(get_db),
 ):
     """Save or update the cohort section in processing_config."""
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
-    config["cohort"] = body.model_dump(exclude_none=True)
+    section_data = body.model_dump(exclude_none=True)
+    config["cohort"] = section_data
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(section_data, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("cohort_meta", {})
+    config["cohort_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
     project.processing_config = config
+    flag_modified(project, "processing_config")
     project.updated_at = datetime.utcnow()
     await db.commit()
     return {"status": "saved", "section": "cohort"}
@@ -3912,9 +3971,23 @@ async def run_cohort_attrition(
     funnel.append({"step": "Final analytic cohort", "n": current_n, "criterion": None})
 
     # Store result back
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
     cohort["funnel"] = funnel
     config["cohort"] = cohort
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(cohort, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("cohort_meta", {})
+    config["cohort_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
     project.processing_config = config
+    flag_modified(project, "processing_config")
     project.updated_at = datetime.utcnow()
     await db.commit()
 
@@ -4013,7 +4086,21 @@ async def compute_study_balance(
                     "data_source": "uploaded",
                 }
                 config["balance"] = balance_result
+                # Staleness tracking metadata
+                import hashlib as _hl_b, json as _json_b
+                content_hash = _hl_b.sha256(_json_b.dumps(balance_result, sort_keys=True, default=str).encode()).hexdigest()
+                old_meta = config.get("balance_meta", {})
+                config["balance_meta"] = {
+                    "updated_at": datetime.utcnow().isoformat() + "Z",
+                    "updated_by": str(current_user.id),
+                    "version": old_meta.get("version", 0) + 1,
+                    "content_hash": content_hash,
+                    "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+                    "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+                }
+                from sqlalchemy.orm.attributes import flag_modified
                 project.processing_config = config
+                flag_modified(project, "processing_config")
                 project.updated_at = datetime.utcnow()
                 await db.commit()
                 return balance_result
@@ -4055,7 +4142,21 @@ async def compute_study_balance(
             },
         }
         config["balance"] = balance_result
+        # Staleness tracking metadata
+        import hashlib as _hl_b2, json as _json_b2
+        content_hash = _hl_b2.sha256(_json_b2.dumps(balance_result, sort_keys=True, default=str).encode()).hexdigest()
+        old_meta = config.get("balance_meta", {})
+        config["balance_meta"] = {
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+            "updated_by": str(current_user.id),
+            "version": old_meta.get("version", 0) + 1,
+            "content_hash": content_hash,
+            "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+            "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+        }
+        from sqlalchemy.orm.attributes import flag_modified
         project.processing_config = config
+        flag_modified(project, "processing_config")
         project.updated_at = datetime.utcnow()
         await db.commit()
         return balance_result
@@ -4143,7 +4244,21 @@ async def get_study_forest_plot(
             for k, v in sens.items() if isinstance(v, dict) and "hazard_ratio" in v
         ]
         config["results"] = cached
+        # Staleness tracking metadata for effect_estimation
+        import hashlib as _hl_ee, json as _json_ee
+        from sqlalchemy.orm.attributes import flag_modified
+        content_hash = _hl_ee.sha256(_json_ee.dumps(cached, sort_keys=True, default=str).encode()).hexdigest()
+        old_meta = config.get("effect_estimation_meta", {})
+        config["effect_estimation_meta"] = {
+            "updated_at": datetime.utcnow().isoformat() + "Z",
+            "updated_by": str(current_user.id),
+            "version": old_meta.get("version", 0) + 1,
+            "content_hash": content_hash,
+            "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+            "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+        }
         project.processing_config = config
+        flag_modified(project, "processing_config")
         project.updated_at = datetime.utcnow()
         await db.commit()
         return forest
@@ -4270,9 +4385,23 @@ async def run_study_bias_analysis(
         bias_result["e_value_error"] = str(e)
 
     # Store in processing_config
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
     config = dict(project.processing_config or {})
     config["bias"] = bias_result
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(bias_result, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("bias_meta", {})
+    config["bias_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
     project.processing_config = config
+    flag_modified(project, "processing_config")
     project.updated_at = datetime.utcnow()
     await db.commit()
 
@@ -4303,13 +4432,226 @@ async def save_study_reproducibility(
     db: AsyncSession = Depends(get_db),
 ):
     """Save or update the reproducibility section in processing_config."""
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
-    config["reproducibility"] = body.model_dump(exclude_none=True)
+    section_data = body.model_dump(exclude_none=True)
+    config["reproducibility"] = section_data
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(section_data, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("reproducibility_meta", {})
+    config["reproducibility_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
     project.processing_config = config
+    flag_modified(project, "processing_config")
     project.updated_at = datetime.utcnow()
     await db.commit()
     return {"status": "saved", "section": "reproducibility"}
+
+
+# ── 17b. PUT generic section save ─────────────────────────────────────────
+# Save endpoints for sections that only had GET or POST-compute but no PUT.
+
+@api_router.put("/projects/{project_id}/study/balance")
+async def save_study_balance(
+    project_id: str,
+    body: Dict[str, Any] = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Save or update the balance section in processing_config."""
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+    config["balance"] = body
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("balance_meta", {})
+    config["balance_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
+    project.processing_config = config
+    flag_modified(project, "processing_config")
+    project.updated_at = datetime.utcnow()
+    await db.commit()
+    return {"status": "saved", "section": "balance"}
+
+
+@api_router.put("/projects/{project_id}/study/effect-estimation")
+async def save_study_effect_estimation(
+    project_id: str,
+    body: Dict[str, Any] = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Save or update the effect estimation / results section in processing_config."""
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+    config["results"] = body
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("effect_estimation_meta", {})
+    config["effect_estimation_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
+    project.processing_config = config
+    flag_modified(project, "processing_config")
+    project.updated_at = datetime.utcnow()
+    await db.commit()
+    return {"status": "saved", "section": "effect_estimation"}
+
+
+@api_router.put("/projects/{project_id}/study/bias")
+async def save_study_bias(
+    project_id: str,
+    body: Dict[str, Any] = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Save or update the bias section in processing_config."""
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+    config["bias"] = body
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("bias_meta", {})
+    config["bias_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
+    project.processing_config = config
+    flag_modified(project, "processing_config")
+    project.updated_at = datetime.utcnow()
+    await db.commit()
+    return {"status": "saved", "section": "bias"}
+
+
+@api_router.put("/projects/{project_id}/study/regulatory")
+async def save_study_regulatory(
+    project_id: str,
+    body: Dict[str, Any] = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Save or update the regulatory section in processing_config."""
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+    config["regulatory"] = body
+    # Staleness tracking metadata
+    content_hash = _hl.sha256(_json.dumps(body, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("regulatory_meta", {})
+    config["regulatory_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+        "staleness_acknowledged_at": old_meta.get("staleness_acknowledged_at"),
+        "acknowledged_upstream_versions": old_meta.get("acknowledged_upstream_versions", {}),
+    }
+    project.processing_config = config
+    flag_modified(project, "processing_config")
+    project.updated_at = datetime.utcnow()
+    await db.commit()
+    return {"status": "saved", "section": "regulatory"}
+
+
+# ── 17c. Staleness tracking endpoints ────────────────────────────────────────
+
+@api_router.get("/projects/{project_id}/study/staleness")
+async def get_staleness_metadata(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return metadata for all workflow sections to compute staleness on the client."""
+    from app.core.dependencies import SECTION_KEYS, STEP_DEPENDENCIES, STEP_LABELS, IMPACT_DESCRIPTIONS
+
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = project.processing_config or {}
+
+    sections_meta = {}
+    for section in SECTION_KEYS:
+        meta = config.get(f"{section}_meta", {})
+        sections_meta[section] = {
+            "updated_at": meta.get("updated_at"),
+            "updated_by": meta.get("updated_by"),
+            "version": meta.get("version", 0),
+            "content_hash": meta.get("content_hash"),
+            "staleness_acknowledged_at": meta.get("staleness_acknowledged_at"),
+            "acknowledged_upstream_versions": meta.get("acknowledged_upstream_versions", {}),
+        }
+
+    return {
+        "sections": sections_meta,
+        "dependency_graph": STEP_DEPENDENCIES,
+        "labels": STEP_LABELS,
+        "impact_descriptions": IMPACT_DESCRIPTIONS,
+    }
+
+
+@api_router.put("/projects/{project_id}/study/{section}/acknowledge-staleness")
+async def acknowledge_staleness(
+    project_id: str,
+    section: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Acknowledge upstream staleness for a section so warnings don't repeat."""
+    from app.core.dependencies import SECTION_KEYS, STEP_DEPENDENCIES
+    from sqlalchemy.orm.attributes import flag_modified
+
+    if section not in SECTION_KEYS:
+        raise HTTPException(400, f"Unknown section: {section}")
+
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+
+    meta_key = f"{section}_meta"
+    meta = config.get(meta_key, {})
+
+    # Record current upstream versions so we know what was acknowledged
+    upstream_versions = {}
+    for dep in STEP_DEPENDENCIES.get(section, []):
+        dep_meta = config.get(f"{dep}_meta", {})
+        upstream_versions[dep] = dep_meta.get("version", 0)
+
+    meta["staleness_acknowledged_at"] = datetime.utcnow().isoformat() + "Z"
+    meta["acknowledged_upstream_versions"] = upstream_versions
+    config[meta_key] = meta
+
+    project.processing_config = config
+    flag_modified(project, "processing_config")
+    await db.commit()
+
+    return {"message": f"Staleness acknowledged for {section}", "acknowledged_versions": upstream_versions}
 
 
 # ── 18. GET audit ─────────────────────────────────────────────────────────────

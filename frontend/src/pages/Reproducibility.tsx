@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom'
 import { Archive, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Copy, ExternalLink, FileText } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
+import { useStalenessCheck } from '../hooks/useStalenessCheck'
+import StalenessBanner from '../components/ui/StalenessBanner'
+import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
 interface Props {
   selectedStudy: Study
@@ -37,7 +40,8 @@ interface Props {
 
 export default function Reproducibility({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const locked = protocolLocked
-  const { data: reproData, loading, error, save, refetch } = useStudyData(selectedStudy?.id, 'reproducibility')
+  const { data: reproData, loading, error, save, saving, refetch } = useStudyData(selectedStudy?.id, 'reproducibility')
+  const staleness = useStalenessCheck(selectedStudy?.id, 'reproducibility')
 
   const [manifest, setManifest] = useState<any[]>([])
   const [envPackages, setEnvPackages] = useState<any[]>([])
@@ -59,6 +63,71 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
     )
     setManifest(updated)
     await save({ manifest: updated, packages: envPackages })
+  }
+
+  const [showImpactDialog, setShowImpactDialog] = useState(false)
+  const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('reproducibility')
+
+  // Editable state
+  const [dockerImageTag, setDockerImageTag] = useState('')
+  const [renvVersion, setRenvVersion] = useState('')
+  const [newArtifactName, setNewArtifactName] = useState('')
+  const [newArtifactType, setNewArtifactType] = useState('script')
+
+  useEffect(() => {
+    if (reproData) {
+      setDockerImageTag(reproData.docker?.image_hash ?? reproData.docker_image_hash ?? '')
+      setRenvVersion(reproData.renv_version ?? '')
+    }
+  }, [reproData])
+
+  const handleAddArtifact = async () => {
+    if (!newArtifactName.trim()) return
+    const newItem = {
+      artifact: newArtifactName.trim(),
+      hash: 'PENDING',
+      signed: false,
+      date: new Date().toISOString().split('T')[0],
+      type: newArtifactType,
+    }
+    const updated = [...safeManifest, newItem]
+    setManifest(updated)
+    setNewArtifactName('')
+    await save({ manifest: updated, packages: envPackages, docker_image_hash: dockerImageTag, renv_version: renvVersion })
+  }
+
+  const handleRemoveArtifact = async (index: number) => {
+    const updated = safeManifest.filter((_, i) => i !== index)
+    setManifest(updated)
+    await save({ manifest: updated, packages: envPackages, docker_image_hash: dockerImageTag, renv_version: renvVersion })
+  }
+
+  const handleToggleSigned = async (artifactName: string) => {
+    const updated = safeManifest.map(m =>
+      m.artifact === artifactName ? { ...m, signed: !m.signed, date: !m.signed ? new Date().toISOString().split('T')[0] : m.date } : m
+    )
+    setManifest(updated)
+    await save({ manifest: updated, packages: envPackages })
+  }
+
+  const handleUpdatePackageVersion = async (index: number, newVersion: string) => {
+    const updated = [...safeEnvPackages]
+    updated[index] = { ...updated[index], version: newVersion }
+    setEnvPackages(updated)
+    await save({ manifest, packages: updated, docker_image_hash: dockerImageTag, renv_version: renvVersion })
+  }
+
+  const doSaveDockerAndRenv = async () => {
+    await save({ manifest, packages: envPackages, docker_image_hash: dockerImageTag, renv_version: renvVersion })
+    setShowImpactDialog(false)
+  }
+
+  const handleSaveDockerAndRenv = () => {
+    if (directImpacts.length > 0 || transitiveImpacts.length > 0) {
+      setShowImpactDialog(true)
+    } else {
+      doSaveDockerAndRenv()
+    }
   }
 
   const signedCount = safeManifest.filter(m => m.signed).length
@@ -87,6 +156,11 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
           </div>
         </div>
       </div>
+
+      <StalenessBanner
+        staleUpstreams={staleness.staleUpstreams}
+        onAcknowledge={staleness.acknowledge}
+      />
 
       <div className="px-8 py-6 space-y-6 max-w-4xl">
 
@@ -125,6 +199,43 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
           ))}
         </div>
 
+        {/* Editable configuration — only when unlocked */}
+        {!locked && !reviewerMode && (
+          <section className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-4">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Environment Configuration</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1.5">Docker Image Tag</label>
+                <input
+                  type="text"
+                  value={dockerImageTag}
+                  onChange={e => setDockerImageTag(e.target.value)}
+                  placeholder="e.g. sha256:f1e4a3b9..."
+                  className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1.5">renv Lockfile Version</label>
+                <input
+                  type="text"
+                  value={renvVersion}
+                  onChange={e => setRenvVersion(e.target.value)}
+                  placeholder="e.g. 1.0.3"
+                  className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                />
+              </div>
+            </div>
+            <button
+              onClick={handleSaveDockerAndRenv}
+              disabled={saving}
+              className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 disabled:bg-[#2563EB]/50 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors"
+            >
+              {saving && <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+              Save Configuration
+            </button>
+          </section>
+        )}
+
         {/* Artifact manifest */}
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -141,6 +252,9 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                   <th className="text-left px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">SHA-256 Hash</th>
                   <th className="text-center px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Reviewed</th>
                   <th className="text-right px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Date</th>
+                  {!locked && !reviewerMode && (
+                    <th className="text-center px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -149,17 +263,71 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                     <td className="px-4 py-2.5 text-gray-900 dark:text-white font-medium font-mono text-xs">{m.artifact}</td>
                     <td className="px-4 py-2.5 font-mono text-gray-500">{m.hash}</td>
                     <td className="px-4 py-2.5 text-center">
-                      {m.signed
-                        ? <CheckCircle2 className="h-4 w-4 text-emerald-400 mx-auto" />
-                        : <span className="text-[9px] text-amber-600 dark:text-amber-300 font-bold uppercase">Pending</span>
-                      }
+                      {!locked && !reviewerMode ? (
+                        <button
+                          onClick={() => handleToggleSigned(m.artifact)}
+                          className="mx-auto block"
+                          title={m.signed ? 'Click to unmark as reviewed' : 'Click to mark as reviewed'}
+                        >
+                          {m.signed
+                            ? <CheckCircle2 className="h-4 w-4 text-emerald-400 mx-auto" />
+                            : <span className="text-[9px] text-amber-600 dark:text-amber-300 font-bold uppercase hover:text-amber-200 cursor-pointer">Pending</span>
+                          }
+                        </button>
+                      ) : (
+                        m.signed
+                          ? <CheckCircle2 className="h-4 w-4 text-emerald-400 mx-auto" />
+                          : <span className="text-[9px] text-amber-600 dark:text-amber-300 font-bold uppercase">Pending</span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5 text-right text-gray-500">{m.date}</td>
+                    {!locked && !reviewerMode && (
+                      <td className="px-4 py-2.5 text-center">
+                        <button
+                          onClick={() => handleRemoveArtifact(i)}
+                          className="text-red-400 hover:text-red-300 text-[10px] font-semibold transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* Add Artifact — only when unlocked */}
+          {!locked && !reviewerMode && (
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                type="text"
+                value={newArtifactName}
+                onChange={e => setNewArtifactName(e.target.value)}
+                placeholder="Artifact filename..."
+                className="flex-1 bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+              />
+              <select
+                value={newArtifactType}
+                onChange={e => setNewArtifactType(e.target.value)}
+                className="bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+              >
+                <option value="script">Script</option>
+                <option value="data">Data</option>
+                <option value="report">Report</option>
+                <option value="config">Config</option>
+                <option value="docker">Docker</option>
+                <option value="other">Other</option>
+              </select>
+              <button
+                onClick={handleAddArtifact}
+                disabled={!newArtifactName.trim() || saving}
+                className="flex items-center gap-1.5 bg-[#2563EB] hover:bg-blue-600 disabled:bg-[#2563EB]/50 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors"
+              >
+                Add Artifact
+              </button>
+            </div>
+          )}
         </section>
 
         {/* Environment */}
@@ -169,10 +337,19 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
             <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5">
               <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-3">Core Packages (renv lockfile)</p>
               <div className="space-y-1.5">
-                {safeEnvPackages.map(({ pkg, version }) => (
+                {safeEnvPackages.map(({ pkg, version }, idx) => (
                   <div key={pkg} className="flex items-center justify-between">
                     <span className="text-sm text-gray-900 dark:text-white font-mono">{pkg}</span>
-                    <span className="text-xs text-gray-500 font-mono">{version}</span>
+                    {!locked && !reviewerMode ? (
+                      <input
+                        type="text"
+                        value={version}
+                        onChange={e => handleUpdatePackageVersion(idx, e.target.value)}
+                        className="w-24 text-right bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded px-2 py-0.5 text-xs text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                      />
+                    ) : (
+                      <span className="text-xs text-gray-500 font-mono">{version}</span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -257,6 +434,15 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
         </div>
 
       </div>
+      <DownstreamImpactDialog
+        open={showImpactDialog}
+        onClose={() => setShowImpactDialog(false)}
+        onConfirm={doSaveDockerAndRenv}
+        saving={saving}
+        currentStepLabel="Reproducibility"
+        directImpacts={directImpacts}
+        transitiveImpacts={transitiveImpacts}
+      />
     </div>
   )
 }

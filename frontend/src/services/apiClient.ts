@@ -639,6 +639,16 @@ class ApiClient {
     });
   }
 
+  async getStalenessMetadata(projectId: string): Promise<any> {
+    return this.request(`/projects/${projectId}/study/staleness`, z.any());
+  }
+
+  async acknowledgeStaleness(projectId: string, section: string): Promise<any> {
+    return this.request(`/projects/${projectId}/study/${section}/acknowledge-staleness`, z.any(), {
+      method: 'PUT',
+    });
+  }
+
   async lockProtocol(projectId: string): Promise<any> {
     return this.request(`/projects/${projectId}/study/lock`, z.any(), {
       method: 'PUT',

@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom'
 import { Database, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Clock, Loader2, BookOpen, FlaskConical, Globe, GraduationCap, Brain, Upload, FileUp, XCircle, AlertTriangle, Activity, Shield, FileText, Trash2 } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
+import { useStalenessCheck } from '../hooks/useStalenessCheck'
+import StalenessBanner from '../components/ui/StalenessBanner'
 import { apiClient } from '../services/apiClient'
 import ValidationGatePanel from '@/components/ui/ValidationGatePanel'
+import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
 interface Props {
   selectedStudy: Study
@@ -69,11 +72,15 @@ const getSourceBadge = (sourceId: string, sourceType: string) => {
 };
 
 export default function DataProvenance({ selectedStudy, protocolLocked, reviewerMode }: Props) {
-  const { data: provData, loading, error, save, refetch } = useStudyData(selectedStudy?.id, 'data-sources')
+  const { data: provData, loading, error, saving, save, refetch } = useStudyData(selectedStudy?.id, 'data-sources')
+  const staleness = useStalenessCheck(selectedStudy?.id, 'data_sources')
 
   const [dataSources, setDataSources] = useState<any[]>([])
   const [validationChecks, setValidationChecks] = useState<any[]>([])
+  const [dataQualityThreshold, setDataQualityThreshold] = useState<number>(95)
   const locked = protocolLocked
+  const [showImpactDialog, setShowImpactDialog] = useState(false)
+  const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('data_sources')
 
   // SDTM Datasets state
   const [sdtmDomains, setSdtmDomains] = useState<Record<string, any>>({})
@@ -95,8 +102,48 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     if (provData) {
       if (Array.isArray(provData.sources) && provData.sources.length) setDataSources(provData.sources)
       if (Array.isArray(provData.checks) && provData.checks.length) setValidationChecks(provData.checks)
+      if (provData.data_quality_threshold != null) setDataQualityThreshold(provData.data_quality_threshold)
     }
   }, [provData])
+
+  // ── Editable field helpers ──
+  const handleUpdateSource = (index: number, field: string, value: any) => {
+    const updated = [...dataSources]
+    updated[index] = { ...updated[index], [field]: value }
+    setDataSources(updated)
+    save({ sources: updated, data_quality_threshold: dataQualityThreshold })
+  }
+
+  const handleAddSource = () => {
+    const newSource = { name: '', type: 'Claims', coverage: '', variables: [], validated: false, hash: 'Pending', version: '' }
+    const updated = [...dataSources, newSource]
+    setDataSources(updated)
+    save({ sources: updated, data_quality_threshold: dataQualityThreshold })
+  }
+
+  const handleRemoveSource = (index: number) => {
+    const updated = dataSources.filter((_, i) => i !== index)
+    setDataSources(updated)
+    save({ sources: updated, data_quality_threshold: dataQualityThreshold })
+  }
+
+  const handleQualityThresholdChange = (value: number) => {
+    setDataQualityThreshold(value)
+    save({ sources: dataSources, data_quality_threshold: value })
+  }
+
+  const confirmSave = () => {
+    save({ sources: dataSources, data_quality_threshold: dataQualityThreshold })
+    setShowImpactDialog(false)
+  }
+
+  const handleSave = () => {
+    if ((directImpacts.length > 0 || transitiveImpacts.length > 0) && !protocolLocked) {
+      setShowImpactDialog(true)
+    } else {
+      confirmSave()
+    }
+  }
 
   // Fetch existing ADaM datasets on mount
   useEffect(() => {
@@ -319,6 +366,14 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
             <p className="text-[10px] text-gray-500">{selectedStudy.indication}</p>
           </div>
         </div>
+      </div>
+
+      {/* Staleness detection banner */}
+      <div className="px-8 pt-4">
+        <StalenessBanner
+          staleUpstreams={staleness.staleUpstreams}
+          onAcknowledge={staleness.acknowledge}
+        />
       </div>
 
       {loading && (
@@ -693,19 +748,90 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
           </div>
         )}
 
+        {/* Data Quality Threshold */}
+        <section>
+          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Data Quality Threshold</h2>
+          <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-4 flex items-center gap-4">
+            <p className="text-xs text-gray-500">Minimum data quality score required:</p>
+            {!locked && !reviewerMode ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={dataQualityThreshold}
+                  onChange={e => handleQualityThresholdChange(Number(e.target.value))}
+                  className="w-20 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                />
+                <span className="text-xs text-gray-500">%</span>
+              </div>
+            ) : (
+              <span className="text-sm font-bold text-gray-900 dark:text-white font-mono">{dataQualityThreshold}%</span>
+            )}
+          </div>
+        </section>
+
         {/* Data sources */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Registered Data Sources</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Registered Data Sources</h2>
+            {!locked && !reviewerMode && (
+              <button
+                onClick={handleAddSource}
+                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-[#2563EB] hover:bg-blue-600 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <span className="text-sm leading-none">+</span> Add Data Source
+              </button>
+            )}
+          </div>
           <div className="space-y-3">
             {safeDataSources.map((src, i) => (
               <div key={i} className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
                 <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-bold text-gray-900 dark:text-white">{src.name}</p>
-                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-[#2563EB]/40 bg-[#2563EB]/10 text-[#2563EB] dark:text-[#60a5fa]">
-                        {src.type}
-                      </span>
+                  <div className="flex-1">
+                    {!locked && !reviewerMode ? (
+                      <div className="space-y-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={src.name}
+                            onChange={e => handleUpdateSource(i, 'name', e.target.value)}
+                            placeholder="Data source name"
+                            className="flex-1 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-900 dark:text-white font-semibold focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                          />
+                          <select
+                            value={src.type}
+                            onChange={e => handleUpdateSource(i, 'type', e.target.value)}
+                            className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                          >
+                            <option value="Claims">Claims</option>
+                            <option value="EHR">EHR</option>
+                            <option value="Registry">Registry</option>
+                            <option value="Lab">Lab</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                        <input
+                          type="text"
+                          value={src.coverage || ''}
+                          onChange={e => handleUpdateSource(i, 'coverage', e.target.value)}
+                          placeholder="Coverage (e.g., 74M lives · 2015–2024)"
+                          className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 mb-1">
+                          <p className="text-sm font-bold text-gray-900 dark:text-white">{src.name}</p>
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-[#2563EB]/40 bg-[#2563EB]/10 text-[#2563EB] dark:text-[#60a5fa]">
+                            {src.type}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500">{src.coverage}</p>
+                      </>
+                    )}
+                    <div className="flex items-center gap-2 mt-1">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getSourceBadge((src as any).source_id || '', (src as any).source_type || src.type).color}`}>
                         {getSourceBadge((src as any).source_id || '', (src as any).source_type || src.type).label}
                       </span>
@@ -714,15 +840,25 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                         : <span className="flex items-center gap-1 text-[9px] text-amber-600 dark:text-amber-300 font-bold"><Clock className="h-3 w-3" /> Pending</span>
                       }
                     </div>
-                    <p className="text-xs text-gray-500">{src.coverage}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[9px] text-gray-600 font-mono">{src.hash}</p>
-                    <p className="text-[9px] text-gray-600">{src.version}</p>
+                  <div className="text-right flex items-start gap-2">
+                    <div>
+                      <p className="text-[9px] text-gray-600 font-mono">{src.hash}</p>
+                      <p className="text-[9px] text-gray-600">{src.version}</p>
+                    </div>
+                    {!locked && !reviewerMode && (
+                      <button
+                        onClick={() => handleRemoveSource(i)}
+                        className="text-red-400 hover:text-red-300 transition-colors p-1"
+                        title="Remove data source"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {src.variables.map(v => (
+                  {(src.variables || []).map((v: string) => (
                     <span key={v} className="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 px-2 py-0.5 rounded">{v}</span>
                   ))}
                 </div>
@@ -906,6 +1042,20 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
           </div>
         </section>
 
+        {/* Save button */}
+        {!locked && !reviewerMode && (
+          <div className="flex justify-end">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+            >
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving ? 'Saving...' : 'Save Data Sources'}
+            </button>
+          </div>
+        )}
+
         {/* Navigation */}
         <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
           <Link to={`/projects/${selectedStudy.id}/causal-framework`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
@@ -917,6 +1067,16 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
         </div>
 
       </div>
+
+      <DownstreamImpactDialog
+        open={showImpactDialog}
+        onClose={() => setShowImpactDialog(false)}
+        onConfirm={confirmSave}
+        saving={saving}
+        currentStepLabel="Data Provenance"
+        directImpacts={directImpacts}
+        transitiveImpacts={transitiveImpacts}
+      />
     </div>
   )
 }

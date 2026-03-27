@@ -5,7 +5,10 @@ import { Link } from 'react-router-dom'
 import { FileOutput, Lock, Eye, ChevronLeft, CheckCircle2, Download, AlertCircle, Shield, Loader2, FileText, BarChart3, Image, Package } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
+import { useStalenessCheck } from '../hooks/useStalenessCheck'
+import StalenessBanner from '../components/ui/StalenessBanner'
 import { apiClient } from '../services/apiClient'
+import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
 interface Props {
   selectedStudy: Study
@@ -56,15 +59,39 @@ const statusColor: Record<string, string> = {
 
 export default function RegulatoryOutput({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const locked = protocolLocked
-  const { data: regData, loading, error, refetch } = useStudyData(selectedStudy?.id, 'regulatory')
+  const { data: regData, loading, error, save, refetch } = useStudyData(selectedStudy?.id, 'regulatory')
+  const staleness = useStalenessCheck(selectedStudy?.id, 'regulatory')
 
   const [sarSections, setSarSections] = useState<any[]>([])
   const [readinessChecks, setReadinessChecks] = useState<any[]>([])
 
+  // Downstream impacts — empty for terminal step, but wired for future-proofing
+  const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('regulatory')
+
+  // ── Editable regulatory settings ──
+  const [submissionAuthority, setSubmissionAuthority] = useState('')
+  const [sarIncluded, setSarIncluded] = useState<Record<string, boolean>>({})
+  const [exportFormat, setExportFormat] = useState('pdf')
+  const [readinessToggles, setReadinessToggles] = useState<Record<string, boolean>>({})
+
   useEffect(() => {
     if (regData) {
-      if (Array.isArray(regData.sections) && regData.sections.length) setSarSections(regData.sections)
-      if (Array.isArray(regData.readiness_checks) && regData.readiness_checks.length) setReadinessChecks(regData.readiness_checks)
+      if (Array.isArray(regData.sections) && regData.sections.length) {
+        setSarSections(regData.sections)
+        // Initialize SAR inclusion toggles from saved data or default all on
+        const inclMap: Record<string, boolean> = {}
+        regData.sections.forEach((s: any) => { inclMap[s.id] = regData.sar_included?.[s.id] ?? true })
+        setSarIncluded(inclMap)
+      }
+      if (Array.isArray(regData.readiness_checks) && regData.readiness_checks.length) {
+        setReadinessChecks(regData.readiness_checks)
+        // Initialize readiness toggles from saved data or default all enabled
+        const toggleMap: Record<string, boolean> = {}
+        regData.readiness_checks.forEach((c: any, i: number) => { toggleMap[c.check || `check-${i}`] = regData.readiness_toggles?.[c.check || `check-${i}`] ?? true })
+        setReadinessToggles(toggleMap)
+      }
+      if (regData.submission_authority) setSubmissionAuthority(regData.submission_authority)
+      if (regData.export_format) setExportFormat(regData.export_format)
     }
   }, [regData])
 
@@ -218,6 +245,11 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
 
       <div className="px-8 py-6 space-y-6 max-w-4xl">
 
+        <StalenessBanner
+          staleUpstreams={staleness.staleUpstreams}
+          onAcknowledge={staleness.acknowledge}
+        />
+
         {loading && (
           <div className="text-center py-8 text-gray-500 text-sm">Loading regulatory data...</div>
         )}
@@ -229,6 +261,102 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
               Retry
             </button>
           </div>
+        )}
+
+        {/* ── Regulatory Settings (editable when unlocked) ── */}
+        {!locked && !reviewerMode && (
+          <section className="space-y-4">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Regulatory Settings</h2>
+
+            {/* Submission target authority */}
+            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-4 space-y-3">
+              <label className="block">
+                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Submission Target Authority</span>
+                <select
+                  value={submissionAuthority}
+                  onChange={(e) => {
+                    setSubmissionAuthority(e.target.value)
+                    save({ submission_authority: e.target.value })
+                  }}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] outline-none transition-colors"
+                >
+                  <option value="">Select authority...</option>
+                  <option value="FDA">FDA</option>
+                  <option value="EMA">EMA</option>
+                  <option value="PMDA">PMDA</option>
+                  <option value="Health Canada">Health Canada</option>
+                </select>
+              </label>
+
+              {/* Export format selection */}
+              <label className="block">
+                <span className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Default Export Format</span>
+                <select
+                  value={exportFormat}
+                  onChange={(e) => {
+                    setExportFormat(e.target.value)
+                    save({ export_format: e.target.value })
+                  }}
+                  className="mt-1 block w-full rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-sm text-gray-900 dark:text-white focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] outline-none transition-colors"
+                >
+                  <option value="pdf">PDF -- Full SAR (FDA submission ready)</option>
+                  <option value="docx">Word .docx -- Editable SAR draft</option>
+                  <option value="rmd">R Markdown -- Reproducible report source</option>
+                </select>
+              </label>
+            </div>
+
+            {/* SAR section inclusion toggles */}
+            {safeSarSections.length > 0 && (
+              <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-4">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">SAR Section Inclusion</p>
+                <div className="space-y-2">
+                  {safeSarSections.map((sec, i) => (
+                    <label key={sec.id || i} className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={sarIncluded[sec.id] ?? true}
+                        onChange={(e) => {
+                          const updated = { ...sarIncluded, [sec.id]: e.target.checked }
+                          setSarIncluded(updated)
+                          save({ sar_included: updated })
+                        }}
+                        className="rounded border-gray-300 dark:border-white/20 text-[#2563EB] focus:ring-[#2563EB] h-4 w-4"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{sec.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Readiness check toggles */}
+            {safeReadinessChecks.length > 0 && (
+              <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-4">
+                <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-3">Readiness Checks — Enable / Disable</p>
+                <div className="space-y-2">
+                  {safeReadinessChecks.map((item, i) => {
+                    const key = item.check || `check-${i}`
+                    return (
+                      <label key={key} className="flex items-center gap-3 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={readinessToggles[key] ?? true}
+                          onChange={(e) => {
+                            const updated = { ...readinessToggles, [key]: e.target.checked }
+                            setReadinessToggles(updated)
+                            save({ readiness_toggles: updated })
+                          }}
+                          className="rounded border-gray-300 dark:border-white/20 text-[#2563EB] focus:ring-[#2563EB] h-4 w-4"
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{item.check}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </section>
         )}
 
         {/* Readiness score */}

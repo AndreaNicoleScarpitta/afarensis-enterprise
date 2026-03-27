@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { ClipboardList, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, Shield, Activity, AlertCircle } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
+import { useStalenessCheck } from '../hooks/useStalenessCheck'
+import StalenessBanner from '../components/ui/StalenessBanner'
 
 interface Props {
   selectedStudy: Study
@@ -42,6 +44,7 @@ function formatTs(ts: string) {
 export default function AuditTrail({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const locked = protocolLocked
   const { data: auditData, loading, error, refetch } = useStudyData(selectedStudy?.id, 'audit')
+  const staleness = useStalenessCheck(selectedStudy?.id, 'audit')
 
   const [allEvents, setAllEvents] = useState<any[]>([])
 
@@ -87,6 +90,11 @@ export default function AuditTrail({ selectedStudy, protocolLocked, reviewerMode
       </div>
 
       <div className="px-8 py-6 space-y-5 max-w-4xl">
+
+        <StalenessBanner
+          staleUpstreams={staleness.staleUpstreams}
+          onAcknowledge={staleness.acknowledge}
+        />
 
         {loading && (
           <div className="text-center py-8 text-gray-500 text-sm">Loading audit trail...</div>

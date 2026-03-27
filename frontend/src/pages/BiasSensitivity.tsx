@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom'
 import { ShieldAlert, Lock, Eye, ChevronRight, ChevronLeft, AlertCircle, CheckCircle2, Info, BarChart3, Layers, Activity, Target, Loader2, FileText, Shield } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
+import { useStalenessCheck } from '../hooks/useStalenessCheck'
+import StalenessBanner from '../components/ui/StalenessBanner'
 import { apiClient } from '../services/apiClient'
 import LiteratureEvidence from '@/components/ui/LiteratureEvidence'
 import ShowYourWork from '@/components/ui/ShowYourWork'
+import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
 interface Props {
   selectedStudy: Study
@@ -32,7 +35,8 @@ const impactColor: Record<string, string> = {
 
 export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const locked = protocolLocked
-  const { data: biasData, loading, error, refetch, runComputation } = useStudyData(selectedStudy?.id, 'bias')
+  const { data: biasData, loading, error, save, saving, refetch, runComputation } = useStudyData(selectedStudy?.id, 'bias')
+  const staleness = useStalenessCheck(selectedStudy?.id, 'bias')
 
   const [sensitivityAnalyses, setSensitivityAnalyses] = useState<any[]>([])
   const [eValue, setEValue] = useState<{ point: number; ci: number } | null>(null)
@@ -78,6 +82,65 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
   const [tippingLoading, setTippingLoading] = useState(false)
   const [mmrmResult, setMmrmResult] = useState<any>(null)
   const [mmrmLoading, setMmrmLoading] = useState(false)
+
+  // Editable configuration state
+  const [editSpecs, setEditSpecs] = useState<Array<{ name: string; method: string }>>([])
+  const [eValuePointInput, setEValuePointInput] = useState('')
+  const [eValueCIInput, setEValueCIInput] = useState('')
+  const [priorDistribution, setPriorDistribution] = useState('normal')
+  const [priorLocation, setPriorLocation] = useState('0')
+  const [priorScale, setPriorScale] = useState('1')
+  const [missingDataStrategy, setMissingDataStrategy] = useState('complete_case')
+  const [runningAll, setRunningAll] = useState(false)
+  const [showImpactDialog, setShowImpactDialog] = useState(false)
+  const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('bias')
+
+  // Initialize editable specs from data
+  useEffect(() => {
+    if (safeSensitivityAnalyses.length > 0 && editSpecs.length === 0) {
+      setEditSpecs(safeSensitivityAnalyses.map(sa => ({ name: sa.name, method: sa.impact ?? 'low' })))
+    }
+  }, [safeSensitivityAnalyses])
+
+  useEffect(() => {
+    if (eValue) {
+      setEValuePointInput(eValue.point?.toString() ?? '')
+      setEValueCIInput(eValue.ci?.toString() ?? '')
+    }
+  }, [eValue])
+
+  const handleAddSpec = () => {
+    setEditSpecs(prev => [...prev, { name: '', method: 'low' }])
+  }
+
+  const handleRemoveSpec = (index: number) => {
+    setEditSpecs(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const doRunAllSensitivity = async () => {
+    setRunningAll(true)
+    try {
+      await save({
+        sensitivity_specs: editSpecs,
+        e_value_params: { point: parseFloat(eValuePointInput) || undefined, ci: parseFloat(eValueCIInput) || undefined },
+        bayesian_prior: { distribution: priorDistribution, location: parseFloat(priorLocation), scale: parseFloat(priorScale) },
+        interim_config: { method: interimMethod, looks: interimLooks },
+        missing_data_strategy: missingDataStrategy,
+      })
+      await handleRunBias()
+    } finally {
+      setRunningAll(false)
+      setShowImpactDialog(false)
+    }
+  }
+
+  const handleRunAllSensitivity = () => {
+    if (directImpacts.length > 0 || transitiveImpacts.length > 0) {
+      setShowImpactDialog(true)
+    } else {
+      doRunAllSensitivity()
+    }
+  }
 
   const fetchMissingSummary = async () => {
     if (!selectedStudy?.id) return
@@ -176,6 +239,11 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
         </div>
       </div>
 
+      <StalenessBanner
+        staleUpstreams={staleness.staleUpstreams}
+        onAcknowledge={staleness.acknowledge}
+      />
+
       <LiteratureEvidence categories={['bias', 'general']} stepLabel="Bias & Sensitivity" />
 
       <div className="px-8 py-6 space-y-6 max-w-4xl">
@@ -199,6 +267,183 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
             <p className="text-xs text-gray-600 mt-1">Run bias analysis to see sensitivity results and E-values.</p>
           </div>
+        )}
+
+        {/* Editable configuration — only when unlocked */}
+        {!locked && !reviewerMode && (
+          <section className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-4">
+            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Sensitivity Analysis Configuration</h2>
+
+            {/* Add/remove sensitivity analysis specifications */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Analysis Specifications</label>
+              <div className="space-y-2">
+                {editSpecs.map((spec, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={spec.name}
+                      placeholder="Analysis name..."
+                      onChange={e => {
+                        setEditSpecs(prev => prev.map((s, j) => j === i ? { name: e.target.value, method: s.method } : s))
+                      }}
+                      className="flex-1 bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                    />
+                    <select
+                      value={spec.method}
+                      onChange={e => {
+                        setEditSpecs(prev => prev.map((s, j) => j === i ? { name: s.name, method: e.target.value } : s))
+                      }}
+                      className="bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                    >
+                      <option value="low">Low Impact</option>
+                      <option value="high">High Impact</option>
+                      <option value="reassuring">Reassuring</option>
+                      <option value="tbd">TBD</option>
+                    </select>
+                    <button
+                      onClick={() => handleRemoveSpec(i)}
+                      className="text-red-400 hover:text-red-300 text-xs font-semibold px-2 py-1 border border-red-700/30 rounded-lg hover:bg-red-900/20 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={handleAddSpec}
+                className="mt-2 flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors"
+              >
+                + Add Specification
+              </button>
+            </div>
+
+            {/* E-value computation parameters */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">E-value Computation Parameters</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Point Estimate</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={eValuePointInput}
+                    onChange={e => setEValuePointInput(e.target.value)}
+                    placeholder="e.g. 0.82"
+                    className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">CI Bound</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={eValueCIInput}
+                    onChange={e => setEValueCIInput(e.target.value)}
+                    placeholder="e.g. 1.30"
+                    className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bayesian prior specification */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Bayesian Prior Specification</label>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Distribution</label>
+                  <select
+                    value={priorDistribution}
+                    onChange={e => setPriorDistribution(e.target.value)}
+                    className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="cauchy">Cauchy</option>
+                    <option value="student_t">Student-t</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Location</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={priorLocation}
+                    onChange={e => setPriorLocation(e.target.value)}
+                    className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Scale</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.01"
+                    value={priorScale}
+                    onChange={e => setPriorScale(e.target.value)}
+                    className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Interim analysis configuration */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Interim Analysis Configuration</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Method</label>
+                  <select
+                    value={interimMethod}
+                    onChange={e => setInterimMethod(e.target.value)}
+                    className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                  >
+                    <option value="obrien_fleming">O'Brien-Fleming</option>
+                    <option value="pocock">Pocock</option>
+                    <option value="lan_demets_obf">Lan-DeMets</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-500 mb-1">Number of Looks</label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="10"
+                    value={interimLooks}
+                    onChange={e => setInterimLooks(parseInt(e.target.value) || 3)}
+                    className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Missing data strategy */}
+            <div>
+              <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Missing Data Strategy</label>
+              <select
+                value={missingDataStrategy}
+                onChange={e => setMissingDataStrategy(e.target.value)}
+                className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+              >
+                <option value="complete_case">Complete Case</option>
+                <option value="mi">Multiple Imputation (MI)</option>
+                <option value="mmrm">MMRM</option>
+                <option value="tipping_point">Tipping Point</option>
+              </select>
+            </div>
+
+            {/* Run all button */}
+            <div className="flex items-center gap-3 pt-2 border-t border-gray-200 dark:border-white/8">
+              <button
+                onClick={handleRunAllSensitivity}
+                disabled={saving || runningAll}
+                className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 disabled:bg-[#2563EB]/50 text-white text-xs font-bold px-5 py-2.5 rounded-lg transition-colors"
+              >
+                {(saving || runningAll) && <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                Run All Sensitivity Analyses
+              </button>
+            </div>
+          </section>
         )}
 
         {/* E-value section */}
@@ -880,6 +1125,15 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
         resultType="diagnostic"
         analysisData={biasData}
         projectId={selectedStudy?.id}
+      />
+      <DownstreamImpactDialog
+        open={showImpactDialog}
+        onClose={() => setShowImpactDialog(false)}
+        onConfirm={doRunAllSensitivity}
+        saving={saving || runningAll}
+        currentStepLabel="Bias & Sensitivity"
+        directImpacts={directImpacts}
+        transitiveImpacts={transitiveImpacts}
       />
     </div>
   )
