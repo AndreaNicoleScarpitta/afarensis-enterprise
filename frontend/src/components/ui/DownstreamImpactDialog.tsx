@@ -31,20 +31,22 @@ interface DownstreamImpactDialogProps {
  * Reverse-lookup: for a given step, which downstream steps depend on it?
  */
 const DOWNSTREAM_DEPS: Record<string, string[]> = {
-  definition:        ['covariates', 'data_sources', 'cohort', 'balance', 'effect_estimation', 'bias', 'regulatory'],
-  covariates:        ['data_sources', 'cohort', 'balance', 'effect_estimation', 'bias'],
-  data_sources:      ['cohort', 'balance', 'effect_estimation', 'reproducibility'],
-  cohort:            ['balance', 'effect_estimation', 'bias', 'reproducibility'],
-  balance:           ['effect_estimation', 'bias'],
-  effect_estimation: ['bias', 'regulatory'],
-  bias:              ['regulatory'],
-  reproducibility:   ['regulatory'],
-  audit:             ['regulatory'],
-  regulatory:        [],
+  definition:            ['causal_specification', 'covariates', 'data_sources', 'cohort', 'balance', 'effect_estimation', 'bias', 'regulatory'],
+  causal_specification:  ['covariates', 'data_sources', 'cohort', 'balance', 'effect_estimation', 'bias', 'regulatory'],
+  covariates:            ['data_sources', 'cohort', 'balance', 'effect_estimation', 'bias'],
+  data_sources:          ['cohort', 'balance', 'effect_estimation', 'reproducibility'],
+  cohort:                ['balance', 'effect_estimation', 'bias', 'reproducibility'],
+  balance:               ['effect_estimation', 'bias'],
+  effect_estimation:     ['bias', 'regulatory'],
+  bias:                  ['regulatory'],
+  reproducibility:       ['regulatory'],
+  audit:                 ['regulatory'],
+  regulatory:            [],
 }
 
 const STEP_LABELS: Record<string, string> = {
   definition: 'Study Definition',
+  causal_specification: 'Causal Specification',
   covariates: 'Causal Framework',
   data_sources: 'Data Provenance',
   cohort: 'Cohort Construction',
@@ -57,9 +59,9 @@ const STEP_LABELS: Record<string, string> = {
 }
 
 const STEP_NUMBERS: Record<string, number> = {
-  definition: 1, covariates: 2, data_sources: 3, cohort: 4,
-  balance: 5, effect_estimation: 6, bias: 7, reproducibility: 8,
-  audit: 9, regulatory: 10,
+  definition: 1, causal_specification: 2, covariates: 3, data_sources: 4, cohort: 5,
+  balance: 6, effect_estimation: 7, bias: 8, reproducibility: 9,
+  audit: 10, regulatory: 11,
 }
 
 /**
@@ -68,6 +70,7 @@ const STEP_NUMBERS: Record<string, number> = {
  */
 const IMPACT_MAP: Record<string, Record<string, string>> = {
   definition: {
+    causal_specification: 'Endpoint or estimand change may require a new causal model \u2014 different outcome variable, different confounders.',
     covariates: 'Endpoint or estimand change may invalidate the causal DAG structure and confounder identification.',
     data_sources: 'Endpoint change may require different SDTM/ADaM domains and variable sourcing.',
     cohort: 'Design or comparator changes invalidate inclusion/exclusion criteria and the attrition funnel.',
@@ -75,6 +78,15 @@ const IMPACT_MAP: Record<string, Record<string, string>> = {
     effect_estimation: 'Endpoint type change may make the current analysis method inappropriate (e.g., Cox PH for binary endpoint).',
     bias: 'E-value and sensitivity calculations are specific to the effect estimate and endpoint type.',
     regulatory: 'SAR/SAP narrative references the estimand, endpoint, and design throughout.',
+  },
+  causal_specification: {
+    covariates: 'Causal DAG changes alter the identified confounders, mediators, and adjustment set.',
+    data_sources: 'New causal nodes may require additional data variables not in current sources.',
+    cohort: 'Adjustment set changes affect propensity score model specification and eligibility logic.',
+    balance: 'The covariate set for balance assessment derives directly from the causal DAG.',
+    effect_estimation: 'Causal model changes may alter the estimand, adjustment strategy, or analytic methods.',
+    bias: 'Sensitivity analyses reference the causal assumptions and unmeasured confounders.',
+    regulatory: 'Causal framework documentation is required in regulatory submissions.',
   },
   covariates: {
     data_sources: 'Adding/removing covariates changes which variables must be captured in the data.',

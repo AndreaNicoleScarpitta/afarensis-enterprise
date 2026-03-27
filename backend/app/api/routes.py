@@ -927,7 +927,16 @@ async def list_projects(
 
     conditions = []
     if status:
-        conditions.append(Project.status == status)
+        # Accept both lowercase values ("draft") and uppercase names ("DRAFT")
+        try:
+            status_enum = ProjectStatus(status)  # Try by value first
+        except ValueError:
+            try:
+                status_enum = ProjectStatus[status.upper()]  # Try by name
+            except KeyError:
+                status_enum = None
+        if status_enum:
+            conditions.append(Project.status == status_enum)
     # Multi-tenancy: filter projects by organization
     if current_user.org_id:
         conditions.append(Project.organization_id == current_user.org_id)
@@ -1082,7 +1091,7 @@ async def update_project_status(
 
     # Invalidate caches
     await cache.delete(f"project:{project_id}")
-    await cache.delete("projects:list:*")
+    await cache.delete_pattern("projects:list:*")
 
     return {
         "id": str(project.id),
@@ -1133,7 +1142,7 @@ async def delete_project(
 
     # Invalidate caches
     await cache.delete(f"project:{project_id}")
-    await cache.delete("projects:list:*")
+    await cache.delete_pattern("projects:list:*")
 
     return {"id": str(project_id), "deleted": True, "message": "Project permanently deleted"}
 
@@ -3783,6 +3792,139 @@ async def parse_document_for_study_definition(
         "document_length": len(text),
         "message": f"Extracted {len(extracted)} field(s) from document."
     }
+
+
+# ── Causal Specification — the scientific backbone ───────────────────────────
+
+@api_router.get("/projects/{project_id}/study/causal-specification")
+async def get_causal_specification(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve the causal specification (DAG, estimand, treatment/outcome, assumptions)."""
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = project.processing_config or {}
+    return config.get("causal_specification", {})
+
+
+@api_router.put("/projects/{project_id}/study/causal-specification")
+async def save_causal_specification(
+    project_id: str,
+    payload: dict = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Save the causal specification — the structured causal model that drives
+    the entire downstream analysis pipeline.
+
+    The causal spec includes: estimand, treatment/outcome definitions,
+    causal DAG (nodes with roles + directed edges), adjustment set,
+    assumptions register, and censoring logic.
+    """
+    from app.services.causal_inference import validate_causal_specification, compute_spec_hash
+    from sqlalchemy.orm.attributes import flag_modified
+
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+
+    # Validate the specification
+    validation = validate_causal_specification(payload)
+    if not validation["valid"]:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "message": "Causal specification validation failed",
+                "errors": validation["errors"],
+                "warnings": validation["warnings"],
+            }
+        )
+
+    # Compute content hash for change detection
+    content_hash = compute_spec_hash(payload)
+
+    # Store the specification
+    config["causal_specification"] = payload
+
+    # Staleness tracking metadata
+    old_meta = config.get("causal_specification_meta", {})
+    config["causal_specification_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": (old_meta.get("version", 0) or 0) + 1,
+        "content_hash": content_hash,
+    }
+
+    project.processing_config = config
+    flag_modified(project, "processing_config")
+    project.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return {
+        "saved": True,
+        "version": config["causal_specification_meta"]["version"],
+        "content_hash": content_hash,
+        "validation": validation,
+    }
+
+
+@api_router.post("/projects/{project_id}/study/causal-specification/derive-adjustment-set")
+async def derive_adjustment_set(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Compute the valid adjustment set from the causal DAG using the backdoor criterion.
+
+    Reads the saved causal specification, identifies treatment and outcome nodes,
+    and returns the set of variables that must be adjusted for to obtain an
+    unbiased causal effect estimate — along with explanations for each inclusion/exclusion.
+    """
+    from app.services.causal_inference import compute_adjustment_set
+
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = project.processing_config or {}
+    spec = config.get("causal_specification", {})
+
+    if not spec:
+        raise HTTPException(status_code=404, detail="No causal specification saved. Define the causal model first.")
+
+    nodes = spec.get("nodes", [])
+    edges = spec.get("edges", [])
+
+    # Find treatment and outcome nodes
+    treatment_nodes = [n for n in nodes if n.get("role") == "treatment"]
+    outcome_nodes = [n for n in nodes if n.get("role") == "outcome"]
+
+    if not treatment_nodes:
+        raise HTTPException(status_code=422, detail="Causal DAG has no treatment node defined.")
+    if not outcome_nodes:
+        raise HTTPException(status_code=422, detail="Causal DAG has no outcome node defined.")
+
+    treatment_id = treatment_nodes[0]["id"]
+    outcome_id = outcome_nodes[0]["id"]
+
+    result = compute_adjustment_set(nodes, edges, treatment_id, outcome_id)
+
+    if "error" in result:
+        raise HTTPException(status_code=422, detail=result["error"])
+
+    return result
+
+
+@api_router.post("/projects/{project_id}/study/causal-specification/validate")
+async def validate_causal_spec_endpoint(
+    project_id: str,
+    payload: dict = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Validate a causal specification without saving it."""
+    from app.services.causal_inference import validate_causal_specification
+    await get_project_with_org_check(project_id, current_user, db)
+    return validate_causal_specification(payload)
 
 
 # ── 4. GET covariates ────────────────────────────────────────────────────────

@@ -131,6 +131,49 @@ xy301 = {
             {"label": "Bias assessment complete", "passed": True},
             {"label": "All artifacts signed", "passed": False}
         ]
+    },
+    "causal_specification": {
+        "estimand": {"type": "ATT", "summary": "Average treatment effect on the treated: time to first seizure recurrence in children switched to XY-301 vs. continuing standard AED therapy"},
+        "treatment": {"variable": "ARM", "levels": ["XY-301", "Standard AED"], "reference_arm": "Standard AED"},
+        "outcome": {"variable": "TIME_TO_SEIZURE", "type": "time-to-event", "definition": "Time from index date to first documented seizure recurrence"},
+        "time_zero": {"definition": "Date of treatment initiation or matched eligibility date for comparator arm", "rationale": "Target trial emulation anchor — aligns treated and untreated follow-up"},
+        "nodes": [
+            {"id": "T", "label": "Treatment (XY-301)", "role": "treatment", "variable_name": "ARM", "rationale": "Exposure of interest: novel AED vs. standard therapy"},
+            {"id": "Y", "label": "Seizure Recurrence", "role": "outcome", "variable_name": "TIME_TO_SEIZURE", "rationale": "Primary endpoint: time to first seizure recurrence"},
+            {"id": "age", "label": "Age", "role": "confounder", "variable_name": "AGE", "rationale": "Younger children may have different seizure patterns and treatment response"},
+            {"id": "sex", "label": "Sex", "role": "confounder", "variable_name": "SEX", "rationale": "Sex-linked differences in drug metabolism and epilepsy phenotype"},
+            {"id": "baseline_freq", "label": "Baseline Seizure Frequency", "role": "confounder", "variable_name": "BASELINE_SZ_FREQ", "rationale": "Higher baseline frequency predicts both treatment urgency and recurrence risk"},
+            {"id": "prior_aeds", "label": "Prior AED Count", "role": "confounder", "variable_name": "N_PRIOR_AEDS", "rationale": "Treatment-resistant epilepsy (more prior AEDs) affects both treatment choice and outcome"},
+            {"id": "syndrome", "label": "Epilepsy Syndrome", "role": "effect_modifier", "variable_name": "EPILEPSY_SYNDROME", "rationale": "Specific syndromes may respond differentially to XY-301 mechanism of action"},
+            {"id": "adherence", "label": "Medication Adherence", "role": "mediator", "variable_name": "ADHERENCE", "rationale": "On causal path: treatment -> adherence -> seizure control"},
+            {"id": "genetics", "label": "Genetic Susceptibility", "role": "confounder", "variable_name": "", "measurement_status": "unmeasured", "rationale": "SCN1A variants affect both treatment selection and seizure threshold — unmeasured confounder"}
+        ],
+        "edges": [
+            {"from_node": "age", "to_node": "T", "relationship": "confounds", "strength": "moderate", "evidence": "Prescribing guidelines differ by age group"},
+            {"from_node": "age", "to_node": "Y", "relationship": "causes", "strength": "strong", "evidence": "Age-dependent seizure recurrence rates well-established"},
+            {"from_node": "sex", "to_node": "T", "relationship": "confounds", "strength": "weak"},
+            {"from_node": "sex", "to_node": "Y", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "baseline_freq", "to_node": "T", "relationship": "confounds", "strength": "strong", "evidence": "Higher frequency drives treatment escalation"},
+            {"from_node": "baseline_freq", "to_node": "Y", "relationship": "causes", "strength": "strong", "evidence": "Strong predictor of future seizure recurrence"},
+            {"from_node": "prior_aeds", "to_node": "T", "relationship": "confounds", "strength": "strong", "evidence": "Treatment-resistant cases more likely to receive novel agents"},
+            {"from_node": "prior_aeds", "to_node": "Y", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "syndrome", "to_node": "T", "relationship": "confounds", "strength": "moderate"},
+            {"from_node": "syndrome", "to_node": "Y", "relationship": "modifies", "strength": "strong"},
+            {"from_node": "T", "to_node": "adherence", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "adherence", "to_node": "Y", "relationship": "mediates", "strength": "strong"},
+            {"from_node": "T", "to_node": "Y", "relationship": "causes", "strength": "moderate", "evidence": "Hypothesized direct effect of XY-301 on seizure threshold"},
+            {"from_node": "genetics", "to_node": "T", "relationship": "confounds", "strength": "moderate"},
+            {"from_node": "genetics", "to_node": "Y", "relationship": "causes", "strength": "strong"}
+        ],
+        "adjustment_set": ["age", "sex", "baseline_freq", "prior_aeds", "syndrome"],
+        "adjustment_labels": ["Age", "Sex", "Baseline Seizure Frequency", "Prior AED Count", "Epilepsy Syndrome"],
+        "assumptions": [
+            {"id": "a1", "description": "No unmeasured confounding conditional on adjustment set (exchangeability)", "testable": False, "rationale": "Genetic susceptibility is unmeasured — E-value analysis quantifies robustness to this violation"},
+            {"id": "a2", "description": "Positivity: all covariate strata have nonzero probability of receiving each treatment", "testable": True, "test_result": "passed", "rationale": "Verified via propensity score distribution overlap check"},
+            {"id": "a3", "description": "Consistency: well-defined treatment versions with no interference", "testable": False, "rationale": "SUTVA — standard dosing protocol, no spillover between patients"},
+            {"id": "a4", "description": "Independent censoring conditional on covariates", "testable": True, "test_result": "passed", "rationale": "Kaplan-Meier curves do not show informative dropout patterns"}
+        ],
+        "censoring_logic": {"mechanism": "Administrative end of study or loss to follow-up", "assumption": "independent", "handling": "Standard Kaplan-Meier censoring; IPCW sensitivity analysis planned"}
     }
 }
 
@@ -256,6 +299,43 @@ clarity_ad = {
             {"label": "All artifacts signed", "passed": True},
             {"label": "CSR cross-referenced", "passed": True}
         ]
+    },
+    "causal_specification": {
+        "estimand": {"type": "ATE", "summary": "Average treatment effect: change from baseline in CDR-SB at 18 months for lecanemab vs. placebo in early Alzheimer's disease"},
+        "treatment": {"variable": "ARM", "levels": ["Lecanemab", "Placebo"], "reference_arm": "Placebo"},
+        "outcome": {"variable": "CDR_SB_CHANGE", "type": "continuous", "definition": "Change from baseline in Clinical Dementia Rating Sum of Boxes at 18 months"},
+        "time_zero": {"definition": "Date of randomization", "rationale": "RCT anchor point — treatment assignment date"},
+        "nodes": [
+            {"id": "T", "label": "Lecanemab", "role": "treatment", "variable_name": "ARM", "rationale": "Anti-amyloid monoclonal antibody — exposure of interest"},
+            {"id": "Y", "label": "CDR-SB Change", "role": "outcome", "variable_name": "CDR_SB_CHANGE", "rationale": "Primary efficacy endpoint per EMA CHMP guidance"},
+            {"id": "age", "label": "Age", "role": "confounder", "variable_name": "AGE", "rationale": "Age affects both treatment eligibility and cognitive decline rate"},
+            {"id": "apoe4", "label": "ApoE4 Status", "role": "effect_modifier", "variable_name": "APOE4", "rationale": "ApoE4 carriers may have differential amyloid burden and treatment response"},
+            {"id": "baseline_cdr", "label": "Baseline CDR-SB", "role": "confounder", "variable_name": "CDR_SB_BASELINE", "rationale": "Baseline severity predicts both treatment allocation preferences and trajectory"},
+            {"id": "amyloid", "label": "Amyloid PET Status", "role": "mediator", "variable_name": "AMYLOID_PET", "rationale": "Lecanemab reduces amyloid, which may mediate cognitive benefit"},
+            {"id": "aria", "label": "ARIA Events", "role": "competing_risk", "variable_name": "ARIA", "rationale": "Amyloid-related imaging abnormalities may lead to treatment discontinuation"},
+            {"id": "education", "label": "Education Level", "role": "confounder", "variable_name": "EDUCATION_YEARS", "rationale": "Cognitive reserve affects baseline performance and decline rate"}
+        ],
+        "edges": [
+            {"from_node": "age", "to_node": "T", "relationship": "confounds", "strength": "moderate"},
+            {"from_node": "age", "to_node": "Y", "relationship": "causes", "strength": "strong"},
+            {"from_node": "apoe4", "to_node": "T", "relationship": "confounds", "strength": "weak"},
+            {"from_node": "apoe4", "to_node": "Y", "relationship": "modifies", "strength": "strong", "evidence": "CLARITY-AD subgroup: ApoE4 carriers showed larger treatment effect"},
+            {"from_node": "baseline_cdr", "to_node": "T", "relationship": "confounds", "strength": "moderate"},
+            {"from_node": "baseline_cdr", "to_node": "Y", "relationship": "causes", "strength": "strong"},
+            {"from_node": "T", "to_node": "amyloid", "relationship": "causes", "strength": "strong", "evidence": "Lecanemab reduces amyloid plaques (confirmed by PET)"},
+            {"from_node": "amyloid", "to_node": "Y", "relationship": "mediates", "strength": "moderate"},
+            {"from_node": "T", "to_node": "aria", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "T", "to_node": "Y", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "education", "to_node": "Y", "relationship": "causes", "strength": "moderate"}
+        ],
+        "adjustment_set": ["age", "apoe4", "baseline_cdr", "education"],
+        "adjustment_labels": ["Age", "ApoE4 Status", "Baseline CDR-SB", "Education Level"],
+        "assumptions": [
+            {"id": "a1", "description": "Randomization ensures exchangeability (no unmeasured confounding)", "testable": True, "test_result": "passed", "rationale": "RCT design — balance verified at baseline"},
+            {"id": "a2", "description": "No informative censoring due to ARIA events", "testable": True, "rationale": "ARIA-related discontinuation may violate MCAR — sensitivity analysis with IPCW"},
+            {"id": "a3", "description": "MMRM model correctly specifies the mean structure", "testable": True, "test_result": "passed", "rationale": "Verified via residual diagnostics"}
+        ],
+        "censoring_logic": {"mechanism": "Study dropout or ARIA-related discontinuation", "assumption": "independent", "handling": "MMRM with all observed data; tipping-point sensitivity analysis for MNAR"}
     }
 }
 
@@ -390,6 +470,50 @@ glp1 = {
             {"label": "All artifacts signed", "passed": False},
             {"label": "DSMB unblinding approval", "passed": False}
         ]
+    },
+    "causal_specification": {
+        "estimand": {"type": "ATE", "summary": "Average treatment effect: time to first MACE for GLP1-RA vs. DPP-4i in T2DM patients with established CVD"},
+        "treatment": {"variable": "ARM", "levels": ["GLP1-RA", "DPP-4i"], "reference_arm": "DPP-4i"},
+        "outcome": {"variable": "TIME_TO_MACE", "type": "time-to-event", "definition": "Time to first major adverse cardiovascular event (composite: CV death, non-fatal MI, non-fatal stroke)"},
+        "time_zero": {"definition": "Date of first GLP1-RA or DPP-4i prescription after CVD diagnosis", "rationale": "Active comparator new-user design — aligns treatment initiation"},
+        "nodes": [
+            {"id": "T", "label": "GLP1-RA", "role": "treatment", "variable_name": "ARM", "rationale": "GLP-1 receptor agonist vs. DPP-4 inhibitor as active comparator"},
+            {"id": "Y", "label": "MACE", "role": "outcome", "variable_name": "TIME_TO_MACE", "rationale": "Composite cardiovascular endpoint per FDA CVOT guidance"},
+            {"id": "age", "label": "Age", "role": "confounder", "variable_name": "AGE", "rationale": "Age affects both prescribing patterns and CV risk"},
+            {"id": "hba1c", "label": "Baseline HbA1c", "role": "confounder", "variable_name": "HBA1C", "rationale": "Glycemic control at baseline drives treatment selection and CV risk"},
+            {"id": "bmi", "label": "BMI", "role": "confounder", "variable_name": "BMI", "rationale": "Obesity influences GLP1-RA prescribing preference and CV risk"},
+            {"id": "prior_cv", "label": "Prior CV Events", "role": "confounder", "variable_name": "N_PRIOR_CV_EVENTS", "rationale": "CV history predicts both treatment escalation and future MACE"},
+            {"id": "egfr", "label": "Baseline eGFR", "role": "confounder", "variable_name": "EGFR", "rationale": "Renal function affects drug selection and CV prognosis"},
+            {"id": "weight_loss", "label": "Weight Change", "role": "mediator", "variable_name": "WEIGHT_CHANGE", "rationale": "GLP1-RA-induced weight loss may mediate part of the CV benefit"},
+            {"id": "death_other", "label": "Non-CV Death", "role": "competing_risk", "variable_name": "DEATH_NONCV", "rationale": "Non-cardiovascular death precludes observation of MACE"},
+            {"id": "frailty", "label": "Frailty Index", "role": "confounder", "variable_name": "", "measurement_status": "unmeasured", "rationale": "Frailty affects treatment selection and mortality — difficult to capture in claims data"}
+        ],
+        "edges": [
+            {"from_node": "age", "to_node": "T", "relationship": "confounds", "strength": "moderate"},
+            {"from_node": "age", "to_node": "Y", "relationship": "causes", "strength": "strong"},
+            {"from_node": "hba1c", "to_node": "T", "relationship": "confounds", "strength": "strong", "evidence": "GLP1-RA preferred for patients needing greater HbA1c reduction"},
+            {"from_node": "hba1c", "to_node": "Y", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "bmi", "to_node": "T", "relationship": "confounds", "strength": "strong", "evidence": "Weight loss benefit drives GLP1-RA prescribing in obese patients"},
+            {"from_node": "bmi", "to_node": "Y", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "prior_cv", "to_node": "T", "relationship": "confounds", "strength": "strong"},
+            {"from_node": "prior_cv", "to_node": "Y", "relationship": "causes", "strength": "strong"},
+            {"from_node": "egfr", "to_node": "T", "relationship": "confounds", "strength": "moderate"},
+            {"from_node": "egfr", "to_node": "Y", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "T", "to_node": "weight_loss", "relationship": "causes", "strength": "strong"},
+            {"from_node": "weight_loss", "to_node": "Y", "relationship": "mediates", "strength": "moderate"},
+            {"from_node": "T", "to_node": "Y", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "frailty", "to_node": "T", "relationship": "confounds", "strength": "moderate"},
+            {"from_node": "frailty", "to_node": "Y", "relationship": "causes", "strength": "strong"}
+        ],
+        "adjustment_set": ["age", "hba1c", "bmi", "prior_cv", "egfr"],
+        "adjustment_labels": ["Age", "Baseline HbA1c", "BMI", "Prior CV Events", "Baseline eGFR"],
+        "assumptions": [
+            {"id": "a1", "description": "No unmeasured confounding after adjustment (conditional exchangeability)", "testable": False, "rationale": "Frailty is unmeasured — negative control outcomes planned to assess residual confounding"},
+            {"id": "a2", "description": "Positivity across treatment-comparator groups", "testable": True, "test_result": "passed", "rationale": "Propensity score trimming at 0.05-0.95 removes extreme weights"},
+            {"id": "a3", "description": "No time-varying confounding after treatment initiation", "testable": False, "rationale": "Intention-to-treat analysis from index date mitigates this concern"},
+            {"id": "a4", "description": "Independent competing risks", "testable": True, "rationale": "Fine-Gray subdistribution hazard model as sensitivity analysis"}
+        ],
+        "censoring_logic": {"mechanism": "End of insurance enrollment, end of study period, or treatment switching", "assumption": "independent", "handling": "Intention-to-treat from index date; per-protocol sensitivity with IPCW for treatment switching"}
     }
 }
 
@@ -514,6 +638,46 @@ mrd100 = {
             {"label": "Bias assessment complete", "passed": False},
             {"label": "All artifacts signed", "passed": False}
         ]
+    },
+    "causal_specification": {
+        "estimand": {"type": "ATE", "summary": "Average treatment effect: ALT normalization rate at Week 24 for MRD-100 vs. standard immunosuppression in autoimmune hepatitis"},
+        "treatment": {"variable": "ARM", "levels": ["MRD-100", "Standard IST"], "reference_arm": "Standard IST"},
+        "outcome": {"variable": "ALT_NORMALIZED", "type": "binary", "definition": "ALT normalization (< 1x ULN) at Week 24"},
+        "time_zero": {"definition": "Date of randomization", "rationale": "RCT design — randomization is the natural index date"},
+        "nodes": [
+            {"id": "T", "label": "MRD-100", "role": "treatment", "variable_name": "ARM", "rationale": "Novel selective immunomodulator vs. standard immunosuppressive therapy"},
+            {"id": "Y", "label": "ALT Normalization", "role": "outcome", "variable_name": "ALT_NORMALIZED", "rationale": "Primary efficacy endpoint — biochemical remission marker"},
+            {"id": "age", "label": "Age", "role": "confounder", "variable_name": "AGE", "rationale": "Age affects disease severity and treatment tolerance"},
+            {"id": "sex", "label": "Sex", "role": "confounder", "variable_name": "SEX", "rationale": "AIH has female predominance; sex may affect treatment response"},
+            {"id": "baseline_alt", "label": "Baseline ALT", "role": "confounder", "variable_name": "ALT_BASELINE", "rationale": "Higher baseline ALT may predict both treatment intensity and response likelihood"},
+            {"id": "fibrosis", "label": "Fibrosis Stage", "role": "confounder", "variable_name": "FIBROSIS_STAGE", "rationale": "Advanced fibrosis affects both treatment decisions and biochemical response"},
+            {"id": "igg_level", "label": "IgG Level", "role": "confounder", "variable_name": "IGG", "rationale": "Elevated IgG drives treatment escalation and correlates with disease activity"},
+            {"id": "immune_response", "label": "Immune Modulation", "role": "mediator", "variable_name": "IMMUNE_MARKERS", "rationale": "MRD-100 mechanism: selective immune modulation -> ALT reduction"},
+            {"id": "infection", "label": "Opportunistic Infection", "role": "competing_risk", "variable_name": "INFECTION", "rationale": "Serious infection may require treatment discontinuation"}
+        ],
+        "edges": [
+            {"from_node": "age", "to_node": "T", "relationship": "confounds", "strength": "weak"},
+            {"from_node": "age", "to_node": "Y", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "sex", "to_node": "T", "relationship": "confounds", "strength": "weak"},
+            {"from_node": "sex", "to_node": "Y", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "baseline_alt", "to_node": "T", "relationship": "confounds", "strength": "moderate"},
+            {"from_node": "baseline_alt", "to_node": "Y", "relationship": "causes", "strength": "strong"},
+            {"from_node": "fibrosis", "to_node": "T", "relationship": "confounds", "strength": "moderate"},
+            {"from_node": "fibrosis", "to_node": "Y", "relationship": "causes", "strength": "strong"},
+            {"from_node": "igg_level", "to_node": "T", "relationship": "confounds", "strength": "moderate"},
+            {"from_node": "igg_level", "to_node": "Y", "relationship": "causes", "strength": "moderate"},
+            {"from_node": "T", "to_node": "immune_response", "relationship": "causes", "strength": "strong"},
+            {"from_node": "immune_response", "to_node": "Y", "relationship": "mediates", "strength": "strong"},
+            {"from_node": "T", "to_node": "Y", "relationship": "causes", "strength": "moderate"}
+        ],
+        "adjustment_set": ["age", "sex", "baseline_alt", "fibrosis", "igg_level"],
+        "adjustment_labels": ["Age", "Sex", "Baseline ALT", "Fibrosis Stage", "IgG Level"],
+        "assumptions": [
+            {"id": "a1", "description": "Randomization ensures baseline exchangeability", "testable": True, "test_result": "passed", "rationale": "RCT design with stratified randomization by fibrosis stage"},
+            {"id": "a2", "description": "No differential measurement error in ALT assessment", "testable": True, "test_result": "passed", "rationale": "Central laboratory for all ALT measurements"},
+            {"id": "a3", "description": "Missing outcome data is missing at random (MAR)", "testable": False, "rationale": "Multiple imputation with sensitivity analysis under MNAR assumptions"}
+        ],
+        "censoring_logic": {"mechanism": "Treatment discontinuation due to adverse events or loss to follow-up", "assumption": "independent", "handling": "Modified intention-to-treat; per-protocol sensitivity analysis"}
     }
 }
 
@@ -526,7 +690,7 @@ PROJECTS = {
 }
 
 SECTIONS = [
-    "study_definition", "covariates", "data_sources", "cohort",
+    "study_definition", "causal_specification", "covariates", "data_sources", "cohort",
     "balance", "effect_estimation", "bias", "reproducibility", "regulatory"
 ]
 

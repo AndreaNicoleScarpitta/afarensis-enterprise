@@ -2,30 +2,37 @@
 Clinical trial workflow step dependency graph.
 Defines which upstream steps invalidate which downstream steps
 when their data changes — informed by biostatistical best practices.
+
+The causal_specification step is the scientific backbone:
+it defines the causal DAG, estimand, treatment/outcome, confounders,
+mediators, colliders, and the derived adjustment set. Changes here
+ripple through every downstream analytical step.
 """
 
 SECTION_KEYS = [
-    "definition", "covariates", "data_sources", "cohort",
+    "definition", "causal_specification", "covariates", "data_sources", "cohort",
     "balance", "effect_estimation", "bias", "reproducibility",
     "audit", "regulatory",
 ]
 
 STEP_DEPENDENCIES = {
     "definition": [],
-    "covariates": ["definition"],
-    "data_sources": ["definition", "covariates"],
-    "cohort": ["definition", "covariates", "data_sources"],
-    "balance": ["definition", "covariates", "cohort"],
-    "effect_estimation": ["definition", "covariates", "data_sources", "cohort", "balance"],
-    "bias": ["definition", "covariates", "cohort", "balance", "effect_estimation"],
+    "causal_specification": ["definition"],
+    "covariates": ["definition", "causal_specification"],
+    "data_sources": ["definition", "causal_specification", "covariates"],
+    "cohort": ["definition", "causal_specification", "covariates", "data_sources"],
+    "balance": ["definition", "causal_specification", "covariates", "cohort"],
+    "effect_estimation": ["definition", "causal_specification", "covariates", "data_sources", "cohort", "balance"],
+    "bias": ["definition", "causal_specification", "covariates", "cohort", "balance", "effect_estimation"],
     "reproducibility": ["data_sources", "cohort"],
     "audit": [],
-    "regulatory": ["definition", "effect_estimation", "bias", "reproducibility", "audit"],
+    "regulatory": ["definition", "causal_specification", "effect_estimation", "bias", "reproducibility", "audit"],
 }
 
 # Human-readable labels for each step
 STEP_LABELS = {
     "definition": "Study Definition",
+    "causal_specification": "Causal Specification",
     "covariates": "Causal Framework",
     "data_sources": "Data Provenance",
     "cohort": "Cohort Construction",
@@ -40,6 +47,7 @@ STEP_LABELS = {
 # Biostatistical impact descriptions when each step changes
 IMPACT_DESCRIPTIONS = {
     "definition": {
+        "causal_specification": "Endpoint or estimand change may require a new causal model — different outcome variable, different confounders.",
         "covariates": "Endpoint or estimand change may invalidate the causal DAG structure and confounder identification.",
         "data_sources": "Endpoint change may require different SDTM/ADaM domains and variable sourcing.",
         "cohort": "Design or comparator changes invalidate inclusion/exclusion criteria and the attrition funnel.",
@@ -47,6 +55,15 @@ IMPACT_DESCRIPTIONS = {
         "effect_estimation": "Endpoint type change may make the current analysis method inappropriate (e.g., Cox PH for binary endpoint).",
         "bias": "E-value and sensitivity calculations are specific to the effect estimate and endpoint type.",
         "regulatory": "SAR/SAP narrative references the estimand, endpoint, and design throughout.",
+    },
+    "causal_specification": {
+        "covariates": "Causal DAG changes alter the identified confounders, mediators, and adjustment set — covariate list must be updated.",
+        "data_sources": "New causal nodes may require additional data variables not present in current data sources.",
+        "cohort": "Adjustment set changes affect propensity score model specification and cohort eligibility logic.",
+        "balance": "The covariate set for balance assessment derives directly from the causal DAG adjustment set.",
+        "effect_estimation": "Causal model changes may alter the estimand, adjustment strategy, or require different analytic methods.",
+        "bias": "Sensitivity analyses (E-value, negative controls) reference the causal assumptions and unmeasured confounders.",
+        "regulatory": "Causal framework documentation is a required section in regulatory submissions — DAG and assumptions must be current.",
     },
     "covariates": {
         "data_sources": "Adding/removing covariates changes which variables must be captured in the data.",

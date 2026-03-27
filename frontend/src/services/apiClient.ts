@@ -649,6 +649,32 @@ class ApiClient {
     });
   }
 
+  // ── Causal Specification ─────────────────────────────────────────────
+
+  async getCausalSpecification(projectId: string): Promise<any> {
+    return this.request(`/projects/${projectId}/study/causal-specification`, z.any());
+  }
+
+  async saveCausalSpecification(projectId: string, spec: any): Promise<any> {
+    return this.request(`/projects/${projectId}/study/causal-specification`, z.any(), {
+      method: 'PUT',
+      body: JSON.stringify(spec),
+    });
+  }
+
+  async deriveAdjustmentSet(projectId: string): Promise<any> {
+    return this.request(`/projects/${projectId}/study/causal-specification/derive-adjustment-set`, z.any(), {
+      method: 'POST',
+    });
+  }
+
+  async validateCausalSpec(projectId: string, spec: any): Promise<any> {
+    return this.request(`/projects/${projectId}/study/causal-specification/validate`, z.any(), {
+      method: 'POST',
+      body: JSON.stringify(spec),
+    });
+  }
+
   async lockProtocol(projectId: string): Promise<any> {
     return this.request(`/projects/${projectId}/study/lock`, z.any(), {
       method: 'PUT',
