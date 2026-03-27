@@ -22,7 +22,7 @@ def meta(section_key):
 
 # ─── PROJECT 1: XY-301 Pediatric CNS / Epilepsy ───────────────────────────
 xy301 = {
-    "definition": {
+    "study_definition": {
         "protocol": "XY-301",
         "indication": "Rare CNS Disorder (Pediatric Epilepsy)",
         "phase": "Phase 3",
@@ -136,7 +136,7 @@ xy301 = {
 
 # ─── PROJECT 2: CLARITY-AD Alzheimer's Phase 3 ────────────────────────────
 clarity_ad = {
-    "definition": {
+    "study_definition": {
         "protocol": "CLARITY-AD",
         "indication": "Alzheimer's Disease (Early Symptomatic)",
         "phase": "Phase 3",
@@ -261,7 +261,7 @@ clarity_ad = {
 
 # ─── PROJECT 3: GLP1-2026 Cardiovascular Outcomes ─────────────────────────
 glp1 = {
-    "definition": {
+    "study_definition": {
         "protocol": "GLP1-2026",
         "indication": "Cardiovascular Outcomes in Type 2 Diabetes",
         "phase": "Phase 3b/4 (CVOT)",
@@ -395,7 +395,7 @@ glp1 = {
 
 # ─── PROJECT 4: MRD-100 Autoimmune Hepatitis Phase 2 ──────────────────────
 mrd100 = {
-    "definition": {
+    "study_definition": {
         "protocol": "MRD-100",
         "indication": "Autoimmune Hepatitis (AIH)",
         "phase": "Phase 2",
@@ -526,7 +526,7 @@ PROJECTS = {
 }
 
 SECTIONS = [
-    "definition", "covariates", "data_sources", "cohort",
+    "study_definition", "covariates", "data_sources", "cohort",
     "balance", "effect_estimation", "bias", "reproducibility", "regulatory"
 ]
 

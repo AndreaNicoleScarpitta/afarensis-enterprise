@@ -4597,9 +4597,13 @@ async def get_staleness_metadata(
     project = await get_project_with_org_check(project_id, current_user, db)
     config = project.processing_config or {}
 
+    # Map dependency graph keys to actual processing_config keys
+    CONFIG_KEY_MAP = {"definition": "study_definition"}
+
     sections_meta = {}
     for section in SECTION_KEYS:
-        meta = config.get(f"{section}_meta", {})
+        config_key = CONFIG_KEY_MAP.get(section, section)
+        meta = config.get(f"{config_key}_meta", {}) or config.get(f"{section}_meta", {})
         sections_meta[section] = {
             "updated_at": meta.get("updated_at"),
             "updated_by": meta.get("updated_by"),
@@ -4634,13 +4638,16 @@ async def acknowledge_staleness(
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
 
-    meta_key = f"{section}_meta"
-    meta = config.get(meta_key, {})
+    CONFIG_KEY_MAP = {"definition": "study_definition"}
+    config_key = CONFIG_KEY_MAP.get(section, section)
+    meta_key = f"{config_key}_meta"
+    meta = config.get(meta_key, {}) or config.get(f"{section}_meta", {})
 
     # Record current upstream versions so we know what was acknowledged
     upstream_versions = {}
     for dep in STEP_DEPENDENCIES.get(section, []):
-        dep_meta = config.get(f"{dep}_meta", {})
+        dep_config_key = CONFIG_KEY_MAP.get(dep, dep)
+        dep_meta = config.get(f"{dep_config_key}_meta", {}) or config.get(f"{dep}_meta", {})
         upstream_versions[dep] = dep_meta.get("version", 0)
 
     meta["staleness_acknowledged_at"] = datetime.utcnow().isoformat() + "Z"
