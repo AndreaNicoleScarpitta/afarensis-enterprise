@@ -1006,7 +1006,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest">Model Card — Primary Analysis</h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border text-amber-600 bg-amber-900/10 border-amber-600/30">
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border text-amber-600 bg-amber-900/10 border-amber-600/30">
                     {primaryModel ? 'Configured' : 'Not Configured'}
                   </span>
                 </div>

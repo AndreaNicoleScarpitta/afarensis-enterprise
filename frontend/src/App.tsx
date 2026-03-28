@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -896,6 +897,9 @@ function App() {
   const [selectedStudy, setSelectedStudy] = useState<Study | null>(null)
   const [protocolLocked, setProtocolLocked] = useState(false)
   const [reviewerMode, setReviewerMode] = useState(false)
+  const [showLockModal, setShowLockModal] = useState(false)
+  const [locking, setLocking] = useState(false)
+  const [lockError, setLockError] = useState<string | null>(null)
   const [staleSteps, setStaleSteps] = useState<Set<string>>(new Set())
 
   // Compute staleness indicators for sidebar
@@ -999,19 +1003,25 @@ function App() {
     navigate('/dashboard', { replace: true })
   }, [login, navigate])
 
-  const handleLockProtocol = useCallback(async () => {
-    const confirmed = window.confirm(
-      'Lock this protocol?\n\nThis action cannot be undone and will be recorded in the audit trail. All study definition fields will become read-only.'
-    )
-    if (!confirmed) return
+  const handleLockProtocol = useCallback(() => {
+    setLockError(null)
+    setShowLockModal(true)
+  }, [])
+
+  const confirmLockProtocol = useCallback(async () => {
+    setLocking(true)
+    setLockError(null)
     try {
       if (selectedStudy?.id) {
         await apiClient.lockProtocol(selectedStudy.id)
       }
       setProtocolLocked(true)
+      setShowLockModal(false)
     } catch (err) {
       console.error('Failed to lock protocol:', err)
-      alert('Failed to lock protocol. Please try again.')
+      setLockError('Failed to lock protocol. Please try again.')
+    } finally {
+      setLocking(false)
     }
   }, [selectedStudy?.id])
 
@@ -1143,6 +1153,7 @@ function App() {
   }
 
   return (
+    <>
     <ThemeProvider>
     <ToastProvider>
     <LiteratureProvider projectId={selectedStudy?.id ?? '__none__'}>
@@ -1362,6 +1373,50 @@ function App() {
     </LiteratureProvider>
     </ToastProvider>
     </ThemeProvider>
+
+    {/* Protocol Lock Confirmation Modal */}
+    {showLockModal && createPortal(
+      <div className="fixed inset-0 z-[200] flex items-center justify-center" onKeyDown={e => { if (e.key === 'Escape') setShowLockModal(false) }}>
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowLockModal(false)} />
+        <div role="dialog" aria-modal="true" aria-labelledby="lock-protocol-title" className="relative bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+          <div className="px-6 py-5">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+              </div>
+              <h3 id="lock-protocol-title" className="text-base font-bold text-gray-900">Lock Protocol</h3>
+            </div>
+            <p className="text-sm text-gray-600 leading-relaxed">
+              This action <span className="font-semibold text-red-600">cannot be undone</span> and will be recorded in the audit trail.
+              All study definition fields will become read-only.
+            </p>
+            {lockError && (
+              <div className="mt-3 flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+                <p className="text-xs text-red-700">{lockError}</p>
+              </div>
+            )}
+          </div>
+          <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+            <button
+              onClick={() => setShowLockModal(false)}
+              className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-300 hover:border-gray-400 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={confirmLockProtocol}
+              disabled={locking}
+              className="px-4 py-2 rounded-lg text-sm font-semibold bg-red-600 hover:bg-red-700 text-white disabled:opacity-50 transition-colors"
+            >
+              {locking ? 'Locking...' : 'Lock Protocol'}
+            </button>
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   )
 }
 

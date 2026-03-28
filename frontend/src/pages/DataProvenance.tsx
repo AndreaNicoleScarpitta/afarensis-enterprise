@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import AttackSignalBanner from '../components/AttackSignalBanner'
 import {
@@ -164,6 +165,9 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     min_rows: 10,
   })
   const [thresholdsOpen, setThresholdsOpen] = useState(false)
+  const [thresholdsSaved, setThresholdsSaved] = useState(false)
+  const thresholdSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const qualityThresholdSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const locked = protocolLocked
   const [showImpactDialog, setShowImpactDialog] = useState(false)
   const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('data_sources')
@@ -202,6 +206,14 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     }
   }, [provData])
 
+  // Clean up debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      if (thresholdSaveTimer.current) clearTimeout(thresholdSaveTimer.current)
+      if (qualityThresholdSaveTimer.current) clearTimeout(qualityThresholdSaveTimer.current)
+    }
+  }, [])
+
   // ── Editable field helpers ──────────────────────────────────────────────────
   const handleUpdateSource = (index: number, field: string, value: any) => {
     const updated = [...dataSources]
@@ -233,7 +245,23 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
 
   const handleQualityThresholdChange = (value: number) => {
     setDataQualityThreshold(value)
-    save({ sources: dataSources, data_quality_threshold: value, thresholds })
+    if (qualityThresholdSaveTimer.current) clearTimeout(qualityThresholdSaveTimer.current)
+    qualityThresholdSaveTimer.current = setTimeout(() => {
+      save({ sources: dataSources, data_quality_threshold: value, thresholds })
+      setThresholdsSaved(true)
+      setTimeout(() => setThresholdsSaved(false), 2000)
+    }, 800)
+  }
+
+  const handleThresholdChange = <K extends keyof typeof thresholds>(key: K, value: typeof thresholds[K]) => {
+    const updated = { ...thresholds, [key]: value }
+    setThresholds(updated)
+    if (thresholdSaveTimer.current) clearTimeout(thresholdSaveTimer.current)
+    thresholdSaveTimer.current = setTimeout(() => {
+      save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: updated })
+      setThresholdsSaved(true)
+      setTimeout(() => setThresholdsSaved(false), 2000)
+    }, 800)
   }
 
   const confirmSave = () => {
@@ -293,6 +321,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     'is binding and is logged with my credentials, timestamp, and session context.'
 
   const [showConsentModal, setShowConsentModal] = useState(false)
+  const [showReplaceConfirm, setShowReplaceConfirm] = useState(false)
   const [consentChecked, setConsentChecked] = useState(false)
   const [consentSubmitting, setConsentSubmitting] = useState(false)
   const [consentId, setConsentId] = useState<string | null>(null)
@@ -595,6 +624,70 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     return getStateBadgeClasses(labelToState[status] || 'required_unconfigured')
   }
 
+  // ── HIPAA Consent Modal focus trap ──────────────────────────────────────────
+  const consentModalRef = useRef<HTMLDivElement>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!showConsentModal) return
+
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null
+
+    const modalEl = consentModalRef.current
+    if (!modalEl) return
+
+    const getFocusableElements = (): HTMLElement[] => {
+      return Array.from(
+        modalEl.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input:not([disabled]), select, [tabindex]:not([tabindex="-1"])'
+        )
+      )
+    }
+
+    // Focus the first focusable element
+    const focusables = getFocusableElements()
+    if (focusables.length > 0) {
+      focusables[0]!.focus()
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowConsentModal(false)
+        setConsentChecked(false)
+        return
+      }
+
+      if (e.key === 'Tab') {
+        const elements = getFocusableElements()
+        if (elements.length === 0) return
+
+        const first = elements[0]!
+        const last = elements[elements.length - 1]!
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault()
+            last.focus()
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault()
+            first.focus()
+          }
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      if (previouslyFocusedRef.current && typeof previouslyFocusedRef.current.focus === 'function') {
+        previouslyFocusedRef.current.focus()
+      }
+    }
+  }, [showConsentModal])
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -662,10 +755,16 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       {/* ── HIPAA Consent Modal ───────────────────────────────────────────── */}
       {showConsentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl">
+          <div
+            ref={consentModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="hipaa-consent-title"
+            className="bg-white border border-gray-200 rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl"
+          >
             <div className="flex items-center gap-2 mb-4">
               <Shield className="h-5 w-5 text-[#2563EB]" />
-              <h3 className="text-lg font-bold text-gray-900">HIPAA De-Identification Attestation</h3>
+              <h3 id="hipaa-consent-title" className="text-lg font-bold text-gray-900">HIPAA De-Identification Attestation</h3>
             </div>
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4 max-h-56 overflow-y-auto">
               <p className="text-xs text-gray-600 leading-relaxed">{ATTESTATION_TEXT}</p>
@@ -754,19 +853,19 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
             {/* Registered Data Sources */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Registered Sources</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Registered Sources</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{safeDataSources.length || '—'}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">Source datasets</p>
             </div>
             {/* Total Person-Time */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Person-Time</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Person-Time</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{datasetSummary?.person_years ?? '—'}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">Observed</p>
             </div>
             {/* Observation Window */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Obs. Window</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Obs. Window</p>
               <p className="text-lg font-bold text-gray-900 mt-1 leading-tight">
                 {datasetSummary?.obs_start && datasetSummary?.obs_end
                   ? `${datasetSummary.obs_start}–${datasetSummary.obs_end}`
@@ -776,13 +875,13 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
             </div>
             {/* Variable Coverage */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Var. Coverage</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Var. Coverage</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{presentCount}/{totalRequired}</p>
               <p className="text-[10px] text-gray-500 mt-0.5">Required variables</p>
             </div>
             {/* Stale Artifacts */}
             <div className={`bg-white border rounded-xl p-4 ${staleCount > 0 ? 'border-red-200' : 'border-gray-200'}`}>
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Stale Artifacts</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Stale Artifacts</p>
               <p className={`text-2xl font-bold mt-1 ${staleCount > 0 ? 'text-red-600' : 'text-gray-900'}`}>
                 {staleCount}
               </p>
@@ -790,7 +889,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
             </div>
             {/* Downstream Readiness */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
-              <p className="text-[9px] text-gray-500 uppercase tracking-widest font-semibold">Downstream</p>
+              <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Downstream</p>
               <p className={`text-lg font-bold mt-1 leading-tight ${downstreamReadinessColor}`}>
                 {downstreamReadiness}
               </p>
@@ -821,7 +920,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                     {existingDataset.filename || existingDataset.name || 'Registered Dataset'}
                   </span>
                 </div>
-                <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
                   existingDataset.compliance_status === 'CLEARED'
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                     : existingDataset.compliance_status === 'BLOCKED'
@@ -834,7 +933,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
               <div className="grid grid-cols-4 gap-3 mb-3">
                 {existingDataset.upload_date && (
                   <div>
-                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">Registered</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Registered</p>
                     <p className="text-xs text-gray-900 font-mono">
                       {new Date(existingDataset.upload_date).toLocaleDateString()}
                     </p>
@@ -842,13 +941,13 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                 )}
                 {existingDataset.row_count != null && (
                   <div>
-                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">Rows</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Rows</p>
                     <p className="text-xs text-gray-900 font-mono">{existingDataset.row_count.toLocaleString()}</p>
                   </div>
                 )}
                 {existingDataset.columns != null && (
                   <div>
-                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">Variables</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Variables</p>
                     <p className="text-xs text-gray-900 font-mono">
                       {Array.isArray(existingDataset.columns) ? existingDataset.columns.length : existingDataset.columns}
                     </p>
@@ -856,13 +955,13 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                 )}
                 {existingDataset.type && (
                   <div>
-                    <p className="text-[9px] text-gray-500 uppercase tracking-wider">Source Type</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Source Type</p>
                     <p className="text-xs text-gray-900 font-medium">{existingDataset.type}</p>
                   </div>
                 )}
               </div>
               <button
-                onClick={handleReplaceDataset}
+                onClick={() => setShowReplaceConfirm(true)}
                 className="flex items-center gap-2 text-xs text-amber-700 hover:text-amber-900 font-semibold transition-colors"
               >
                 <Trash2 className="h-3 w-3" /> Replace Dataset
@@ -1022,7 +1121,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                           <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
                             <td className="px-4 py-2 text-gray-900">{f.check_name || f.name}</td>
                             <td className="px-4 py-2">
-                              <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
                                 f.severity === 'CRITICAL' ? 'bg-red-100 text-red-700' :
                                 f.severity === 'MAJOR' ? 'bg-orange-100 text-orange-700' :
                                 f.severity === 'WARNING' ? 'bg-amber-100 text-amber-700' :
@@ -1048,19 +1147,19 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                   <div className="grid grid-cols-4 gap-3">
                     {datasetSummary.total_rows != null && (
                       <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-                        <p className="text-[9px] text-gray-500 uppercase tracking-wider">Total Rows</p>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">Total Rows</p>
                         <p className="text-lg font-bold text-gray-900">{datasetSummary.total_rows.toLocaleString()}</p>
                       </div>
                     )}
                     {datasetSummary.columns_detected != null && (
                       <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-                        <p className="text-[9px] text-gray-500 uppercase tracking-wider">Variables Detected</p>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">Variables Detected</p>
                         <p className="text-lg font-bold text-gray-900">{datasetSummary.columns_detected}</p>
                       </div>
                     )}
                     {datasetSummary.missingness != null && (
                       <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-                        <p className="text-[9px] text-gray-500 uppercase tracking-wider">Missingness</p>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">Missingness</p>
                         <p className="text-lg font-bold text-gray-900">
                           {typeof datasetSummary.missingness === 'number'
                             ? `${(datasetSummary.missingness * 100).toFixed(1)}%`
@@ -1070,7 +1169,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                     )}
                     {datasetSummary.n_by_arm && (
                       <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
-                        <p className="text-[9px] text-gray-500 uppercase tracking-wider">N by Arm</p>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-wider">N by Arm</p>
                         {Object.entries(datasetSummary.n_by_arm).map(([arm, n]: [string, any]) => (
                           <p key={arm} className="text-xs text-gray-700">
                             <span className="font-mono text-gray-900 font-semibold">{n}</span> {arm}
@@ -1188,7 +1287,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                         <>
                           <div className="flex items-center gap-2 mb-1">
                             <p className="text-sm font-bold text-gray-900">{src.name}</p>
-                            <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-blue-200 bg-blue-50 text-blue-700">
                               {src.type}
                             </span>
                           </div>
@@ -1197,15 +1296,15 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                       )}
                       <div className="flex items-center gap-2 mt-1.5">
                         {src.validated
-                          ? <span className="flex items-center gap-1 text-[9px] text-emerald-700 font-bold"><CheckCircle2 className="h-3 w-3" /> Validated</span>
-                          : <span className="flex items-center gap-1 text-[9px] text-amber-700 font-bold"><Clock className="h-3 w-3" /> Pending validation</span>
+                          ? <span className="flex items-center gap-1 text-[10px] text-emerald-700 font-bold"><CheckCircle2 className="h-3 w-3" /> Validated</span>
+                          : <span className="flex items-center gap-1 text-[10px] text-amber-700 font-bold"><Clock className="h-3 w-3" /> Pending validation</span>
                         }
                       </div>
                     </div>
                     <div className="text-right flex items-start gap-2">
                       <div>
-                        <p className="text-[9px] text-gray-400 font-mono">{src.hash}</p>
-                        <p className="text-[9px] text-gray-400">{src.version}</p>
+                        <p className="text-[10px] text-gray-400 font-mono">{src.hash}</p>
+                        <p className="text-[10px] text-gray-400">{src.version}</p>
                       </div>
                       {!locked && !reviewerMode && (
                         <button
@@ -1259,7 +1358,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                     <td className="px-4 py-3 font-medium text-gray-900">{row.category}</td>
                     <td className="px-4 py-3 text-gray-600">{row.requiredBy}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${coverageStatusColors[row.status]}`}>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${coverageStatusColors[row.status]}`}>
                         {row.status}
                       </span>
                     </td>
@@ -1347,6 +1446,12 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
               <div className="flex items-center gap-2">
                 <Activity className="h-4 w-4 text-gray-400 shrink-0" />
                 <span className="text-xs font-bold text-gray-700">Regulatory Check Thresholds</span>
+                {thresholdsSaved && (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-600 ml-1 transition-opacity">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Saved
+                  </span>
+                )}
                 <span className="text-[10px] text-gray-400 ml-1">Configure positive &amp; negative control limits</span>
               </div>
               <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${thresholdsOpen ? 'rotate-180' : ''}`} />
@@ -1373,11 +1478,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                             max={100}
                             step={1}
                             value={thresholds.max_overall_missingness}
-                            onChange={e => {
-                              const val = Number(e.target.value)
-                              setThresholds(prev => ({ ...prev, max_overall_missingness: val }))
-                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, max_overall_missingness: val } })
-                            }}
+                            onChange={e => handleThresholdChange('max_overall_missingness', Number(e.target.value))}
                             className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                           />
                           <span className="text-[10px] text-gray-400">% (default: 20)</span>
@@ -1398,11 +1499,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                             max={100}
                             step={1}
                             value={thresholds.max_differential_missingness}
-                            onChange={e => {
-                              const val = Number(e.target.value)
-                              setThresholds(prev => ({ ...prev, max_differential_missingness: val }))
-                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, max_differential_missingness: val } })
-                            }}
+                            onChange={e => handleThresholdChange('max_differential_missingness', Number(e.target.value))}
                             className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                           />
                           <span className="text-[10px] text-gray-400">% (default: 10)</span>
@@ -1423,11 +1520,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                             max={2}
                             step={0.01}
                             value={thresholds.max_smd}
-                            onChange={e => {
-                              const val = Number(e.target.value)
-                              setThresholds(prev => ({ ...prev, max_smd: val }))
-                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, max_smd: val } })
-                            }}
+                            onChange={e => handleThresholdChange('max_smd', Number(e.target.value))}
                             className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                           />
                           <span className="text-[10px] text-gray-400">(default: 0.30)</span>
@@ -1448,11 +1541,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                             max={100}
                             step={1}
                             value={thresholds.max_nonstandard_vars}
-                            onChange={e => {
-                              const val = Number(e.target.value)
-                              setThresholds(prev => ({ ...prev, max_nonstandard_vars: val }))
-                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, max_nonstandard_vars: val } })
-                            }}
+                            onChange={e => handleThresholdChange('max_nonstandard_vars', Number(e.target.value))}
                             className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                           />
                           <span className="text-[10px] text-gray-400">(default: 5)</span>
@@ -1479,11 +1568,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                         <div className="flex items-center gap-2">
                           <select
                             value={thresholds.pii_sensitivity}
-                            onChange={e => {
-                              const val = e.target.value as 'standard' | 'strict'
-                              setThresholds(prev => ({ ...prev, pii_sensitivity: val }))
-                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, pii_sensitivity: val } })
-                            }}
+                            onChange={e => handleThresholdChange('pii_sensitivity', e.target.value as 'standard' | 'strict')}
                             className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                           >
                             <option value="standard">Standard</option>
@@ -1507,11 +1592,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                             max={20}
                             step={1}
                             value={thresholds.min_sdtm_vars}
-                            onChange={e => {
-                              const val = Number(e.target.value)
-                              setThresholds(prev => ({ ...prev, min_sdtm_vars: val }))
-                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, min_sdtm_vars: val } })
-                            }}
+                            onChange={e => handleThresholdChange('min_sdtm_vars', Number(e.target.value))}
                             className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                           />
                           <span className="text-[10px] text-gray-400">(default: 2 = USUBJID + ARM)</span>
@@ -1532,11 +1613,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                             max={10}
                             step={1}
                             value={thresholds.max_future_years}
-                            onChange={e => {
-                              const val = Number(e.target.value)
-                              setThresholds(prev => ({ ...prev, max_future_years: val }))
-                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, max_future_years: val } })
-                            }}
+                            onChange={e => handleThresholdChange('max_future_years', Number(e.target.value))}
                             className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                           />
                           <span className="text-[10px] text-gray-400">years (default: 0)</span>
@@ -1557,11 +1634,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                             max={10000}
                             step={1}
                             value={thresholds.min_rows}
-                            onChange={e => {
-                              const val = Number(e.target.value)
-                              setThresholds(prev => ({ ...prev, min_rows: val }))
-                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, min_rows: val } })
-                            }}
+                            onChange={e => handleThresholdChange('min_rows', Number(e.target.value))}
                             className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                           />
                           <span className="text-[10px] text-gray-400">(default: 10)</span>
@@ -1659,10 +1732,10 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                         <h3 className="text-sm font-bold text-gray-900">{ds.name} — {ds.label}</h3>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${requirednessTag}`}>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${requirednessTag}`}>
                           {spec.required ? 'Required' : 'Optional'}
                         </span>
-                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${statusColors}`}>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${statusColors}`}>
                           {statusLabel}
                         </span>
                       </div>
@@ -1672,7 +1745,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                   <p className="text-xs text-gray-600 mb-2 leading-relaxed">{spec.reason}</p>
 
                   <div className="mb-3">
-                    <p className="text-[9px] text-gray-400 uppercase tracking-wider font-semibold mb-1">Dependencies</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1">Dependencies</p>
                     <div className="flex flex-wrap gap-1.5">
                       {spec.dependencies.map(dep => (
                         <span key={dep} className="text-[10px] text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">
@@ -1747,7 +1820,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-bold text-gray-900">{spec.name} — {spec.label}</h3>
-                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${statusColors}`}>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${statusColors}`}>
                           {status}
                         </span>
                       </div>
@@ -1757,7 +1830,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
 
                   {/* SDTM dependencies with status */}
                   <div className="mb-3">
-                    <p className="text-[9px] text-gray-400 uppercase tracking-wider font-semibold mb-1">SDTM Dependencies</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1">SDTM Dependencies</p>
                     <div className="flex items-center gap-2 flex-wrap">
                       {spec.sdtmDeps.map(dep => {
                         const mapped = !!sdtmDomains[dep]
@@ -1780,7 +1853,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
 
                   {/* Study definition dependencies */}
                   <div className="mb-3">
-                    <p className="text-[9px] text-gray-400 uppercase tracking-wider font-semibold mb-1">Study Definition Dependencies</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider font-semibold mb-1">Study Definition Dependencies</p>
                     <div className="flex flex-wrap gap-1.5">
                       {spec.studyDeps.map(dep => (
                         <span key={dep} className="text-[10px] text-gray-500 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">
@@ -1877,7 +1950,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border font-sans ${
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border font-sans ${
                         row.status === 'Verified'
                           ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                           : 'bg-amber-50 border-amber-200 text-amber-700'
@@ -1933,6 +2006,42 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
         directImpacts={directImpacts}
         transitiveImpacts={transitiveImpacts}
       />
+
+      {/* Replace Dataset Confirmation Modal */}
+      {showReplaceConfirm && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center" onKeyDown={e => { if (e.key === 'Escape') setShowReplaceConfirm(false) }}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowReplaceConfirm(false)} />
+          <div role="dialog" aria-modal="true" aria-labelledby="replace-dataset-title" className="relative bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="px-6 py-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                </div>
+                <h3 id="replace-dataset-title" className="text-base font-bold text-gray-900">Replace Dataset</h3>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                This will discard the current dataset, compliance report, and any analysis results.
+                <span className="font-semibold text-amber-700"> This cannot be undone.</span>
+              </p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-2">
+              <button
+                onClick={() => setShowReplaceConfirm(false)}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-300 hover:border-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { handleReplaceDataset(); setShowReplaceConfirm(false) }}
+                className="px-4 py-2 rounded-lg text-sm font-semibold bg-amber-600 hover:bg-amber-700 text-white transition-colors"
+              >
+                Replace
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

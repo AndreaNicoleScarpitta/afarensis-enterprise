@@ -6,7 +6,7 @@
  * effect of their changes before they commit.
  */
 import { AlertTriangle, ArrowRight, Save, X, ChevronRight, Zap } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 
 export interface DownstreamImpact {
@@ -169,12 +169,66 @@ export function computeDownstreamImpacts(currentStep: string): { direct: Downstr
   return { direct, transitive }
 }
 
+const FOCUSABLE_SELECTOR = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export default function DownstreamImpactDialog({
   open, onClose, onConfirm, saving,
   currentStepLabel, directImpacts, transitiveImpacts,
 }: DownstreamImpactDialogProps) {
   const [showTransitive, setShowTransitive] = useState(false)
   const totalAffected = directImpacts.length + transitiveImpacts.length
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      onClose()
+      return
+    }
+    if (e.key === 'Tab') {
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusableElements = Array.from(
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter(el => el.offsetParent !== null)
+      if (focusableElements.length === 0) return
+      const firstElement = focusableElements[0]!
+      const lastElement = focusableElements[focusableElements.length - 1]!
+      if (e.shiftKey) {
+        if (document.activeElement === firstElement || !dialog.contains(document.activeElement)) {
+          e.preventDefault()
+          lastElement.focus()
+        }
+      } else {
+        if (document.activeElement === lastElement || !dialog.contains(document.activeElement)) {
+          e.preventDefault()
+          firstElement.focus()
+        }
+      }
+    }
+  }, [onClose])
+
+  useEffect(() => {
+    if (!open) return
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null
+    const rafId = requestAnimationFrame(() => {
+      const dialog = dialogRef.current
+      if (dialog) {
+        const firstFocusable = dialog.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+        if (firstFocusable) firstFocusable.focus()
+        else dialog.focus()
+      }
+    })
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      cancelAnimationFrame(rafId)
+      document.removeEventListener('keydown', handleKeyDown)
+      if (previouslyFocusedRef.current && typeof previouslyFocusedRef.current.focus === 'function') {
+        previouslyFocusedRef.current.focus()
+      }
+    }
+  }, [open, handleKeyDown])
 
   if (!open) return null
 
@@ -184,7 +238,13 @@ export default function DownstreamImpactDialog({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Dialog */}
-      <div className="relative bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="downstream-impact-title"
+        className="relative bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden"
+      >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div className="flex items-center gap-2.5">
@@ -192,7 +252,7 @@ export default function DownstreamImpactDialog({
               <Zap className="h-4 w-4 text-amber-600" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-gray-900">Downstream Impact Preview</h3>
+              <h3 id="downstream-impact-title" className="text-sm font-bold text-gray-900">Downstream Impact Preview</h3>
               <p className="text-[10px] text-gray-500 mt-0.5">
                 Saving changes to <span className="text-amber-600 font-semibold">{currentStepLabel}</span>
               </p>
@@ -224,7 +284,7 @@ export default function DownstreamImpactDialog({
               {directImpacts.map((d) => (
                 <div key={d.step} className="rounded-md border border-amber-200 bg-amber-50/50 p-3">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-[9px] font-black text-amber-600 tabular-nums w-4 text-center">
+                    <span className="text-[10px] font-black text-amber-600 tabular-nums w-4 text-center">
                       {String(STEP_NUMBERS[d.step] || '?').padStart(2, '0')}
                     </span>
                     <ArrowRight className="h-3 w-3 text-amber-400" />
@@ -251,7 +311,7 @@ export default function DownstreamImpactDialog({
                   {transitiveImpacts.map((d) => (
                     <div key={d.step} className="rounded-md border border-gray-200 bg-gray-50 p-2.5">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[9px] font-black text-gray-500 tabular-nums w-4 text-center">
+                        <span className="text-[10px] font-black text-gray-500 tabular-nums w-4 text-center">
                           {String(STEP_NUMBERS[d.step] || '?').padStart(2, '0')}
                         </span>
                         <ArrowRight className="h-2.5 w-2.5 text-gray-400" />
