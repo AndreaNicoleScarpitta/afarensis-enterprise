@@ -9,14 +9,12 @@ Critical for submissions using R or Python (non-SAS).
 """
 
 from docx import Document
-from docx.shared import Inches, Pt, RGBColor
+from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
-import io
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 import logging
 
 logger = logging.getLogger(__name__)
@@ -373,10 +371,10 @@ class ADRGGenerator:
             "analysis environment with all dependencies locked to exact versions."
         )
         steps_docker = [
-            ("Step 1", f"Pull the Docker image:\n"
-             f"    docker pull afarensis/xy301:v1.0"),
+            ("Step 1", "Pull the Docker image:\n"
+             "    docker pull afarensis/xy301:v1.0"),
             ("Step 2", "Run the container:\n"
-             f"    docker run -v /path/to/data:/data afarensis/xy301:v1.0"),
+             "    docker run -v /path/to/data:/data afarensis/xy301:v1.0"),
             ("Step 3", "Outputs are written to /data/output/ inside the container."),
         ]
         for step_label, step_text in steps_docker:

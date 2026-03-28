@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import {
   Search, Filter, Download, Eye, Flag, CheckCircle,
   AlertTriangle, XCircle, FileText, Users, Calendar,
-  BarChart3, Brain, Target, Shield, Loader2, Star
+  Brain, Loader2
 } from 'lucide-react'
 import { useEvidenceList, useEvidenceMutations } from '../services/hooks'
 import type { EvidenceStatus } from '../services/apiClient'

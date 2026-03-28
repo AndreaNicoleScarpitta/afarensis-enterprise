@@ -52,7 +52,7 @@ const PHASE_STATUS_BADGE: Record<string, { color: string; icon: React.ReactNode;
 
 function PhaseSection({ name, phase }: { name: string; phase: any }) {
   const [expanded, setExpanded] = useState(phase.status === 'FAIL')
-  const badge = PHASE_STATUS_BADGE[phase.status] || PHASE_STATUS_BADGE['INFO']
+  const badge = PHASE_STATUS_BADGE[phase.status] ?? PHASE_STATUS_BADGE['INFO']!
 
   return (
     <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -79,7 +79,7 @@ function PhaseSection({ name, phase }: { name: string; phase: any }) {
             <div className="space-y-2 mt-2">
               {phase.findings.map((finding: any, i: number) => {
                 const severity = finding.severity || 'INFO'
-                const style = SEVERITY_STYLES[severity] || SEVERITY_STYLES['INFO']
+                const style = SEVERITY_STYLES[severity] ?? SEVERITY_STYLES['INFO']!
 
                 return (
                   <div key={i} className={cn('border rounded-md p-3', style.bg)}>

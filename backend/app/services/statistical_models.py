@@ -360,7 +360,7 @@ class StatisticalAnalysisService:
         var_names: List[str],
     ) -> Dict:
         """Simplified Schoenfeld test for proportional hazards assumption."""
-        n = len(times)
+        len(times)
         p = X.shape[1]
         exp_eta = np.exp(X @ beta)
         event_idx = np.where(events == 1)[0]
@@ -1039,7 +1039,7 @@ class StatisticalAnalysisService:
         n = len(time_to_event)
         X = treatment.reshape(-1, 1).astype(float)
         order = np.argsort(time_to_event)
-        t = time_to_event[order]
+        time_to_event[order]
         d = event_indicator[order].astype(float)
         X_s = X[order]
         w = weights[order]
@@ -1785,9 +1785,12 @@ class StatisticalAnalysisService:
             col_check["pass"] = True
         else:
             missing = []
-            if not arm_col: missing.append("treatment arm")
-            if not time_col: missing.append("time-to-event")
-            if not event_col: missing.append("event indicator")
+            if not arm_col:
+                missing.append("treatment arm")
+            if not time_col:
+                missing.append("time-to-event")
+            if not event_col:
+                missing.append("event indicator")
             col_check["pass"] = False
             col_check["reason"] = f"Missing columns: {', '.join(missing)}"
         checks.append(col_check)
@@ -1822,7 +1825,7 @@ class StatisticalAnalysisService:
 
         # Binary treatment assignment
         str_groups = sorted([str(g) for g in groups])
-        control_label, treated_label = str_groups[0], str_groups[-1]
+        control_label, _treated_label = str_groups[0], str_groups[-1]
         treatment = np.where(df[arm_col].astype(str) == control_label, 0.0, 1.0)
         n_control = int((treatment == 0).sum())
         n_treated = int((treatment == 1).sum())
@@ -2376,7 +2379,7 @@ class StatisticalAnalysisService:
                 # Shift time for missing/censored subjects by delta factor
                 shift_mask = any_missing
                 if shift_mask.any():
-                    median_time = np.median(time[~any_missing]) if (~any_missing).any() else np.median(time)
+                    np.median(time[~any_missing]) if (~any_missing).any() else np.median(time)
                     # Apply delta as a multiplicative shift on survival time
                     shift_factor = np.exp(delta)
                     time_mod[shift_mask] = time[shift_mask] * shift_factor
@@ -2494,7 +2497,7 @@ class StatisticalAnalysisService:
                 X_fixed = np.column_stack([treat_numeric, time_numeric, interaction])
                 fixed_names = ["treatment", "time", "treatment_x_time"]
 
-            p = X_fixed.shape[1]
+            X_fixed.shape[1]
 
             # Try statsmodels MixedLM
             try:
@@ -2512,11 +2515,11 @@ class StatisticalAnalysisService:
                 if covariates is not None and covariates.ndim == 2:
                     for i in range(covariates.shape[1]):
                         df[f"cov_{i}"] = covariates[:, i]
-                    formula_vars = "treatment + time + interaction + " + " + ".join(
+                    "treatment + time + interaction + " + " + ".join(
                         [f"cov_{i}" for i in range(covariates.shape[1])]
                     )
                 else:
-                    formula_vars = "treatment + time + interaction"
+                    pass
 
                 # Fit mixed model with subject random intercept
                 exog_cols = ["treatment", "time", "interaction"]
@@ -2977,7 +2980,7 @@ class StatisticalAnalysisService:
             order = np.argsort(t_arr)
             t_sorted = t_arr[order]
             ev_sorted = ev_arr[order]
-            n = len(t_sorted)
+            len(t_sorted)
 
             unique_times = np.unique(t_sorted[ev_sorted > 0])
             if len(unique_times) == 0:
@@ -3090,8 +3093,8 @@ class StatisticalAnalysisService:
 
         # Track subjects still "at risk" in subdistribution sense:
         # subjects with competing events stay in the risk set (weighted)
-        n0_orig = mask0.sum()
-        n1_orig = mask1.sum()
+        mask0.sum()
+        mask1.sum()
 
         for tj in all_event_times:
             # Subjects at risk at time tj (not yet experienced target or censored before tj)
@@ -3130,7 +3133,7 @@ class StatisticalAnalysisService:
             "statistic": float(test_stat),
             "p_value": p_value,
             "df": 1,
-            "significant": p_value < (config.significance_alpha if hasattr(self, '_config') else 0.05),
+            "significant": p_value < (self._config.significance_alpha if hasattr(self, '_config') else 0.05),
         }
 
     def compute_fine_gray(
@@ -3211,7 +3214,7 @@ class StatisticalAnalysisService:
         sub_ev_sorted = sub_event[order]
         X_sorted = X[order]
         competing_sorted = competing_mask[order]
-        time_competing = time[competing_mask]
+        time[competing_mask]
 
         # Newton-Raphson on subdistribution partial likelihood
         beta = np.zeros(p)

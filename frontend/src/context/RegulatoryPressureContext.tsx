@@ -76,37 +76,11 @@ export function useRegulatoryPressure(): RegulatoryPressureState {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const SEVERITY_PRIORITY: Record<string, number> = { critical: 3, warning: 2, info: 1 }
-
-function groupSignalsByStep(signals: AttackSignal[]): Record<string, AttackSignal[]> {
-  const grouped: Record<string, AttackSignal[]> = {}
-  for (const signal of signals) {
-    if (!grouped[signal.step]) grouped[signal.step] = []
-    grouped[signal.step]!.push(signal)
-  }
-  return grouped
-}
-
-function computeStepRisk(grouped: Record<string, AttackSignal[]>): Record<string, 'critical' | 'warning' | 'info' | null> {
-  const result: Record<string, 'critical' | 'warning' | 'info' | null> = {}
-  for (const [step, stepSignals] of Object.entries(grouped)) {
-    let maxPriority = 0
-    let maxSeverity: 'critical' | 'warning' | 'info' | null = null
-    for (const s of stepSignals) {
-      const p = SEVERITY_PRIORITY[s.severity] ?? 0
-      if (p > maxPriority) {
-        maxPriority = p
-        maxSeverity = s.severity
-      }
-    }
-    result[step] = maxSeverity
-  }
-  return result
-}
+// Helpers removed — groupSignalsByStep/computeStepRisk now handled by backend response
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-export function RegulatoryPressureProvider({ children, projectId: _projectId }: { children: React.ReactNode; projectId?: string }) {
+export function RegulatoryPressureProvider({ children, projectId: _projectId }: { children: React.ReactNode; projectId?: string | undefined }) {
   const [pressureMode, setPressureMode] = useState(false)
   const [signals, setSignals] = useState<Record<string, AttackSignal[]>>({})
   const [stepRisk, setStepRisk] = useState<Record<string, 'critical' | 'warning' | 'info' | null>>({})
@@ -153,7 +127,12 @@ export function RegulatoryPressureProvider({ children, projectId: _projectId }: 
         `/projects/${projectId}/study/regulatory-confidence`,
         RegulatoryConfidenceResponseSchema
       )
-      const result = applyResponse(data)
+      const safeData = {
+        ...data,
+        signals_by_step: data.signals_by_step ?? {},
+        step_risk: data.step_risk ?? {},
+      }
+      const result = applyResponse(safeData)
       cacheRef.current[projectId] = result
     } catch (err) {
       console.error('[RegulatoryPressure] Failed to fetch signals:', err)

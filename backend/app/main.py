@@ -28,7 +28,7 @@ from app.core.exceptions import setup_exception_handlers
 setup_logging()
 logger = logging.getLogger(__name__)
 
-from app.core.observability import init_sentry
+from app.core.observability import init_sentry  # noqa: E402
 init_sentry()
 
 

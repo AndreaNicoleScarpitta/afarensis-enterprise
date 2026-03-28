@@ -6,7 +6,7 @@ These machine-readable files describe all datasets, variables, codelists,
 and value-level metadata required for FDA data submissions.
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select

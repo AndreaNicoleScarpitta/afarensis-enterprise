@@ -8,7 +8,7 @@ Usage as FastAPI dependency:
 """
 import time
 import logging
-from typing import Optional, Dict, List
+from typing import Dict, List
 from fastapi import Request, HTTPException, status
 
 logger = logging.getLogger(__name__)

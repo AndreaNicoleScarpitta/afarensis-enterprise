@@ -5,8 +5,8 @@ Pydantic models for request/response validation, implementing the complete
 12-layer capability model for regulatory evidence review.
 """
 
-from pydantic import BaseModel, Field, validator
-from typing import List, Dict, Optional, Any, Union
+from pydantic import BaseModel, Field, validator  # noqa: F401
+from typing import List, Dict, Optional, Any, Union  # noqa: F401
 from datetime import datetime
 from enum import Enum
 import uuid
@@ -93,7 +93,7 @@ class UserResponse(UserBase, IdMixin, TimestampMixin):
     is_active: bool
     last_login: Optional[datetime]
     expertise_areas: List[str] = []
-    
+
     class Config:
         from_attributes = True
 
@@ -484,7 +484,7 @@ class EvidenceCritiqueResponse(IdMixin, TimestampMixin):
     identified_risks: List[str] = []
     improvement_suggestions: List[str] = []
     regulatory_concerns: List[str] = []
-    
+
     class Config:
         from_attributes = True
 
@@ -542,7 +542,7 @@ class AuditLogResponse(IdMixin, TimestampMixin):
     ip_address: Optional[str]
     user_agent: Optional[str]
     regulatory_significance: bool = False
-    
+
     class Config:
         from_attributes = True
 

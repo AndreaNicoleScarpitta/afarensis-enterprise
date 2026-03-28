@@ -6,10 +6,9 @@ Supports ADSL (Subject-Level), ADAE (Adverse Events), and ADTTE (Time-to-Event).
 Includes validation against ADaM Implementation Guide rules.
 """
 
-import uuid
 import numpy as np
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import logging

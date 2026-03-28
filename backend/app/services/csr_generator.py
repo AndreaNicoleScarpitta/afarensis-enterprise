@@ -6,14 +6,12 @@ Produces the key statistical sections (11, 12, 14, 16) as DOCX or HTML.
 """
 
 from docx import Document
-from docx.shared import Inches, Pt, RGBColor
+from docx.shared import Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
-import io
 from datetime import datetime
-from typing import Dict, Any, Optional, List
+from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 import logging
 
 logger = logging.getLogger(__name__)
@@ -360,9 +358,9 @@ class CSRGenerator:
         pd = project_data or {}
         st = self._results(pd)
         protocol = self._val(pd, "protocol")
-        title = self._val(pd, "title")
+        self._val(pd, "title")
         sponsor = self._val(pd, "sponsor")
-        primary_endpoint = self._val(pd, "primary_endpoint")
+        self._val(pd, "primary_endpoint")
         stat_method = self._val(pd, "statistical_method")
         covariates = self._val(pd, "covariates", _XY301_DEFAULTS["covariates"])
         now = self._now_str()
@@ -645,8 +643,8 @@ class CSRGenerator:
         self._add_table_from_rows(
             doc,
             ["Category",
-             f"Trial Arm n/N (%)",
-             f"External Control n/N (%)"],
+             "Trial Arm n/N (%)",
+             "External Control n/N (%)"],
             [
                 ["Any TEAE",
                  f"{total_teaes_trial}/{n_trial} ({pct_teae_trial})",

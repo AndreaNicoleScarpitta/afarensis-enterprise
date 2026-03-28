@@ -10,7 +10,7 @@ Used for IDMC/DSMB reporting and adaptive trial monitoring.
 
 import numpy as np
 from scipy import stats
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List
 import logging
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class InterimAnalysisService:
         """
         fracs = np.asarray(information_fractions, dtype=float)
         k = len(fracs)
-        z_alpha = float(stats.norm.ppf(1 - alpha))
+        float(stats.norm.ppf(1 - alpha))
 
         cum_alpha = np.zeros(k)
         for i, t in enumerate(fracs):
@@ -361,8 +361,8 @@ class InterimAnalysisService:
         -------
         dict with re-estimated sample size.
         """
-        z_alpha = float(stats.norm.ppf(1 - alpha))
-        z_beta = float(stats.norm.ppf(target_power))
+        float(stats.norm.ppf(1 - alpha))
+        float(stats.norm.ppf(target_power))
         t = info_fraction
 
         # Current effect estimate (on z-scale per unit info)
@@ -384,7 +384,6 @@ class InterimAnalysisService:
             best_n = original_n
             for mult in np.arange(1.0, 5.01, 0.05):
                 cand_n = int(np.ceil(original_n * mult))
-                t_new = info_fraction  # info fraction stays based on current n vs new total
                 remaining_frac = 1.0 - (t * original_n / cand_n)
                 if remaining_frac <= 0:
                     continue
@@ -622,7 +621,6 @@ class InterimAnalysisService:
         for k in range(1, n_looks + 1):
             stop_dist[f"look_{k}"] = float(stop_looks.count(k) / n_simulations)
 
-        label = "power" if effect_size > 0 else "type1_error"
 
         return {
             "power" if effect_size > 0 else "type1_error": power,

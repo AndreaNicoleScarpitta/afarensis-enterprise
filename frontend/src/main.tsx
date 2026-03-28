@@ -14,7 +14,8 @@ const queryClient = new QueryClient({
       staleTime: 1000 * 60 * 5, // 5 minutes
       retry: (failureCount, error) => {
         // Don't retry on 4xx errors
-        if (error?.response?.status >= 400 && error?.response?.status < 500) {
+        const resp = (error as any)?.response
+        if (resp?.status >= 400 && resp?.status < 500) {
           return false
         }
         return failureCount < 3

@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import type React from 'react'
+import { useState, useEffect } from 'react'
 import { apiClient } from '../services/apiClient'
-import { 
-  BarChart3, 
-  Target, 
-  Users, 
-  Calendar, 
+import {
+  BarChart3,
+  Target,
+  Calendar,
   TrendingUp,
   AlertTriangle,
   CheckCircle,
@@ -114,7 +114,7 @@ const ComparabilityAnalysis: React.FC = () => {
     )
   }
 
-  const selectedResult = results.find(r => r.id === selectedComparison) || results[0]
+  const selectedResult = (results.find(r => r.id === selectedComparison) || results[0])!
 
   return (
     <div className="p-6">

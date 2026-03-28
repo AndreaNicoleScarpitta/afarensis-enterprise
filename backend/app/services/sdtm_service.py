@@ -10,9 +10,8 @@ FDA Validator Rules v1.6.
 """
 
 import numpy as np
-import uuid
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import logging
@@ -479,7 +478,7 @@ class SDTMService:
             dm_result = await SDTMService.create_dm(db, project_id)
             dm_data = dm_result["data"]
 
-        rng = np.random.default_rng(seed=505)
+        np.random.default_rng(seed=505)
 
         variables = [
             {"name": "STUDYID", "label": "Study Identifier", "type": "Char", "length": 12},

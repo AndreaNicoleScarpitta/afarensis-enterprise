@@ -9,7 +9,6 @@ implausible value detection.
 
 import json
 import hashlib
-import re
 from datetime import datetime
 
 

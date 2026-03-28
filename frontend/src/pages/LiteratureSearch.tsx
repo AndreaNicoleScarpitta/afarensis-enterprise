@@ -1,9 +1,10 @@
-import React, { useState, useCallback, useMemo } from 'react'
+import type React from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   Search, BookOpen, Beaker, Globe, Layers,
   ExternalLink, Loader2, Filter,
   BookMarked, Users, Calendar, Quote, AlertCircle,
-  SlidersHorizontal, ArrowUpDown, Link2, ChevronDown,
+  ArrowUpDown, Link2,
 } from 'lucide-react'
 import PaperViewer from '../components/ui/PaperViewer'
 import { apiClient } from '../services/apiClient'
@@ -307,8 +308,6 @@ export default function LiteratureSearch() {
   // Filters
   const [enabledSources, setEnabledSources] = useState<Set<Source>>(new Set(['pubmed', 'clinicaltrials', 'openalex', 'semanticscholar']))
   const [sortMode, setSortMode] = useState<SortMode>('relevance')
-  const [showFilters, setShowFilters] = useState(false)
-
   // Search all sources in parallel
   const search = useCallback(async () => {
     if (!query.trim()) return
@@ -332,7 +331,6 @@ export default function LiteratureSearch() {
   }, [query, maxResults])
 
   const anyLoading = Object.values(loading).some(Boolean)
-  const loadingSources = (Object.entries(loading) as [Source, boolean][]).filter(([, v]) => v).map(([k]) => k)
 
   // Deduplicate + merge across sources
   const mergedResults = useMemo(() => {

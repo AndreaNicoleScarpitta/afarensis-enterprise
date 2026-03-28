@@ -5,12 +5,11 @@ Evidence processing and analysis background tasks
 import uuid
 import asyncio
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from datetime import datetime
 from celery import Celery
 
 from app.core.database import get_async_session
-from app.models import Project, EvidenceRecord, ComparabilityScore, BiasAnalysis
 
 logger = logging.getLogger(__name__)
 
@@ -22,16 +21,16 @@ def evidence_discovery_task(self, project_id: str, search_config: Dict[str, Any]
     """Discover evidence from external sources"""
     try:
         self.update_state(state="PROGRESS", meta={"step": "initializing_search", "progress": 5})
-        
+
         async def discover_evidence():
-            async with get_async_session() as db:
+            async with get_async_session():
                 # Mock evidence discovery from PubMed, ClinicalTrials.gov, etc.
                 search_queries = search_config.get("queries", [])
                 max_results = search_config.get("max_results", 50)
-                
+
                 discovered_evidence = []
                 total_sources = len(search_queries)
-                
+
                 for i, query in enumerate(search_queries):
                     progress = int(((i + 1) / total_sources) * 80) + 10
                     self.update_state(
@@ -42,7 +41,7 @@ def evidence_discovery_task(self, project_id: str, search_config: Dict[str, Any]
                             "current_query": query.get("terms", "")
                         }
                     )
-                    
+
                     # Simulate evidence discovery
                     mock_evidence = [
                         {
@@ -57,19 +56,19 @@ def evidence_discovery_task(self, project_id: str, search_config: Dict[str, Any]
                         }
                         for j in range(min(5, max_results // total_sources))
                     ]
-                    
+
                     discovered_evidence.extend(mock_evidence)
-                    
+
                     # Simulate API delay
                     await asyncio.sleep(0.5)
-                
+
                 return discovered_evidence
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             evidence_list = loop.run_until_complete(discover_evidence())
-            
+
             return {
                 "status": "completed",
                 "project_id": project_id,
@@ -80,7 +79,7 @@ def evidence_discovery_task(self, project_id: str, search_config: Dict[str, Any]
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"Evidence discovery failed: {str(exc)}")
         self.update_state(state="FAILURE", meta={"error": str(exc), "project_id": project_id})
@@ -91,11 +90,11 @@ def evidence_quality_assessment_task(self, evidence_ids: List[str], assessment_c
     """Assess quality of evidence records"""
     try:
         self.update_state(state="PROGRESS", meta={"step": "initializing_assessment", "progress": 0})
-        
+
         async def assess_quality():
             quality_assessments = []
             total_evidence = len(evidence_ids)
-            
+
             for i, evidence_id in enumerate(evidence_ids):
                 progress = int(((i + 1) / total_evidence) * 100)
                 self.update_state(
@@ -105,7 +104,7 @@ def evidence_quality_assessment_task(self, evidence_ids: List[str], assessment_c
                         "progress": progress
                     }
                 )
-                
+
                 # Mock quality assessment
                 quality_assessment = {
                     "evidence_id": evidence_id,
@@ -124,19 +123,19 @@ def evidence_quality_assessment_task(self, evidence_ids: List[str], assessment_c
                     ],
                     "assessment_timestamp": datetime.utcnow().isoformat()
                 }
-                
+
                 quality_assessments.append(quality_assessment)
-                
+
                 # Simulate processing delay
                 await asyncio.sleep(0.1)
-            
+
             return quality_assessments
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             assessments = loop.run_until_complete(assess_quality())
-            
+
             return {
                 "status": "completed",
                 "quality_assessments": assessments,
@@ -146,7 +145,7 @@ def evidence_quality_assessment_task(self, evidence_ids: List[str], assessment_c
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"Evidence quality assessment failed: {str(exc)}")
         self.update_state(state="FAILURE", meta={"error": str(exc)})
@@ -157,13 +156,13 @@ def evidence_synthesis_task(self, evidence_ids: List[str], synthesis_config: Dic
     """Synthesize evidence for regulatory submission"""
     try:
         self.update_state(state="PROGRESS", meta={"step": "preparing_synthesis", "progress": 10})
-        
+
         async def synthesize_evidence():
             # Mock evidence synthesis
             synthesis_method = synthesis_config.get("method", "narrative_synthesis")
-            
+
             self.update_state(state="PROGRESS", meta={"step": "analyzing_evidence_base", "progress": 30})
-            
+
             # Simulate synthesis process
             synthesis_results = {
                 "synthesis_method": synthesis_method,
@@ -198,16 +197,16 @@ def evidence_synthesis_task(self, evidence_ids: List[str], synthesis_config: Dic
                     ]
                 }
             }
-            
+
             return synthesis_results
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             self.update_state(state="PROGRESS", meta={"step": "finalizing_synthesis", "progress": 90})
-            
+
             results = loop.run_until_complete(synthesize_evidence())
-            
+
             return {
                 "status": "completed",
                 "evidence_synthesis": results,
@@ -217,7 +216,7 @@ def evidence_synthesis_task(self, evidence_ids: List[str], synthesis_config: Dic
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"Evidence synthesis failed: {str(exc)}")
         self.update_state(state="FAILURE", meta={"error": str(exc)})
@@ -228,16 +227,16 @@ def regulatory_artifact_generation_task(self, project_id: str, artifact_type: st
     """Generate regulatory artifacts from evidence"""
     try:
         self.update_state(state="PROGRESS", meta={"step": "initializing_generation", "progress": 5})
-        
+
         async def generate_artifact():
             # Mock artifact generation
             self.update_state(state="PROGRESS", meta={"step": "collecting_evidence", "progress": 20})
-            
+
             # Simulate evidence collection for artifact
             await asyncio.sleep(1)
-            
+
             self.update_state(state="PROGRESS", meta={"step": "applying_template", "progress": 50})
-            
+
             # Mock artifact content based on type
             if artifact_type == "clinical_study_report":
                 artifact_content = {
@@ -258,7 +257,7 @@ def regulatory_artifact_generation_task(self, project_id: str, artifact_type: st
                     "title": "Statistical Analysis Plan for Primary Efficacy Analysis",
                     "sections": [
                         "objectives",
-                        "endpoints", 
+                        "endpoints",
                         "analysis_populations",
                         "statistical_methods",
                         "handling_of_missing_data"
@@ -273,9 +272,9 @@ def regulatory_artifact_generation_task(self, project_id: str, artifact_type: st
                     "page_count": 50,
                     "regulatory_section": "5.3.X"
                 }
-            
+
             self.update_state(state="PROGRESS", meta={"step": "formatting_document", "progress": 80})
-            
+
             artifact_metadata = {
                 "artifact_id": str(uuid.uuid4()),
                 "project_id": project_id,
@@ -288,14 +287,14 @@ def regulatory_artifact_generation_task(self, project_id: str, artifact_type: st
                 "regulatory_agency": generation_config.get("agency", "FDA"),
                 "submission_context": generation_config.get("submission_context", "NDA")
             }
-            
+
             return artifact_metadata
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             artifact_data = loop.run_until_complete(generate_artifact())
-            
+
             return {
                 "status": "completed",
                 "artifact_metadata": artifact_data,
@@ -304,7 +303,7 @@ def regulatory_artifact_generation_task(self, project_id: str, artifact_type: st
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"Artifact generation failed: {str(exc)}")
         self.update_state(state="FAILURE", meta={"error": str(exc), "project_id": project_id})
@@ -315,7 +314,7 @@ def evidence_gap_analysis_task(self, project_id: str, target_indication: str, an
     """Identify gaps in evidence for regulatory submission"""
     try:
         self.update_state(state="PROGRESS", meta={"step": "analyzing_current_evidence", "progress": 20})
-        
+
         # Mock evidence gap analysis
         gap_analysis = {
             "current_evidence_strength": {
@@ -335,7 +334,7 @@ def evidence_gap_analysis_task(self, project_id: str, target_indication: str, an
                 {
                     "gap_type": "long_term_safety",
                     "description": "Follow-up duration <2 years in most studies",
-                    "severity": "medium", 
+                    "severity": "medium",
                     "regulatory_impact": "post_market_commitment_likely",
                     "recommended_action": "Extended follow-up protocol or registry study"
                 },
@@ -358,7 +357,7 @@ def evidence_gap_analysis_task(self, project_id: str, target_indication: str, an
                 "mitigation_impact": "significant_risk_reduction"
             }
         }
-        
+
         return {
             "status": "completed",
             "project_id": project_id,
@@ -366,7 +365,7 @@ def evidence_gap_analysis_task(self, project_id: str, target_indication: str, an
             "gap_analysis": gap_analysis,
             "completed_at": datetime.utcnow().isoformat()
         }
-        
+
     except Exception as exc:
         logger.error(f"Evidence gap analysis failed: {str(exc)}")
         self.update_state(state="FAILURE", meta={"error": str(exc), "project_id": project_id})

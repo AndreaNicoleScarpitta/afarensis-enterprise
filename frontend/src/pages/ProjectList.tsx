@@ -1,13 +1,11 @@
-import React, { useState } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Calendar, 
-  Users, 
-  FileText, 
-  BarChart3,
+import {
+  Plus,
+  Search,
+  Filter,
+  FileText,
   Clock,
   CheckCircle,
   AlertCircle,
@@ -17,7 +15,7 @@ import {
 
 // CRITICAL FIX: Use new API hooks and types
 import { useProjects, useProjectMutations } from '../services/hooks'
-import { Project, ProjectStatus } from '../services/apiClient'
+import { ProjectStatus } from '../services/apiClient'
 
 const ProjectList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -108,45 +106,7 @@ const ProjectList: React.FC = () => {
       </div>
     );
   }
-  // Derive projects list from hook data
-  const projects = ((projectsData as any) ?? []) as any[];
-
-
-  const getPriorityBadge = (priority: string) => {
-    const baseClasses = "px-2 py-1 rounded-full text-xs font-medium"
-    switch (priority) {
-      case 'high': return `${baseClasses} bg-red-100 text-red-700`
-      case 'medium': return `${baseClasses} bg-yellow-100 text-yellow-700`
-      case 'low': return `${baseClasses} bg-green-100 text-green-700`
-      default: return `${baseClasses} bg-gray-100 text-gray-700`
-    }
-  }
-
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         project.description.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || project.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-64 mb-6"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="bg-white rounded-lg shadow p-6">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    )
-  }
+  // projects list from hook data used below via projectsData.items
 
   return (
     <div className="space-y-8">
@@ -233,8 +193,8 @@ const ProjectList: React.FC = () => {
                 {/* Header */}
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-2">
-                    {getStatusIcon(project.status)}
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                    {getStatusIcon(project.status as ProjectStatus)}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(project.status as ProjectStatus)}`}>
                       {project.status}
                     </span>
                   </div>
@@ -292,7 +252,7 @@ const ProjectList: React.FC = () => {
       </div>
 
       {/* Pagination */}
-      {projectsData && projectsData.pages > 1 && (
+      {projectsData && (projectsData as any).pages > 1 && (
         <div className="flex items-center justify-between">
           <div className="flex-1 flex justify-between sm:hidden">
             <button
@@ -304,7 +264,7 @@ const ProjectList: React.FC = () => {
             </button>
             <button
               onClick={() => setCurrentPage(currentPage + 1)}
-              disabled={currentPage === projectsData.pages}
+              disabled={currentPage === (projectsData as any).pages}
               className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
             >
               Next
@@ -315,14 +275,14 @@ const ProjectList: React.FC = () => {
               <p className="text-sm text-gray-700">
                 Showing{' '}
                 <span className="font-medium">
-                  {(currentPage - 1) * (projectsData.page_size || 20) + 1}
+                  {(currentPage - 1) * ((projectsData as any).page_size ?? 20) + 1}
                 </span>{' '}
                 to{' '}
                 <span className="font-medium">
-                  {Math.min(currentPage * (projectsData.page_size || 20), projectsData.total)}
+                  {Math.min(currentPage * ((projectsData as any).page_size ?? 20), (projectsData as any).total ?? 0)}
                 </span>{' '}
                 of{' '}
-                <span className="font-medium">{projectsData.total}</span> results
+                <span className="font-medium">{(projectsData as any).total}</span> results
               </p>
             </div>
             <div>
@@ -335,7 +295,7 @@ const ProjectList: React.FC = () => {
                   Previous
                 </button>
                 {/* Page numbers */}
-                {Array.from({ length: Math.min(5, projectsData.pages) }, (_, i) => {
+                {Array.from({ length: Math.min(5, (projectsData as any).pages as number) }, (_, i) => {
                   const pageNum = i + 1;
                   return (
                     <button
@@ -353,7 +313,7 @@ const ProjectList: React.FC = () => {
                 })}
                 <button
                   onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === projectsData.pages}
+                  disabled={currentPage === (projectsData as any).pages}
                   className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                 >
                   Next

@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import { apiClient } from '../services/apiClient'
 import {
   Network, Globe, Share2, CheckCircle, Clock, AlertTriangle,
   Plus, Settings, Shield, Lock, Wifi, WifiOff, BarChart3,
-  RefreshCw, ExternalLink, ArrowRight
+  RefreshCw, ArrowRight
 } from 'lucide-react'
 
 interface NetworkNode {
@@ -183,7 +184,7 @@ const FederatedNetwork: React.FC = () => {
                             {node.type}
                           </span>
                           {node.trust_level === 'verified' && (
-                            <CheckCircle className="w-3.5 h-3.5 text-green-500" title="Verified node" />
+                            <CheckCircle className="w-3.5 h-3.5 text-green-500" />
                           )}
                         </div>
                         <p className="text-xs text-gray-500 mt-0.5">{node.organization}</p>

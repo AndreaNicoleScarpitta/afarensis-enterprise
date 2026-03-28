@@ -12,7 +12,7 @@ Implements 6 phases of validation with ZERO tolerance for:
 If ANY phase fails, modeling is BLOCKED.
 """
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from datetime import datetime
 
 logger = logging.getLogger(__name__)

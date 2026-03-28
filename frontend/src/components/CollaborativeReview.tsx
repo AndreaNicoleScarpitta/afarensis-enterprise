@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   MessageSquare,
@@ -8,14 +8,9 @@ import {
   AlertTriangle,
   User,
   Calendar,
-  Target,
-  ThumbsUp,
-  ThumbsDown,
   Eye,
   Edit3,
   Send,
-  Filter,
-  ArrowRight,
   Badge,
   BarChart3,
   GitBranch,
@@ -23,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useApiRequest } from '../services/hooks';
 import { apiClient } from '../services/apiClient';
+import { z } from 'zod';
 
 interface ReviewAssignment {
   assignment_id: string;
@@ -80,7 +76,7 @@ interface ReviewDecision {
 const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ evidenceId }) => {
   const [assignments, setAssignments] = useState<ReviewAssignment[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [workflowProgress, setWorkflowProgress] = useState<WorkflowProgress | null>(null);
+  const [workflowProgress, _setWorkflowProgress] = useState<WorkflowProgress | null>(null);
   const [activeUsers, setActiveUsers] = useState<UserPresence[]>([]);
   const [newComment, setNewComment] = useState('');
   const [commentType, setCommentType] = useState('general');
@@ -99,15 +95,22 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
   // API hooks
   const { data: assignmentsData, refetch: refetchAssignments } = useApiRequest<{
     assignments: ReviewAssignment[];
-  }>(`/api/v1/review/assignments?evidence_id=${evidenceId}`);
+  }>(
+    () => apiClient.request(`/api/v1/review/assignments?evidence_id=${evidenceId}`, z.object({ assignments: z.array(z.any()) }))
+  );
 
   const { data: commentsData, refetch: refetchComments } = useApiRequest<{
     comment_threads: Comment[];
-  }>(`/api/v1/review/comments/${evidenceId}`);
+  }>(
+    () => apiClient.request(`/api/v1/review/comments/${evidenceId}`, z.object({ comment_threads: z.array(z.any()) }))
+  );
 
   const { data: presenceData } = useApiRequest<{
     active_users: UserPresence[];
-  }>(`/api/v1/review/presence/${evidenceId}`, { refreshInterval: 5000 });
+  }>(
+    () => apiClient.request(`/api/v1/review/presence/${evidenceId}`, z.object({ active_users: z.array(z.any()) })),
+    [evidenceId]
+  );
 
   useEffect(() => {
     if (assignmentsData?.assignments) {
@@ -130,10 +133,11 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
   // Update user presence
   useEffect(() => {
     const updatePresence = () => {
-      apiClient.post(`/api/v1/review/presence/${evidenceId}`, {
-        activity: 'reviewing',
-        cursor_position: null
-      }).catch(console.error);
+      apiClient.request(
+        `/api/v1/review/presence/${evidenceId}`,
+        z.object({}),
+        { method: 'POST', body: JSON.stringify({ activity: 'reviewing', cursor_position: null }) }
+      ).catch(console.error);
     };
 
     updatePresence();
@@ -146,12 +150,19 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
     if (!newComment.trim()) return;
 
     try {
-      await apiClient.post('/api/v1/review/comments', {
-        evidence_id: evidenceId,
-        content: newComment,
-        comment_type: commentType,
-        mentions: []
-      });
+      await apiClient.request(
+        '/api/v1/review/comments',
+        z.object({}),
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            evidence_id: evidenceId,
+            content: newComment,
+            comment_type: commentType,
+            mentions: []
+          })
+        }
+      );
 
       setNewComment('');
       refetchComments();
@@ -164,13 +175,20 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
     if (!selectedAssignment) return;
 
     try {
-      await apiClient.post('/api/v1/review/decisions', {
-        assignment_id: selectedAssignment.assignment_id,
-        decision: reviewDecision.decision,
-        rationale: reviewDecision.rationale,
-        confidence: reviewDecision.confidence,
-        tags: reviewDecision.tags
-      });
+      await apiClient.request(
+        '/api/v1/review/decisions',
+        z.object({}),
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            assignment_id: selectedAssignment.assignment_id,
+            decision: reviewDecision.decision,
+            rationale: reviewDecision.rationale,
+            confidence: reviewDecision.confidence,
+            tags: reviewDecision.tags
+          })
+        }
+      );
 
       setShowDecisionDialog(false);
       setSelectedAssignment(null);
@@ -182,11 +200,18 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
 
   const handleResolveConflicts = async () => {
     try {
-      await apiClient.post('/api/v1/review/conflicts/resolve', {
-        evidence_id: evidenceId,
-        strategy: conflictStrategy,
-        notes: 'Automated conflict resolution'
-      });
+      await apiClient.request(
+        '/api/v1/review/conflicts/resolve',
+        z.object({}),
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            evidence_id: evidenceId,
+            strategy: conflictStrategy,
+            notes: 'Automated conflict resolution'
+          })
+        }
+      );
 
       setShowConflictResolution(false);
       refetchAssignments();

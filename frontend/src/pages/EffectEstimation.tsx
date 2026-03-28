@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import AttackSignalBanner from '../components/AttackSignalBanner'
 import { TrendingUp, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Layers, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react'
@@ -43,7 +43,9 @@ function computeAxisBounds(data: Array<{ lo: number; hi: number }>) {
   }
 }
 
-function ForestRow({ row, xMin, xMax }: { row: typeof FOREST_PLOT_DATA[0]; xMin: number; xMax: number }) {
+interface ForestPlotRow { label: string; est: number; lo: number; hi: number; primary: boolean; note: string | null }
+
+function ForestRow({ row, xMin, xMax }: { row: ForestPlotRow; xMin: number; xMax: number }) {
   const range = xMax - xMin
   const estPct = ((row.est - xMin) / range) * 100
   const loPct  = ((row.lo  - xMin) / range) * 100
@@ -486,7 +488,6 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
           <div className="mt-4 grid grid-cols-3 gap-4 pt-4 border-t border-[#2563EB]/20">
             {(() => {
               const detection = analysisResults?.column_detection || {}
-              const nTreated = detection.groups?.treated ? (analysisResults?.sample_sizes?.n_treated || '—') : '—'
               const nEvents = detection.n_events ?? '—'
               const nAnalyzed = detection.n_records_analyzed ?? '—'
               return [
@@ -593,11 +594,11 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
                   <div key={i} className={`grid grid-cols-4 gap-3 items-center px-4 py-2.5 text-xs border-b border-gray-200/50 hover:bg-gray-100 transition-colors ${row.primary ? 'bg-[#2563EB]/5' : ''}`}>
                     <span className={`${row.primary ? 'font-bold text-gray-900' : 'text-gray-500'} truncate`}>{row.label}</span>
                     <span className="text-right font-mono text-gray-600">{rawPValues[i]?.toFixed(4)}</span>
-                    <span className={`text-right font-mono ${adjustedPValues[i] < alpha ? 'text-emerald-400 font-bold' : 'text-gray-500'}`}>
+                    <span className={`text-right font-mono ${(adjustedPValues[i] ?? 1) < alpha ? 'text-emerald-400 font-bold' : 'text-gray-500'}`}>
                       {adjustedPValues[i]?.toFixed(4)}
                     </span>
                     <span className="text-center">
-                      {adjustedPValues[i] < alpha
+                      {(adjustedPValues[i] ?? 1) < alpha
                         ? <CheckCircle2 className="h-4 w-4 text-emerald-400 mx-auto" />
                         : <span className="text-gray-600 text-sm">&#x2717;</span>
                       }

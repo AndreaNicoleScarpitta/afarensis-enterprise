@@ -3,8 +3,7 @@ Regulatory Confidence Engine
 Generates per-step attack signals and inline warnings from analysis results.
 Runs across all workflow steps, surfacing fragility indicators and challenges.
 """
-import numpy as np
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, asdict
 from typing import List, Dict, Optional, Any
 from enum import Enum
 
@@ -279,7 +278,7 @@ class RegulatoryConfidenceEngine:
 
         # Stability envelope
         stability = attack.get("stability_envelope", {})
-        if stability.get("sign_consistent") == False:
+        if not stability.get("sign_consistent"):
             self.signals.append(AttackSignal(
                 step="effect_estimation", severity="critical",
                 title="Direction of Effect Unstable",

@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as d3 from 'd3'
-import { 
-  Eye, 
-  Filter, 
-  Settings, 
-  Layers, 
-  Search,
+import {
+  Eye,
+  Filter,
+  Layers,
   BarChart3,
   Network,
   ZoomIn,
@@ -14,7 +12,7 @@ import {
   RotateCcw
 } from 'lucide-react'
 
-interface EvidenceNode {
+interface EvidenceNode extends d3.SimulationNodeDatum {
   id: string
   title: string
   type: 'clinical_trial' | 'real_world_evidence' | 'literature' | 'synthetic_control'
@@ -35,7 +33,7 @@ interface EvidenceNode {
   isAnchorCandidate: boolean
 }
 
-interface EvidenceRelationship {
+interface EvidenceRelationship extends d3.SimulationLinkDatum<EvidenceNode> {
   source: string
   target: string
   relationshipType: 'similar_population' | 'shared_endpoint' | 'temporal_overlap' | 'methodological_similarity'
@@ -130,14 +128,14 @@ const EvidenceNetworkVisualization: React.FC<EvidenceNetworkVisualizationProps> 
           a = ((a << 5) - a) + b.charCodeAt(0)
           return a & a
         }, 0)
-        return d3.schemeCategory10[Math.abs(hash) % 10]
+        return d3.schemeCategory10[Math.abs(hash) % 10] || '#666'
       
       case 'quality':
         return d3.interpolateRdYlGn(node.qualityScore)
       
       case 'timeline':
         const yearRange = [2000, 2024]
-        const yearNormalized = (node.studyYear - yearRange[0]) / (yearRange[1] - yearRange[0])
+        const yearNormalized = (node.studyYear - yearRange[0]!) / (yearRange[1]! - yearRange[0]!)
         return d3.interpolateViridis(yearNormalized)
       
       default:
@@ -212,7 +210,7 @@ const EvidenceNetworkVisualization: React.FC<EvidenceNetworkVisualizationProps> 
       )
       .force('charge', d3.forceManyBody().strength(-300))
       .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(d => getNodeSize(d) + 2))
+      .force('collision', d3.forceCollide<EvidenceNode>().radius(d => getNodeSize(d) + 2))
 
     simulationRef.current = simulation
 
@@ -245,7 +243,7 @@ const EvidenceNetworkVisualization: React.FC<EvidenceNetworkVisualizationProps> 
         setSelectedNode(d)
         onNodeSelect(d)
       })
-      .on('mouseover', (event, d) => {
+      .on('mouseover', (_event, d) => {
         setHoveredNode(d)
       })
       .on('mouseout', () => {
@@ -286,10 +284,10 @@ const EvidenceNetworkVisualization: React.FC<EvidenceNetworkVisualizationProps> 
     // Update positions on tick
     simulation.on('tick', () => {
       link
-        .attr('x1', d => (d.source as EvidenceNode).x!)
-        .attr('y1', d => (d.source as EvidenceNode).y!)
-        .attr('x2', d => (d.target as EvidenceNode).x!)
-        .attr('y2', d => (d.target as EvidenceNode).y!)
+        .attr('x1', d => (d.source as unknown as EvidenceNode).x!)
+        .attr('y1', d => (d.source as unknown as EvidenceNode).y!)
+        .attr('x2', d => (d.target as unknown as EvidenceNode).x!)
+        .attr('y2', d => (d.target as unknown as EvidenceNode).y!)
 
       node
         .attr('cx', d => d.x!)

@@ -4,8 +4,8 @@
  * 8-Stage SAR Generation Pipeline
  */
 
-import React, { useState, useEffect } from 'react'
-import { useSARPipeline, useSARMutations } from '../services/hooks'
+import React, { useState } from 'react'
+import { useSARPipeline } from '../services/hooks'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer, ReferenceLine,
@@ -13,15 +13,14 @@ import {
 import {
   CheckCircle2, Loader2, Circle, Database, FlaskConical,
   BarChart3, Target, TrendingUp, GitBranch, Package,
-  FileText, Shield, Download, ChevronRight, AlertTriangle,
-  BookOpen, Search, Users, Activity, Microscope, Brain,
-  ArrowRight, Lock, Sparkles, Info, ExternalLink,
+  FileText, Download, ChevronRight,
+  Search, Users, Activity,
+  ArrowRight, Lock, Sparkles, Info,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
 
@@ -125,7 +124,7 @@ const StageTracker: React.FC<{ stages: Stage[] }> = ({ stages }) => (
             {i < stages.length - 1 && (
               <div className={cn(
                 'h-0.5 w-8 mt-5 flex-shrink-0',
-                stages[i + 1].status !== 'pending' || isComplete ? 'bg-success-300' : 'bg-gray-200'
+                stages[i + 1]?.status !== 'pending' || isComplete ? 'bg-success-300' : 'bg-gray-200'
               )} />
             )}
           </React.Fragment>
@@ -154,12 +153,14 @@ const ForestPlot: React.FC = () => {
     <div className="overflow-x-auto">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[560px] font-sans text-xs select-none">
         {/* Primary analysis shaded band */}
+        {FOREST_ROWS[0] && (
         <rect
           x={toX(FOREST_ROWS[0].lo)} y={topPad}
           width={toX(FOREST_ROWS[0].hi) - toX(FOREST_ROWS[0].lo)}
           height={plotH}
           fill="#3b5ce820" rx={2}
         />
+        )}
 
         {/* Null line */}
         <line x1={nullX} y1={topPad - 6} x2={nullX} y2={topPad + plotH + 4}
@@ -271,7 +272,10 @@ const CausalDAG: React.FC = () => {
 
   // Simple arrow endpoint offset
   const edgePts = (e: { from: number; to: number }) => {
-    const f = nc(nodes[e.from]), t = nc(nodes[e.to])
+    const fromNode = nodes[e.from]
+    const toNode = nodes[e.to]
+    if (!fromNode || !toNode) return { x1: 0, y1: 0, x2: 0, y2: 0 }
+    const f = nc(fromNode), t = nc(toNode)
     const dx = t.cx - f.cx, dy = t.cy - f.cy
     const len = Math.sqrt(dx * dx + dy * dy)
     const ux = dx / len, uy = dy / len
@@ -344,8 +348,6 @@ const SARPipeline: React.FC = () => {
 
   // Real API hooks — falls back gracefully to static STAGES if API returns nothing
   const { data: pipelineData, loading: pipelineLoading, refetch } = useSARPipeline(projectId)
-  const { runStage, loading: stageRunning } = useSARMutations()
-
   // Derive live stages from API data (merge with static icon/label definitions)
   const liveStages: Stage[] = (() => {
     const apiStages: any[] = (pipelineData as any)?.stages ?? []
@@ -358,15 +360,6 @@ const SARPipeline: React.FC = () => {
 
   const completedStages = liveStages.filter(s => s.status === 'complete').length
   const totalProgress = Math.round((completedStages / liveStages.length) * 100)
-
-  const handleRunStage = async (stageName: string) => {
-    try {
-      await runStage(projectId, stageName)
-      refetch()
-    } catch (e) {
-      console.error('Failed to run stage:', e)
-    }
-  }
 
   // Derived summary from API
   const apiSummary = (pipelineData as any)?.summary

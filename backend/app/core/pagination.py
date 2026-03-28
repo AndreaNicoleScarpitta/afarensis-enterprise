@@ -26,9 +26,8 @@ Usage in routes:
         return await paginate_query(query, pagination, db)
 """
 
-from typing import Optional, Any, List
 from fastapi import Query
-from sqlalchemy import select, func
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 

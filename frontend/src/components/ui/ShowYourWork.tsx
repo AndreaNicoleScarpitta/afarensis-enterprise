@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
   X,
   CreditCard,
@@ -10,20 +10,13 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  Lock,
-  Unlock,
-  ArrowDown,
   Hash,
-  FileText,
   User,
   Clock,
   Server,
   Layers,
   BarChart3,
   Shield,
-  Copy,
-  ExternalLink,
-  Loader2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -72,7 +65,6 @@ function extractModelCard(data: any) {
   if (!data) return null
   const cox = data.cox_proportional_hazards || data.weighted_cox || {}
   const detection = data.column_detection || {}
-  const validation = data.pre_analysis_validation || {}
   const ps = data.propensity_scores || {}
 
   return {
@@ -728,7 +720,7 @@ function LineageTab({ data }: { data: any }) {
 // Main component
 // ---------------------------------------------------------------------------
 
-export default function ShowYourWork({ isOpen, onClose, resultId, resultLabel, resultType, analysisData }: ShowYourWorkProps) {
+export default function ShowYourWork({ isOpen, onClose, resultId: _resultId, resultLabel, resultType: _resultType, analysisData }: ShowYourWorkProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('model')
 
   if (!isOpen) return null

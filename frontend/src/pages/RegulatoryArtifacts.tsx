@@ -19,20 +19,16 @@ import {
   Plus,
   CheckCircle,
   Clock,
-  AlertTriangle,
   Shield,
   BarChart3,
   BookOpen,
   Search,
-  Filter,
   RefreshCw,
   X,
-  ChevronDown,
   Loader2,
   Sparkles,
   FileCheck,
   ClipboardList,
-  Microscope,
   Globe,
   Calendar,
   User,
@@ -40,8 +36,6 @@ import {
   Info,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useApiQuery } from '../services/hooks'
-import { z } from 'zod'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -247,7 +241,7 @@ function formatFileSize(bytes?: number) {
 }
 
 function getTypeConfig(type: ArtifactType) {
-  return ARTIFACT_TYPES.find((t) => t.value === type) ?? ARTIFACT_TYPES[0]
+  return ARTIFACT_TYPES.find((t) => t.value === type) ?? ARTIFACT_TYPES[0]!
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -777,7 +771,7 @@ const RegulatoryArtifacts: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [refreshKey, setRefreshKey] = useState(0)
+  const [, setRefreshKey] = useState(0)
 
   // Stats
   const totalArtifacts = localArtifacts.length

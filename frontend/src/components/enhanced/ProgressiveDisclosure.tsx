@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  ChevronDown, 
-  ChevronRight, 
-  Settings, 
-  Eye, 
-  EyeOff, 
-  Info, 
+  ChevronDown,
+  ChevronRight,
+  Settings,
+  Eye,
+  Info,
   BookOpen,
   Zap,
   Brain,
-  Target,
-  BarChart3
+  Target
 } from 'lucide-react'
 
 interface InformationLayer {

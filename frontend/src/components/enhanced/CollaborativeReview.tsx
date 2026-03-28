@@ -1,18 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  MessageCircle, 
-  Users, 
-  Clock, 
-  CheckCircle, 
+import {
+  MessageCircle,
+  Users,
+  CheckCircle,
   AlertTriangle,
-  ThumbsUp,
-  ThumbsDown,
-  MoreHorizontal,
-  Reply,
-  AtSign,
-  Edit3,
-  Eye
+  ThumbsUp
 } from 'lucide-react'
 
 interface User {
@@ -110,7 +103,7 @@ const CollaborativeReview: React.FC<CollaborativeReviewProps> = ({
   const [newComment, setNewComment] = useState('')
   const [mentionUsers, setMentionUsers] = useState<User[]>([])
   const [showMentions, setShowMentions] = useState(false)
-  const [reviewDecision, setReviewDecision] = useState<{
+  const [_reviewDecision, _setReviewDecision] = useState<{
     decision: 'approve' | 'reject' | 'request_more_info'
     confidence: number
     rationale: string
@@ -350,15 +343,15 @@ const CollaborativeReview: React.FC<CollaborativeReviewProps> = ({
 
   const extractMentions = (text: string): string[] => {
     const mentionRegex = /@(\w+)/g
-    const mentions = []
+    const mentions: string[] = []
     let match
     while ((match = mentionRegex.exec(text)) !== null) {
-      mentions.push(match[1])
+      if (match[1]) mentions.push(match[1])
     }
     return mentions
   }
 
-  const generateAISuggestions = async (comment: string, anchorText: string) => {
+  const generateAISuggestions = async (comment: string, _anchorText: string) => {
     // Placeholder for automated suggestion generation
     // In real implementation, this would call the analysis service
     const suggestions = []

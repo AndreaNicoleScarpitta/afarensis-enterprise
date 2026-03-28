@@ -1,26 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Shield, 
-  ShieldAlert, 
-  ShieldCheck, 
-  Eye,
-  Lock,
-  Unlock,
+import {
+  Shield,
+  ShieldCheck,
   AlertTriangle,
   Activity,
-  Globe,
   User,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
   TrendingUp,
-  TrendingDown,
-  Zap,
-  Fingerprint,
-  Smartphone,
-  MapPin,
   Settings
 } from 'lucide-react'
 
@@ -78,7 +64,7 @@ interface ZeroTrustSecurityMonitorProps {
 export const ZeroTrustSecurityMonitor: React.FC<ZeroTrustSecurityMonitorProps> = ({
   className = "",
   onSecurityEvent,
-  onPolicyUpdate
+  onPolicyUpdate: _onPolicyUpdate
 }) => {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'events' | 'policies' | 'users'>('dashboard')
   const [securityEvents, setSecurityEvents] = useState<SecurityEvent[]>([])
@@ -240,9 +226,9 @@ export const ZeroTrustSecurityMonitor: React.FC<ZeroTrustSecurityMonitorProps> =
         const currentIndex = levels.indexOf(prev)
         const change = Math.random() - 0.5
         if (change > 0.3 && currentIndex < levels.length - 1) {
-          return levels[currentIndex + 1]
+          return levels[currentIndex + 1]!
         } else if (change < -0.3 && currentIndex > 0) {
-          return levels[currentIndex - 1]
+          return levels[currentIndex - 1]!
         }
         return prev
       })

@@ -22,7 +22,6 @@ from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
 from datetime import datetime
 import logging
-import copy
 
 logger = logging.getLogger(__name__)
 
@@ -244,7 +243,6 @@ class RegulatoryAttackService:
         """
         n = len(treatment)
         n_bins = self.cfg.positivity_n_bins
-        min_prev = self.cfg.positivity_min_prevalence
         near_thresh = self.cfg.positivity_near_violation_threshold
 
         # --- 1. PS distribution overlap ---
@@ -782,7 +780,7 @@ class RegulatoryAttackService:
         stability = attack_results.get("stability_range", {})
         hr_min = stability.get("hr_min", 1.0)
         hr_max = stability.get("hr_max", 1.0)
-        base_hr = attack_results.get("primary_estimate", {}).get("hr", 1.0)
+        attack_results.get("primary_estimate", {}).get("hr", 1.0)
 
         if hr_min < 1.0 < hr_max:
             failures.append({
@@ -1482,7 +1480,7 @@ class RegulatoryAttackService:
         w = self.cfg.robustness_weights
 
         # S1: stability
-        s_range = stability.get("stability_range", {})
+        stability.get("stability_range", {})
         max_d = stability.get("max_delta", 0.0)
         sign_ok = stability.get("sign_consistent", True)
         if sign_ok and max_d < 0.05:

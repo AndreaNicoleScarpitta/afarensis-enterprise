@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import {
   Activity, Search, Download, Eye, Calendar, User,
   Filter, RefreshCw, Loader2, AlertTriangle, CheckCircle,
-  Shield, FileText, Users, Settings, Trash2, Edit
+  Shield, FileText, Trash2, Edit
 } from 'lucide-react'
 import { useApiQuery } from '../services/hooks'
 import { z } from 'zod'
@@ -55,7 +56,7 @@ const AuditLogs: React.FC = () => {
   const [actionFilter, setActionFilter] = useState('all')
   const [selectedLog, setSelectedLog] = useState<any>(null)
 
-  const { data, loading, error, refetch } = useApiQuery(
+  const { data, loading, refetch } = useApiQuery(
     '/audit/logs?limit=100',
     AuditLogSchema
   )

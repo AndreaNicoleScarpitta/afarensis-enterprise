@@ -4,9 +4,8 @@ Produces regulatory-grade SAR, FDA packets, and evidence tables.
 """
 import os
 import hashlib
-import json
 from datetime import datetime
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional
 
 
 # ---------------------------------------------------------------------------
@@ -787,7 +786,7 @@ the external control arm as a supplementary source of evidence.
 """)
 
         # ---- 11. Appendices ----
-        sections.append(f"""
+        sections.append("""
 <div class="page-break"></div>
 <h2>11. Appendices</h2>
 <h3>Appendix A: Full Evidence Table</h3>
@@ -939,7 +938,7 @@ Full lineage is available via the Afarensis API:
     ) -> bytes:
         """Generate SAR as DOCX using python-docx."""
         from docx import Document
-        from docx.shared import Inches, Pt, Cm, RGBColor
+        from docx.shared import Pt, RGBColor
         from docx.enum.text import WD_ALIGN_PARAGRAPH
         from docx.enum.table import WD_TABLE_ALIGNMENT
         from io import BytesIO
@@ -1230,17 +1229,16 @@ Full lineage is available via the Afarensis API:
         Produces a ~15-section professional document.
         """
         from docx import Document
-        from docx.shared import Inches, Pt, Cm, RGBColor
+        from docx.shared import Pt, RGBColor
         from docx.enum.text import WD_ALIGN_PARAGRAPH
         from docx.enum.table import WD_TABLE_ALIGNMENT
-        from docx.oxml.ns import qn
         from io import BytesIO
 
         # Extract data from project_data or use defaults
         pd = project_data or {}
         study_def = pd.get("study_definition", {})
         covariates = pd.get("covariates", _XY301_PROJECT.get("covariates", []))
-        cohort = pd.get("cohort", {})
+        pd.get("cohort", {})
 
         protocol = study_def.get("protocol", _XY301_PROJECT["protocol"])
         indication = study_def.get("indication", _XY301_PROJECT["indication"])
@@ -1265,7 +1263,7 @@ Full lineage is available via the Afarensis API:
         font.size = Pt(11)
 
         navy = RGBColor(0x1B, 0x2A, 0x4A)
-        white = RGBColor(0xFF, 0xFF, 0xFF)
+        RGBColor(0xFF, 0xFF, 0xFF)
 
         def add_heading_styled(text, level=1):
             h = doc.add_heading(text, level=level)

@@ -13,7 +13,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
+// cn removed — unused
 
 interface CurrentUser {
   id: string
@@ -59,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onMenuToggle, onLogout }) 
   const initials = displayName
     .split(' ')
     .filter(Boolean)
-    .map((n) => n[0])
+    .map((n) => n?.[0] ?? '')
     .join('')
     .toUpperCase()
     .slice(0, 2)
@@ -68,7 +68,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onMenuToggle, onLogout }) 
   const segments = location.pathname.split('/').filter(Boolean)
   const currentPageLabel = pathLabel[location.pathname] ?? (
     segments.length > 0
-      ? segments[segments.length - 1].charAt(0).toUpperCase() + segments[segments.length - 1].slice(1)
+      ? (segments[segments.length - 1] ?? '').charAt(0).toUpperCase() + (segments[segments.length - 1] ?? '').slice(1)
       : 'Overview'
   )
 

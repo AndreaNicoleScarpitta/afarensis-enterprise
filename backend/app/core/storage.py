@@ -22,9 +22,8 @@ Configuration (via .env):
 import os
 import hashlib
 import logging
-import uuid
 from pathlib import Path
-from typing import Optional, BinaryIO
+from typing import Optional
 from datetime import datetime
 
 logger = logging.getLogger(__name__)

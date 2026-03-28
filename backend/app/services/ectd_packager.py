@@ -7,11 +7,10 @@ Generates the directory structure, Study Tagging File (STF), and
 document cross-references required for gateway submission.
 """
 
-import os
 import json
 import hashlib
 from datetime import datetime
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 import logging
@@ -82,7 +81,7 @@ class ECTDPackager:
                 ParsedSpecification.project_id == project_id
             )
         )
-        specifications = specs_result.scalars().all()
+        specs_result.scalars().all()
 
         # ---- Build project metadata ----
         project_data = {
@@ -236,7 +235,7 @@ class ECTDPackager:
         errors: List[str] = []
         warnings: List[str] = []
         documents = package.get("documents", [])
-        directory = package.get("directory_structure", {})
+        package.get("directory_structure", {})
         stf = package.get("study_tagging_file", "")
 
         # 1. Required sections present

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import AttackSignalBanner from '../components/AttackSignalBanner'
 import { Users2, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, X, Loader2, AlertCircle, Users } from 'lucide-react'
@@ -54,7 +54,7 @@ interface Props {
 // ]
 
 export default function CohortConstruction({ selectedStudy, protocolLocked, reviewerMode }: Props) {
-  const { data: cohortData, loading, error, saving, save, refetch, runComputation } = useStudyData(selectedStudy?.id, 'cohort')
+  const { data: cohortData, loading, error, saving, save, refetch } = useStudyData(selectedStudy?.id, 'cohort')
   const staleness = useStalenessCheck(selectedStudy?.id, 'cohort')
 
   const [inclusion, setInclusion] = useState<string[]>([])
@@ -150,11 +150,6 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
   const safeExclusion = Array.isArray(exclusion) ? exclusion : []
   const safeFunnel = Array.isArray(funnel) ? funnel : []
   const safeWeightingMethods = Array.isArray(weightingMethods) ? weightingMethods : []
-
-  const handleRunCohort = async () => {
-    const result = await runComputation('cohort/run', { inclusion, exclusion })
-    if (result?.funnel) setFunnel(result.funnel)
-  }
 
   const formatN = (n: number | undefined | null) => n != null ? n.toLocaleString() : '—'
 

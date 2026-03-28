@@ -10,8 +10,8 @@ Uses scipy.stats for distributions and numerical integration.
 """
 
 import numpy as np
-from scipy import stats, integrate
-from typing import Dict, List, Any, Optional, Tuple
+from scipy import stats
+from typing import Dict, Any, Optional
 import logging
 
 logger = logging.getLogger(__name__)
@@ -295,8 +295,8 @@ class BayesianAnalysisService:
         """
         historical_data = np.asarray(historical_data, dtype=float)
         n_hist = len(historical_data)
-        mu_hist = float(np.mean(historical_data))
-        sd_hist = float(np.std(historical_data, ddof=1)) if n_hist > 1 else 1.0
+        float(np.mean(historical_data))
+        float(np.std(historical_data, ddof=1)) if n_hist > 1 else 1.0
 
         try:
             if method == "power_prior":

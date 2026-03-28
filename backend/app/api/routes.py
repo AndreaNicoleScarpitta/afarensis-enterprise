@@ -6,7 +6,7 @@ with proper authentication, validation, and error handling.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, Request, BackgroundTasks, WebSocket, Body
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
@@ -15,19 +15,13 @@ import uuid
 from datetime import datetime, timedelta
 
 import logging
-
-logger = logging.getLogger(__name__)
-
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 from app.core.rate_limiter import rate_limit
 from app.core.pagination import PaginationParams, paginate_query
-from app.models import User, UserRole, Project, ProjectStatus, Organization
+from app.models import User, Project, ProjectStatus, Organization
 from app.schemas import (
-    ProjectCreateRequest, ProjectResponse, ProjectDetailResponse,
-    EvidenceRecordResponse, ReviewDecisionRequest, ReviewDecisionResponse,
-    ComparabilityScoreResponse, BiasAnalysisResponse,
-    RegulatoryArtifactResponse, UserResponse, HealthResponse,
+    ProjectCreateRequest, ReviewDecisionRequest, HealthResponse,
     ForgotPasswordRequest, VerifyResetCodeRequest, ResetPasswordRequest,
     RefreshTokenRequest, SemanticSearchRequest, HybridSearchRequest,
     SaveSearchRequest, CitationNetworkRequest, ReviewWorkflowRequest,
@@ -38,13 +32,14 @@ from app.schemas import (
     InviteUserRequest, UpdateUserRoleRequest,
 )
 from app.services import (
-    ProjectService, EvidenceService, ReviewService, 
-    ComparabilityService, BiasAnalysisService, 
-    RegulatoryArtifactService, AuditService
+    BiasAnalysisService
 )
 from app.services.enhanced_ai import EnhancedAIService
 from app.services.enhanced_security import ZeroTrustSecurityService
 from app.services.intelligent_workflow import IntelligentWorkflowService
+from pydantic import BaseModel as _BaseModel
+
+logger = logging.getLogger(__name__)
 
 # Main API router
 api_router = APIRouter()
@@ -111,11 +106,11 @@ async def _get_active_patient_data(project_id: str, db: AsyncSession) -> Optiona
 async def health_check():
     """System health check"""
     from app.core.database import check_db_health, get_database_stats, get_pool_status
-    
+
     db_healthy = await check_db_health()
     db_stats = await get_database_stats()
     pool_status = await get_pool_status()
-    
+
     return HealthResponse(
         status="healthy" if db_healthy else "degraded",
         timestamp=datetime.utcnow(),
@@ -131,7 +126,6 @@ async def health_check():
 # AUTHENTICATION ENDPOINTS
 # ============================================================================
 
-from pydantic import BaseModel as _BaseModel
 
 class LoginRequest(_BaseModel):
     email: str
@@ -149,7 +143,6 @@ async def login(request: LoginRequest, db: AsyncSession = Depends(get_db), _=Dep
     from sqlalchemy import select as sa_select, func as sa_func
     from app.core.security import verify_password_async, create_access_token, create_refresh_token, get_password_hash_async, Roles
     from app.models import UserRole as UserRoleEnum
-    from datetime import timedelta
 
     # Look up user by email
     stmt = sa_select(User).where(User.email == request.email)
@@ -275,7 +268,7 @@ async def revoke_all_sessions(current_user=Depends(get_current_user), db: AsyncS
     result = await db.execute(
         sa_update(SessionToken).where(
             SessionToken.user_id == current_user.user_id,
-            SessionToken.is_revoked == False,
+            not SessionToken.is_revoked,
         ).values(is_revoked=True)
     )
     await db.commit()
@@ -297,7 +290,8 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
       - 2-minute cooldown between requests (prevents spam/abuse).
       - Email is always sent when user exists.
     """
-    import secrets as _secrets, hashlib as _hashlib
+    import secrets as _secrets
+    import hashlib as _hashlib
     from sqlalchemy import select as sa_select, delete as sa_delete
     from app.models import User as UserModel, SessionToken
     from app.services.email_service import email_service
@@ -399,7 +393,7 @@ async def verify_reset_code(body: VerifyResetCodeRequest, db: AsyncSession = Dep
         sa_select(SessionToken).where(
             SessionToken.user_id == str(user.id),
             SessionToken.token_type == "reset",
-            SessionToken.is_revoked == False,
+            not SessionToken.is_revoked,
         )
     )
     entry = tok_result.scalar_one_or_none()
@@ -450,7 +444,7 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
             SessionToken.user_id == str(user.id),
             SessionToken.token_type == "reset",
             SessionToken.token_hash == token_hash,
-            SessionToken.is_revoked == False,
+            not SessionToken.is_revoked,
         )
     )
     entry = tok_result.scalar_one_or_none()
@@ -499,7 +493,8 @@ async def refresh_token_endpoint(body: RefreshTokenRequest, db: AsyncSession = D
     refresh token is reused (indicating potential theft), ALL of the user's
     refresh tokens are invalidated, forcing re-authentication everywhere.
     """
-    import hashlib as _hashlib, uuid as _uuid
+    import hashlib as _hashlib
+    import uuid as _uuid
     from sqlalchemy import select as sa_select, update as sa_update
     from app.core.security import verify_token, create_access_token, create_refresh_token, Roles
     from app.models import SessionToken
@@ -614,7 +609,10 @@ class ResendVerificationRequest(_BaseModel):
 @api_router.post("/auth/register")
 async def register(body: RegisterRequest, request: Request, db: AsyncSession = Depends(get_db), _=Depends(rate_limit(max_requests=5, window_seconds=900))):
     """Self-register a new account. Sends a verification email."""
-    import re, secrets as _secrets, hashlib as _hashlib, uuid as _uuid
+    import re
+    import secrets as _secrets
+    import hashlib as _hashlib
+    import uuid as _uuid
     from sqlalchemy import select as sa_select
     from app.core.security import get_password_hash_async, verify_password_strength
     from app.models import UserRole as UserRoleEnum, Organization, AuditLog, EmailVerificationToken
@@ -733,7 +731,7 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
         sa_select(EmailVerificationToken).where(
             EmailVerificationToken.user_id == str(user.id),
             EmailVerificationToken.token_hash == token_hash,
-            EmailVerificationToken.used == False,
+            not EmailVerificationToken.used,
         )
     )
     entry = tok_result.scalar_one_or_none()
@@ -755,7 +753,9 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
 @api_router.post("/auth/resend-verification")
 async def resend_verification(body: ResendVerificationRequest, request: Request, db: AsyncSession = Depends(get_db), _=Depends(rate_limit(max_requests=10, window_seconds=60))):
     """Resend the email verification link."""
-    import secrets as _secrets, hashlib as _hashlib, uuid as _uuid
+    import secrets as _secrets
+    import hashlib as _hashlib
+    import uuid as _uuid
     from sqlalchemy import select as sa_select, delete as sa_delete
     from app.models import EmailVerificationToken
     from app.services.email_service import email_service
@@ -891,7 +891,6 @@ async def create_project(
     _=Depends(rate_limit(max_requests=20, window_seconds=60))
 ):
     """Create a new evidence review project"""
-    from sqlalchemy import select as sa_select
     import uuid as _uuid
 
     # Merge phase and agency into processing_config
@@ -1035,7 +1034,6 @@ async def get_project(
     """Get detailed project information"""
     from app.core.cache import cache
     from sqlalchemy import select as sa_select, func as sa_func
-    from sqlalchemy.orm import selectinload
     from app.models import EvidenceRecord, ReviewDecision, ParsedSpecification
 
     # Check cache first (120s TTL)
@@ -1272,7 +1270,7 @@ async def generate_project_dag(
     from sqlalchemy import select as sa_select
     from app.models import ParsedSpecification
 
-    project = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
 
     # Try to find a parsed spec
     spec_result = await db.execute(
@@ -1999,7 +1997,7 @@ async def generate_regulatory_artifact(
     _=Depends(rate_limit(max_requests=10, window_seconds=60))
 ):
     """Generate regulatory submission artifact with real content"""
-    from app.models import RegulatoryArtifact, EvidenceRecord, ComparabilityScore, BiasAnalysis, Project
+    from app.models import RegulatoryArtifact, EvidenceRecord, ComparabilityScore, BiasAnalysis
     from app.services.document_generator import DocumentGenerator
     from sqlalchemy import select as sa_select
     import uuid as _uuid
@@ -2623,7 +2621,7 @@ async def get_analytics_dashboard(
     """Get analytics dashboard data with real counts from the database"""
     from app.core.cache import cache
     from sqlalchemy import select as sa_select, func as sa_func
-    from app.models import EvidenceRecord, ReviewDecision, AuditLog
+    from app.models import EvidenceRecord, ReviewDecision
 
     # Build org filter conditions
     org_id = current_user.org_id if hasattr(current_user, 'org_id') else None
@@ -3133,9 +3131,9 @@ async def get_workflow_progress(
 ):
     """Get progress of a review workflow"""
     from app.services.collaborative_review import CollaborativeReviewService
-    
+
     review_service = CollaborativeReviewService(db, {"user_id": str(current_user.id)})
-    
+
     progress = await review_service.get_workflow_progress(workflow_id)
 
     return progress.__dict__
@@ -3145,15 +3143,14 @@ async def get_workflow_progress(
 # SEMANTIC SCHOLAR SEARCH ENDPOINTS
 # ============================================================================
 
-from pydantic import BaseModel as _BaseModel2
 
-class RareDiseaseSearchRequest(_BaseModel2):
+class RareDiseaseSearchRequest(_BaseModel):
     disease_name: str
     intervention: str = ""
     limit: int = 20
     year_from: int = 2010
 
-class SemanticScholarRecommendationsRequest(_BaseModel2):
+class SemanticScholarRecommendationsRequest(_BaseModel):
     positive_paper_ids: list
     limit: int = 10
 
@@ -3299,14 +3296,14 @@ async def search_rare_disease_evidence(
 # SAR PIPELINE ENDPOINTS
 # ============================================================================
 
-class SARInitRequest(_BaseModel2):
+class SARInitRequest(_BaseModel):
     project_id: str
     treatment_source: str
     control_source: str
     primary_endpoint: str
     analysis_type: str = "ATT"
 
-class SARStageRequest(_BaseModel2):
+class SARStageRequest(_BaseModel):
     stage: str
     config: dict = {}
 
@@ -3352,13 +3349,12 @@ async def get_sar_pipeline_status(
     """Get SAR pipeline status for a project, populated from processing_config"""
     from sqlalchemy import select as sa_select, func as sa_func
     from app.models import EvidenceRecord
-    from datetime import datetime as _dt
 
     project = await get_project_with_org_check(project_id, current_user, db)
 
     config = project.processing_config or {}
     study_def = config.get("study_definition", {})
-    cohort = config.get("cohort", {})
+    config.get("cohort", {})
     balance = config.get("balance", {})
     results_cache = config.get("results", {})
 
@@ -3467,7 +3463,7 @@ async def get_sar_results(
 
     config = project.processing_config or {}
     results_cache = config.get("results", {})
-    balance = config.get("balance", {})
+    config.get("balance", {})
     study_def = config.get("study_definition", {})
 
     # Run statistical analysis for live numbers — prefer real patient data
@@ -3602,7 +3598,8 @@ async def save_study_definition(
 ):
     """Save or update the study definition section in processing_config."""
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
     section_data = body.model_dump(exclude_none=True)
@@ -3847,6 +3844,33 @@ async def parse_document_for_study_definition(
     }
 
 
+# ── 3c. POST compile-definition → validate, fill gaps, normalize ─────────────
+
+@api_router.post("/projects/{project_id}/study/compile-definition")
+async def compile_study_definition(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Run the Study Definition Compiler — validates, fills gaps, and normalizes."""
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+    study_def = config.get("study_definition", {})
+
+    from app.services.study_compiler import StudyDefinitionCompiler
+    compiler = StudyDefinitionCompiler()
+    result = await compiler.compile(study_def, project_name=getattr(project, 'title', '') or "")
+
+    # Store the compilation result
+    config["compiled_definition"] = compiler.to_dict(result)
+    project.processing_config = config
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(project, "processing_config")
+    await db.commit()
+
+    return compiler.to_dict(result)
+
+
 # ── Causal Specification — the scientific backbone ───────────────────────────
 
 @api_router.get("/projects/{project_id}/study/causal-specification")
@@ -4069,6 +4093,7 @@ async def run_competing_risks_analysis(
       target_event (int): which event type is the primary (default: 1)
       event_type_column (str): column name for event type codes
     """
+    import numpy as np
     from app.services.statistical_models import StatisticalAnalysisService, AnalysisConfig
     from sqlalchemy import select as sa_select
     from app.models import PatientDataset
@@ -4303,7 +4328,7 @@ async def list_execution_runs(
 ):
     """List unique analysis runs for a project with summary stats."""
     from app.models import ExecutionEvent
-    from sqlalchemy import select as sa_select, func as sa_func, distinct
+    from sqlalchemy import select as sa_select
 
     await get_project_with_org_check(project_id, current_user, db)
 
@@ -4438,7 +4463,8 @@ async def save_study_covariates(
 ):
     """Save or update the covariates section in processing_config."""
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
     section_data = body.model_dump(exclude_none=True)
@@ -4486,7 +4512,8 @@ async def save_study_data_sources(
 ):
     """Save or update the data sources section in processing_config."""
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
     section_data = body.model_dump(exclude_none=True)
@@ -4534,7 +4561,8 @@ async def save_study_cohort(
 ):
     """Save or update the cohort section in processing_config."""
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
     section_data = body.model_dump(exclude_none=True)
@@ -4600,7 +4628,8 @@ async def run_cohort_attrition(
 
     # Store result back
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     cohort["funnel"] = funnel
     config["cohort"] = cohort
     # Staleness tracking metadata
@@ -4715,7 +4744,8 @@ async def compute_study_balance(
                 }
                 config["balance"] = balance_result
                 # Staleness tracking metadata
-                import hashlib as _hl_b, json as _json_b
+                import hashlib as _hl_b
+                import json as _json_b
                 content_hash = _hl_b.sha256(_json_b.dumps(balance_result, sort_keys=True, default=str).encode()).hexdigest()
                 old_meta = config.get("balance_meta", {})
                 config["balance_meta"] = {
@@ -4771,7 +4801,8 @@ async def compute_study_balance(
         }
         config["balance"] = balance_result
         # Staleness tracking metadata
-        import hashlib as _hl_b2, json as _json_b2
+        import hashlib as _hl_b2
+        import json as _json_b2
         content_hash = _hl_b2.sha256(_json_b2.dumps(balance_result, sort_keys=True, default=str).encode()).hexdigest()
         old_meta = config.get("balance_meta", {})
         config["balance_meta"] = {
@@ -4873,7 +4904,8 @@ async def get_study_forest_plot(
         ]
         config["results"] = cached
         # Staleness tracking metadata for effect_estimation
-        import hashlib as _hl_ee, json as _json_ee
+        import hashlib as _hl_ee
+        import json as _json_ee
         from sqlalchemy.orm.attributes import flag_modified
         content_hash = _hl_ee.sha256(_json_ee.dumps(cached, sort_keys=True, default=str).encode()).hexdigest()
         old_meta = config.get("effect_estimation_meta", {})
@@ -4903,10 +4935,10 @@ async def get_study_bias(
     db: AsyncSession = Depends(get_db),
 ):
     """Get bias analysis results for the study."""
-    from sqlalchemy import select as sa_select, and_
+    from sqlalchemy import select as sa_select
     from app.models import BiasAnalysis, ComparabilityScore, EvidenceRecord
 
-    project = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
 
     # Check for existing bias analyses in DB
     ev_query = sa_select(EvidenceRecord.id).where(EvidenceRecord.project_id == str(project_id))
@@ -5014,7 +5046,8 @@ async def run_study_bias_analysis(
 
     # Store in processing_config
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     config = dict(project.processing_config or {})
     config["bias"] = bias_result
     # Staleness tracking metadata
@@ -5061,7 +5094,8 @@ async def save_study_reproducibility(
 ):
     """Save or update the reproducibility section in processing_config."""
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
     section_data = body.model_dump(exclude_none=True)
@@ -5096,7 +5130,8 @@ async def save_study_balance(
 ):
     """Save or update the balance section in processing_config."""
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
     config["balance"] = body
@@ -5127,7 +5162,8 @@ async def save_study_effect_estimation(
 ):
     """Save or update the effect estimation / results section in processing_config."""
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
     config["results"] = body
@@ -5158,7 +5194,8 @@ async def save_study_bias(
 ):
     """Save or update the bias section in processing_config."""
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
     config["bias"] = body
@@ -5189,7 +5226,8 @@ async def save_study_regulatory(
 ):
     """Save or update the regulatory section in processing_config."""
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
     config["regulatory"] = body
@@ -5525,7 +5563,6 @@ async def download_study_regulatory_artifact(
     """Download a generated regulatory artifact by its ID."""
     from sqlalchemy import select as sa_select
     from app.models import RegulatoryArtifact
-    from fastapi.responses import HTMLResponse
 
     result = await db.execute(
         sa_select(RegulatoryArtifact).where(RegulatoryArtifact.id == str(artifact_id))
@@ -5578,20 +5615,22 @@ async def generate_sap_document(project_id: str, format: str = Query("docx"),
     try:
         if format == "html":
             content = gen.generate_statistical_analysis_plan_html(pdata)
-            fpath, fsize, a_fmt, checksum = None, len(content), "html", None
+            fpath, fsize, a_fmt, _checksum = None, len(content), "html", None
         else:
             cbytes = gen.generate_sap_docx(pdata)
             saved = gen.save_artifact(cbytes, f"SAP_{project_id}", "docx")
             content, fsize, a_fmt = None, len(cbytes), "docx"
             fpath = saved["file_path"]
-            checksum = saved.get("checksum")
+            saved.get("checksum")
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"SAP generation failed: {str(exc)}")
     art = RegulatoryArtifact(id=str(uuid.uuid4()), project_id=project_id, artifact_type="statistical_analysis_plan",
                               title=f"SAP — {project.title}", format=a_fmt, content=content, file_path=fpath,
                               file_size=fsize, generated_at=datetime.utcnow(), generated_by=getattr(current_user, "user_id", "") or getattr(current_user, "id", ""),
                               regulatory_agency="FDA")
-    db.add(art); await db.commit(); await db.refresh(art)
+    db.add(art)
+    await db.commit()
+    await db.refresh(art)
     return {"id": art.id, "artifact_type": art.artifact_type, "format": a_fmt, "title": art.title,
             "file_size": fsize, "generated_at": art.generated_at.isoformat()}
 
@@ -5714,7 +5753,8 @@ async def lock_comparability_protocol(
     db: AsyncSession = Depends(get_db),
 ):
     """Lock the comparability protocol. Irreversible. Computes SHA-256 hash."""
-    import hashlib, json as _json
+    import hashlib
+    import json as _json
     from sqlalchemy import select as sa_select
     from app.models import ComparabilityProtocol
     await get_project_with_org_check(project_id, current_user, db)
@@ -5842,7 +5882,9 @@ async def export_evidence_package(
     ADaM metadata, feasibility assessment, audit trail, and dataset metadata.
     Returns a JSON evidence bundle with per-artifact hashes and a master manifest hash.
     """
-    import json as _json, hashlib, uuid as _uuid
+    import json as _json
+    import hashlib
+    import uuid as _uuid
     from sqlalchemy import text as sa_text
 
     project = await get_project_with_org_check(project_id, current_user, db)
@@ -6088,8 +6130,10 @@ async def gen_all_tfls_ep(project_id: str, current_user=Depends(get_current_user
 @api_router.post("/projects/{project_id}/adam/generate/{dataset_type}")
 async def gen_adam(project_id: str, dataset_type: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Generate a CDISC ADaM dataset (adsl, adae, adtte)."""
-    from app.services.adam_service import AdamService; from app.models import AdamDataset
-    if dataset_type not in ("adsl", "adae", "adtte"): raise HTTPException(400, f"Invalid: {dataset_type}")
+    from app.services.adam_service import AdamService
+    from app.models import AdamDataset
+    if dataset_type not in ("adsl", "adae", "adtte"):
+        raise HTTPException(400, f"Invalid: {dataset_type}")
     svc = AdamService()
     patient_data = await _get_active_patient_data(project_id, db)
     fn = {"adsl": svc.create_adsl, "adae": svc.create_adae, "adtte": svc.create_adtte}[dataset_type]
@@ -6098,14 +6142,17 @@ async def gen_adam(project_id: str, dataset_type: str, current_user=Depends(get_
                      dataset_label=result.get("label", ""), structure=result.get("structure", ""),
                      variables=result.get("variables", []), records_count=result.get("records_count", 0),
                      data_content=(result.get("data", []) or [])[:100], validation_status="pending", created_at=datetime.utcnow())
-    db.add(ds); await db.commit(); await db.refresh(ds)
+    db.add(ds)
+    await db.commit()
+    await db.refresh(ds)
     return {"id": ds.id, "dataset_name": ds.dataset_name, "records_count": ds.records_count,
             "variables_count": len(ds.variables or []), "created_at": ds.created_at.isoformat()}
 
 @api_router.get("/projects/{project_id}/adam/datasets")
 async def list_adam_ep(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """List generated ADaM datasets."""
-    from sqlalchemy import select as s; from app.models import AdamDataset
+    from sqlalchemy import select as s
+    from app.models import AdamDataset
     r = await db.execute(s(AdamDataset).where(AdamDataset.project_id == project_id))
     return [{"id": d.id, "dataset_name": d.dataset_name, "dataset_label": d.dataset_label,
              "records_count": d.records_count, "variables_count": len(d.variables or []),
@@ -6115,12 +6162,18 @@ async def list_adam_ep(project_id: str, current_user=Depends(get_current_user), 
 @api_router.post("/projects/{project_id}/adam/validate")
 async def validate_adam_ep(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Validate all ADaM datasets."""
-    from sqlalchemy import select as s; from app.services.adam_service import AdamService; from app.models import AdamDataset
+    from sqlalchemy import select as s
+    from app.services.adam_service import AdamService
+    from app.models import AdamDataset
     r = await db.execute(s(AdamDataset).where(AdamDataset.project_id == project_id))
-    datasets = r.scalars().all(); svc = AdamService(); reports = []
+    datasets = r.scalars().all()
+    svc = AdamService()
+    reports = []
     for ds in datasets:
         rpt = svc.validate_adam({"dataset_name": ds.dataset_name, "variables": ds.variables or [], "data": ds.data_content or []})
-        ds.validation_status = "valid" if rpt["valid"] else "invalid"; ds.validation_report = rpt; reports.append(rpt)
+        ds.validation_status = "valid" if rpt["valid"] else "invalid"
+        ds.validation_report = rpt
+        reports.append(rpt)
     await db.commit()
     return {"datasets_validated": len(reports), "reports": reports}
 
@@ -6168,14 +6221,18 @@ async def run_mi_ep(project_id: str, current_user=Depends(get_current_user), db:
     p = await get_project_with_org_check(project_id, current_user, db)
 
     def _run():
-        svc = StatisticalAnalysisService(); sim = svc.generate_simulation_data()
+        svc = StatisticalAnalysisService()
+        sim = svc.generate_simulation_data()
         return svc.compute_multiple_imputation(data=sim["covariates"], treatment=sim["treatment"],
                                               outcome=sim["event_indicator"], time=sim["time_to_event"],
                                               event=sim["event_indicator"], m=20)
 
     mi = await asyncio.get_event_loop().run_in_executor(None, _run)
-    config = dict(p.processing_config or {}); config.setdefault("missing_data", {})["imputation"] = mi
-    p.processing_config = config; p.updated_at = datetime.utcnow(); await db.commit()
+    config = dict(p.processing_config or {})
+    config.setdefault("missing_data", {})["imputation"] = mi
+    p.processing_config = config
+    p.updated_at = datetime.utcnow()
+    await db.commit()
     return mi
 
 @api_router.post("/projects/{project_id}/study/missing-data/tipping")
@@ -6186,13 +6243,17 @@ async def run_tipping_ep(project_id: str, current_user=Depends(get_current_user)
     p = await get_project_with_org_check(project_id, current_user, db)
 
     def _run():
-        svc = StatisticalAnalysisService(); sim = svc.generate_simulation_data()
+        svc = StatisticalAnalysisService()
+        sim = svc.generate_simulation_data()
         return svc.compute_tipping_point(treatment=sim["treatment"], outcome=sim["event_indicator"],
                                         time=sim["time_to_event"], event=sim["event_indicator"])
 
     tp = await asyncio.get_event_loop().run_in_executor(None, _run)
-    config = dict(p.processing_config or {}); config.setdefault("missing_data", {})["tipping_point"] = tp
-    p.processing_config = config; p.updated_at = datetime.utcnow(); await db.commit()
+    config = dict(p.processing_config or {})
+    config.setdefault("missing_data", {})["tipping_point"] = tp
+    p.processing_config = config
+    p.updated_at = datetime.utcnow()
+    await db.commit()
     return tp
 
 @api_router.post("/projects/{project_id}/study/missing-data/mmrm")
@@ -6204,22 +6265,31 @@ async def run_mmrm_ep(project_id: str, current_user=Depends(get_current_user), d
     p = await get_project_with_org_check(project_id, current_user, db)
 
     def _run():
-        svc = StatisticalAnalysisService(); sim = svc.generate_simulation_data()
-        n = len(sim["treatment"]); n_tp = 4
-        subj = np.repeat(np.arange(n), n_tp); tp_arr = np.tile(np.arange(n_tp), n)
-        trt = np.repeat(sim["treatment"], n_tp); out = np.random.randn(n*n_tp) - 0.3*trt + 0.1*tp_arr
+        svc = StatisticalAnalysisService()
+        sim = svc.generate_simulation_data()
+        n = len(sim["treatment"])
+        n_tp = 4
+        subj = np.repeat(np.arange(n), n_tp)
+        tp_arr = np.tile(np.arange(n_tp), n)
+        trt = np.repeat(sim["treatment"], n_tp)
+        out = np.random.randn(n*n_tp) - 0.3*trt + 0.1*tp_arr
         return svc.compute_mmrm(subjects=subj, timepoints=tp_arr, outcomes=out, treatment=trt)
 
     mmrm = await asyncio.get_event_loop().run_in_executor(None, _run)
-    config = dict(p.processing_config or {}); config.setdefault("missing_data", {})["mmrm"] = mmrm
-    p.processing_config = config; p.updated_at = datetime.utcnow(); await db.commit()
+    config = dict(p.processing_config or {})
+    config.setdefault("missing_data", {})["mmrm"] = mmrm
+    p.processing_config = config
+    p.updated_at = datetime.utcnow()
+    await db.commit()
     return mmrm
 
 @api_router.get("/projects/{project_id}/study/missing-data/summary")
 async def missing_summary_ep(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Get missing data pattern summary."""
     p = await get_project_with_org_check(project_id, current_user, db)
-    config = p.processing_config or {}; n = 897; cached = config.get("missing_data", {})
+    config = p.processing_config or {}
+    n = 897
+    cached = config.get("missing_data", {})
     return {"total_subjects": n, "complete_cases": n-89, "incomplete_cases": 89,
             "missing_by_variable": [
                 {"name": "Age", "total": n, "missing": 0, "missing_pct": 0.0},
@@ -6242,7 +6312,7 @@ async def missing_summary_ep(project_id: str, current_user=Depends(get_current_u
 async def generate_ectd_package(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Generate eCTD Module 5 submission package."""
     from app.services.ectd_packager import ECTDPackager
-    p = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
     packager = ECTDPackager()
     package = await packager.generate_package(db, project_id)
     return package
@@ -6252,7 +6322,7 @@ async def generate_ectd_package(project_id: str, current_user=Depends(get_curren
 async def get_ectd_manifest(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Get HTML manifest for the eCTD package."""
     from app.services.ectd_packager import ECTDPackager
-    p = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
     packager = ECTDPackager()
     package = await packager.generate_package(db, project_id)
     manifest_html = packager.generate_package_manifest(package)
@@ -6263,7 +6333,7 @@ async def get_ectd_manifest(project_id: str, current_user=Depends(get_current_us
 async def validate_ectd_package(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Validate eCTD package structure and completeness."""
     from app.services.ectd_packager import ECTDPackager
-    p = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
     packager = ECTDPackager()
     package = await packager.generate_package(db, project_id)
     validation = packager.validate_package(package)
@@ -6274,7 +6344,7 @@ async def validate_ectd_package(project_id: str, current_user=Depends(get_curren
 async def generate_define_xml(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Generate Define-XML 2.1 for ADaM datasets."""
     from app.services.define_xml_generator import DefineXMLGenerator
-    p = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
     generator = DefineXMLGenerator()
     result = await generator.generate(db, project_id)
     return result
@@ -6285,7 +6355,7 @@ async def validate_define_xml_ep(project_id: str, xml_content: str = Body(defaul
                                   current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Validate Define-XML content."""
     from app.services.define_xml_generator import DefineXMLGenerator
-    p = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
     generator = DefineXMLGenerator()
     # If no XML provided, generate first then validate
     if not xml_content:
@@ -6324,7 +6394,9 @@ async def generate_adrg(project_id: str, current_user=Depends(get_current_user),
                               checksum=saved.get("checksum"),
                               generated_at=datetime.utcnow(), generated_by=getattr(current_user, "user_id", "") or getattr(current_user, "id", ""),
                               regulatory_agency="FDA")
-    db.add(art); await db.commit(); await db.refresh(art)
+    db.add(art)
+    await db.commit()
+    await db.refresh(art)
     return {"id": art.id, "artifact_type": art.artifact_type, "format": "docx", "title": art.title,
             "file_size": art.file_size, "generated_at": art.generated_at.isoformat()}
 
@@ -6358,7 +6430,9 @@ async def generate_csr_synopsis(project_id: str, current_user=Depends(get_curren
                               checksum=saved.get("checksum"),
                               generated_at=datetime.utcnow(), generated_by=getattr(current_user, "user_id", "") or getattr(current_user, "id", ""),
                               regulatory_agency="FDA")
-    db.add(art); await db.commit(); await db.refresh(art)
+    db.add(art)
+    await db.commit()
+    await db.refresh(art)
     return {"id": art.id, "artifact_type": art.artifact_type, "format": "docx", "title": art.title,
             "file_size": art.file_size, "generated_at": art.generated_at.isoformat()}
 
@@ -6392,7 +6466,9 @@ async def generate_csr_section_11(project_id: str, current_user=Depends(get_curr
                               checksum=saved.get("checksum"),
                               generated_at=datetime.utcnow(), generated_by=getattr(current_user, "user_id", "") or getattr(current_user, "id", ""),
                               regulatory_agency="FDA")
-    db.add(art); await db.commit(); await db.refresh(art)
+    db.add(art)
+    await db.commit()
+    await db.refresh(art)
     return {"id": art.id, "artifact_type": art.artifact_type, "format": "docx", "title": art.title,
             "file_size": art.file_size, "generated_at": art.generated_at.isoformat()}
 
@@ -6426,7 +6502,9 @@ async def generate_csr_section_12(project_id: str, current_user=Depends(get_curr
                               checksum=saved.get("checksum"),
                               generated_at=datetime.utcnow(), generated_by=getattr(current_user, "user_id", "") or getattr(current_user, "id", ""),
                               regulatory_agency="FDA")
-    db.add(art); await db.commit(); await db.refresh(art)
+    db.add(art)
+    await db.commit()
+    await db.refresh(art)
     return {"id": art.id, "artifact_type": art.artifact_type, "format": "docx", "title": art.title,
             "file_size": art.file_size, "generated_at": art.generated_at.isoformat()}
 
@@ -6460,7 +6538,9 @@ async def generate_csr_appendix_16(project_id: str, current_user=Depends(get_cur
                               checksum=saved.get("checksum"),
                               generated_at=datetime.utcnow(), generated_by=getattr(current_user, "user_id", "") or getattr(current_user, "id", ""),
                               regulatory_agency="FDA")
-    db.add(art); await db.commit(); await db.refresh(art)
+    db.add(art)
+    await db.commit()
+    await db.refresh(art)
     return {"id": art.id, "artifact_type": art.artifact_type, "format": "docx", "title": art.title,
             "file_size": art.file_size, "generated_at": art.generated_at.isoformat()}
 
@@ -6549,9 +6629,12 @@ async def export_submission_evidence_package(
     db: AsyncSession = Depends(get_db),
 ):
     """Bundle all regulatory artifacts into a single Evidence Package ZIP."""
-    import zipfile, io, hashlib, json as _json
+    import zipfile
+    import io
+    import hashlib
+    import json as _json
     from sqlalchemy import select as sa_select
-    from app.models import ComparabilityProtocol, AdamDataset, RegulatoryArtifact, AuditLog
+    from app.models import ComparabilityProtocol, AdamDataset, RegulatoryArtifact
 
     project = await get_project_with_org_check(project_id, current_user, db)
     config = project.processing_config or {}
@@ -6763,7 +6846,6 @@ async def run_bayesian_analyze(project_id: str, current_user=Depends(get_current
 
     p = await get_project_with_org_check(project_id, current_user, db)
 
-    import numpy as np
     stat_svc = StatisticalAnalysisService()
     sim = stat_svc.generate_simulation_data()
     # Split time-to-event data by treatment group for Bayesian analysis
@@ -6791,7 +6873,7 @@ async def run_bayesian_prior(project_id: str, current_user=Depends(get_current_u
     from app.services.statistical_models import StatisticalAnalysisService
     import numpy as np
 
-    p = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
 
     try:
         patient_data = await _get_active_patient_data(project_id, db)
@@ -6821,7 +6903,7 @@ async def run_bayesian_adaptive(project_id: str, current_user=Depends(get_curren
     from app.services.bayesian_methods import BayesianAnalysisService
     from app.services.statistical_models import StatisticalAnalysisService
 
-    p = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
 
     try:
         import numpy as np
@@ -7031,7 +7113,7 @@ async def get_sdtm_acrf(project_id: str, current_user=Depends(get_current_user),
     """Generate annotated CRF (aCRF) HTML."""
     from app.services.sdtm_service import SDTMService
 
-    p = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
 
     svc = SDTMService()
     acrf = await svc.generate_acrf(db, project_id)
@@ -7061,7 +7143,7 @@ async def program_portfolio(current_user=Depends(get_current_user), db: AsyncSes
 @api_router.get("/program/{project_id}/readiness")
 async def program_readiness(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Get submission readiness checklist for a project."""
-    p = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
 
     from app.services.program_dashboard import ProgramDashboardService
     svc = ProgramDashboardService()
@@ -7071,7 +7153,7 @@ async def program_readiness(project_id: str, current_user=Depends(get_current_us
 @api_router.get("/program/{project_id}/milestones")
 async def program_milestones(project_id: str, current_user=Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """Get milestone timeline for a project."""
-    p = await get_project_with_org_check(project_id, current_user, db)
+    await get_project_with_org_check(project_id, current_user, db)
 
     from app.services.program_dashboard import ProgramDashboardService
     svc = ProgramDashboardService()
@@ -7493,9 +7575,8 @@ async def upload_patient_data(
     Runs 8 regulatory checks and returns ingestion report.
     """
     from app.services.ingestion_service import IngestionService
-    from app.models import ConsentLog, IngestionReport, PatientDataset
+    from app.models import IngestionReport, PatientDataset
     from sqlalchemy import text as sa_text
-    import json as _json
 
     svc = IngestionService()
     user_id = str(current_user.id)
@@ -7756,7 +7837,7 @@ async def set_retention_decision(
     current_user=Depends(get_current_user),
 ):
     """Set data retention decision (PERSIST or PURGE) for project archival."""
-    from app.models import ProjectRetentionLog, PatientDataset
+    from app.models import ProjectRetentionLog
     from app.services.ingestion_service import IngestionService
     from sqlalchemy import text as sa_text
 
@@ -7924,7 +8005,8 @@ async def _run_analysis_background(
     import re as _re
     import logging as _logging
     import numpy as _np2
-    import scipy, numpy
+    import scipy
+    import numpy
 
     from app.core.database import AsyncSessionLocal, update_processing_config
     from app.services.statistical_models import StatisticalAnalysisService
@@ -8039,11 +8121,16 @@ async def _run_analysis_background(
         # ── Phase 4: Serialize numpy → JSON-safe ──
         class _NumpyEncoder(_json2.JSONEncoder):
             def default(self, obj):
-                if isinstance(obj, (_np2.integer,)): return int(obj)
-                if isinstance(obj, (_np2.floating, float)) and (_np2.isnan(obj) or _np2.isinf(obj)): return None
-                if isinstance(obj, (_np2.floating,)): return float(obj)
-                if isinstance(obj, _np2.ndarray): return obj.tolist()
-                if isinstance(obj, (_np2.bool_,)): return bool(obj)
+                if isinstance(obj, (_np2.integer,)):
+                    return int(obj)
+                if isinstance(obj, (_np2.floating, float)) and (_np2.isnan(obj) or _np2.isinf(obj)):
+                    return None
+                if isinstance(obj, (_np2.floating,)):
+                    return float(obj)
+                if isinstance(obj, _np2.ndarray):
+                    return obj.tolist()
+                if isinstance(obj, (_np2.bool_,)):
+                    return bool(obj)
                 return super().default(obj)
 
         json_str = _json2.dumps(analysis_results, cls=_NumpyEncoder, default=str)
@@ -8244,7 +8331,8 @@ async def export_audit_trail(
     db: AsyncSession = Depends(get_db),
 ):
     """Export the project's complete audit trail as a regulatory-grade document."""
-    import json as _json, hashlib
+    import json as _json
+    import hashlib
     from sqlalchemy import text as sa_text
 
     project = await get_project_with_org_check(project_id, current_user, db)
@@ -8366,7 +8454,7 @@ async def list_reference_populations(
     if org_id:
         query = query.where(
             (ReferencePopulation.organization_id == str(org_id)) |
-            (ReferencePopulation.organization_id == None)
+            (ReferencePopulation.organization_id is None)
         )
 
     if disease_area:
@@ -8524,7 +8612,8 @@ async def run_regulatory_attack(
 
     # Store in processing_config with staleness tracking
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     config = dict(project.processing_config or {})
     config["regulatory_attack"] = attack_result
     content_hash = _hl.sha256(_json.dumps(attack_result, sort_keys=True, default=str).encode()).hexdigest()
@@ -8592,7 +8681,8 @@ async def run_assumption_traceability(
 
     # Store with staleness tracking
     from sqlalchemy.orm.attributes import flag_modified
-    import hashlib as _hl, json as _json
+    import hashlib as _hl
+    import json as _json
     config = dict(project.processing_config or {})
     config["assumption_traceability"] = assumption_result
     content_hash = _hl.sha256(_json.dumps(assumption_result, sort_keys=True, default=str).encode()).hexdigest()

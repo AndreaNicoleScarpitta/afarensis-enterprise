@@ -25,7 +25,7 @@ user_id: ContextVar[Optional[str]] = ContextVar('user_id', default=None)
 
 class CorrelationFilter(logging.Filter):
     """Add correlation ID and user context to log records"""
-    
+
     def filter(self, record: logging.LogRecord) -> bool:
         record.correlation_id = correlation_id.get()
         record.user_id = user_id.get()
@@ -35,7 +35,7 @@ class CorrelationFilter(logging.Filter):
 
 class JSONFormatter(logging.Formatter):
     """Custom JSON formatter for structured logging"""
-    
+
     def format(self, record: logging.LogRecord) -> str:
         log_entry = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -49,7 +49,7 @@ class JSONFormatter(logging.Formatter):
             "function": record.funcName,
             "line": record.lineno,
         }
-        
+
         # Add exception info if present
         if record.exc_info:
             log_entry["exception"] = {
@@ -57,26 +57,26 @@ class JSONFormatter(logging.Formatter):
                 "message": str(record.exc_info[1]),
                 "traceback": self.formatException(record.exc_info)
             }
-        
+
         # Add extra fields from the record
         for key, value in record.__dict__.items():
-            if key not in ['name', 'msg', 'args', 'levelname', 'levelno', 'pathname', 
-                          'filename', 'module', 'lineno', 'funcName', 'created', 
-                          'msecs', 'relativeCreated', 'thread', 'threadName', 
+            if key not in ['name', 'msg', 'args', 'levelname', 'levelno', 'pathname',
+                          'filename', 'module', 'lineno', 'funcName', 'created',
+                          'msecs', 'relativeCreated', 'thread', 'threadName',
                           'processName', 'process', 'message', 'exc_info', 'exc_text',
                           'stack_info', 'correlation_id', 'user_id', 'service']:
                 log_entry[key] = value
-        
+
         return json.dumps(log_entry, default=str)
 
 
 class AuditLogger:
     """Specialized logger for regulatory audit trails"""
-    
+
     def __init__(self, name: str = "audit"):
         self.logger = logging.getLogger(f"afarensis.audit.{name}")
         self.logger.setLevel(logging.INFO)
-        
+
         # Ensure audit logs always go to file in production
         if settings.is_production and settings.LOG_FILE:
             handler = logging.FileHandler(
@@ -85,11 +85,11 @@ class AuditLogger:
             handler.setFormatter(JSONFormatter())
             handler.addFilter(CorrelationFilter())
             self.logger.addHandler(handler)
-    
+
     def log_user_action(
-        self, 
-        action: str, 
-        resource_type: str, 
+        self,
+        action: str,
+        resource_type: str,
         resource_id: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None,
         regulatory_significance: bool = False
@@ -107,10 +107,10 @@ class AuditLogger:
                 "timestamp_utc": datetime.utcnow().isoformat() + "Z"
             }
         )
-    
+
     def log_system_event(
-        self, 
-        event: str, 
+        self,
+        event: str,
         event_type: str = "system",
         details: Optional[Dict[str, Any]] = None,
         severity: str = "info"
@@ -127,7 +127,7 @@ class AuditLogger:
                 "timestamp_utc": datetime.utcnow().isoformat() + "Z"
             }
         )
-    
+
     def log_data_access(
         self,
         table: str,
@@ -151,60 +151,59 @@ class AuditLogger:
 
 def setup_logging():
     """Configure application logging"""
-    
+
     # Get log level
     log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
-    
+
     # Choose formatter based on config
     if settings.LOG_FORMAT.lower() == "json":
-        formatter_class = JSONFormatter
+        pass
     else:
-        formatter_class = logging.Formatter
         formatter = logging.Formatter(
             fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
             datefmt='%Y-%m-%d %H:%M:%S'
         )
-    
+
     # Configure root logger
     logging.root.setLevel(log_level)
-    
+
     # Clear existing handlers
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
-    
+
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(log_level)
-    
+
     if settings.LOG_FORMAT.lower() == "json":
         console_handler.setFormatter(JSONFormatter())
     else:
         console_handler.setFormatter(formatter)
-    
+
     console_handler.addFilter(CorrelationFilter())
     logging.root.addHandler(console_handler)
-    
+
     # File handler for production
     if settings.LOG_FILE:
         file_handler = logging.FileHandler(settings.LOG_FILE)
         file_handler.setLevel(log_level)
-        
+
         if settings.LOG_FORMAT.lower() == "json":
             file_handler.setFormatter(JSONFormatter())
         else:
             file_handler.setFormatter(formatter)
-        
+
         file_handler.addFilter(CorrelationFilter())
         logging.root.addHandler(file_handler)
-    
+
     # Suppress noisy third-party loggers
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
     logging.getLogger("databases").setLevel(logging.WARNING)
     logging.getLogger("asyncpg").setLevel(logging.WARNING)
-    
+
     # Set application logger levels
     logging.getLogger("afarensis").setLevel(log_level)
-    
+
     logger = logging.getLogger(__name__)
     logger.info(f"[INIT] Logging configured - Level: {settings.LOG_LEVEL}, Format: {settings.LOG_FORMAT}")
 

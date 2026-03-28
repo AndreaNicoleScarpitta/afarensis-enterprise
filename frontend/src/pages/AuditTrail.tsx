@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ClipboardList, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, Shield, Activity, AlertCircle } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'

@@ -7,6 +7,7 @@
  */
 import { AlertTriangle, ArrowRight, Save, X, ChevronRight, Zap } from 'lucide-react'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 
 export interface DownstreamImpact {
   step: string
@@ -177,7 +178,7 @@ export default function DownstreamImpactDialog({
 
   if (!open) return null
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -187,26 +188,26 @@ export default function DownstreamImpactDialog({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-900/40 flex items-center justify-center">
-              <Zap className="h-4 w-4 text-amber-400" />
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
+              <Zap className="h-4 w-4 text-amber-600" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">Downstream Impact Preview</h3>
+              <h3 className="text-sm font-bold text-gray-900">Downstream Impact Preview</h3>
               <p className="text-[10px] text-gray-500 mt-0.5">
-                Saving changes to <span className="text-amber-400 font-semibold">{currentStepLabel}</span>
+                Saving changes to <span className="text-amber-600 font-semibold">{currentStepLabel}</span>
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white p-1 rounded transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 p-1 rounded transition-colors">
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Summary */}
-        <div className="px-5 py-3 bg-amber-950/20 border-b border-amber-700/20">
+        <div className="px-5 py-3 bg-amber-50 border-b border-amber-200">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-            <p className="text-xs text-amber-300">
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+            <p className="text-xs text-amber-800">
               <span className="font-bold">{totalAffected} downstream {totalAffected === 1 ? 'step' : 'steps'}</span> will
               be flagged as needing review after this save.
             </p>
@@ -221,15 +222,15 @@ export default function DownstreamImpactDialog({
                 Direct dependencies ({directImpacts.length})
               </p>
               {directImpacts.map((d) => (
-                <div key={d.step} className="rounded-md border border-gray-200 bg-gray-50 p-3">
+                <div key={d.step} className="rounded-md border border-amber-200 bg-amber-50/50 p-3">
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-[9px] font-black text-amber-500 tabular-nums w-4 text-center">
+                    <span className="text-[9px] font-black text-amber-600 tabular-nums w-4 text-center">
                       {String(STEP_NUMBERS[d.step] || '?').padStart(2, '0')}
                     </span>
-                    <ArrowRight className="h-3 w-3 text-amber-500/50" />
-                    <span className="text-xs font-semibold text-white">{d.label}</span>
+                    <ArrowRight className="h-3 w-3 text-amber-400" />
+                    <span className="text-xs font-semibold text-gray-900">{d.label}</span>
                   </div>
-                  <p className="text-[11px] text-gray-400 leading-relaxed pl-6">{d.impact}</p>
+                  <p className="text-[11px] text-gray-600 leading-relaxed pl-6">{d.impact}</p>
                 </div>
               ))}
             </>
@@ -240,23 +241,23 @@ export default function DownstreamImpactDialog({
             <>
               <button
                 onClick={() => setShowTransitive(v => !v)}
-                className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2 hover:text-gray-300 transition-colors"
+                className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2 hover:text-gray-700 transition-colors"
               >
                 <ChevronRight className={`h-3 w-3 transition-transform ${showTransitive ? 'rotate-90' : ''}`} />
                 Indirect cascade ({transitiveImpacts.length} additional)
               </button>
               {showTransitive && (
-                <div className="space-y-2 pl-2 border-l border-white/6 ml-1">
+                <div className="space-y-2 pl-2 border-l border-gray-200 ml-1">
                   {transitiveImpacts.map((d) => (
-                    <div key={d.step} className="rounded-md border border-white/6 bg-white/2 p-2.5">
+                    <div key={d.step} className="rounded-md border border-gray-200 bg-gray-50 p-2.5">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[9px] font-black text-gray-600 tabular-nums w-4 text-center">
+                        <span className="text-[9px] font-black text-gray-500 tabular-nums w-4 text-center">
                           {String(STEP_NUMBERS[d.step] || '?').padStart(2, '0')}
                         </span>
-                        <ArrowRight className="h-2.5 w-2.5 text-gray-600" />
-                        <span className="text-[11px] font-medium text-gray-300">{d.label}</span>
+                        <ArrowRight className="h-2.5 w-2.5 text-gray-400" />
+                        <span className="text-[11px] font-medium text-gray-800">{d.label}</span>
                       </div>
-                      <p className="text-[10px] text-gray-500 leading-relaxed pl-6">{d.impact}</p>
+                      <p className="text-[10px] text-gray-600 leading-relaxed pl-6">{d.impact}</p>
                     </div>
                   ))}
                 </div>
@@ -273,14 +274,14 @@ export default function DownstreamImpactDialog({
 
         {/* Actions */}
         <div className="px-5 py-4 border-t border-gray-200 flex items-center justify-between">
-          <p className="text-[10px] text-gray-600 max-w-[200px]">
+          <p className="text-[10px] text-gray-500 max-w-[200px]">
             Affected steps will show a staleness warning until reviewed.
           </p>
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-3 py-2 rounded-md text-xs font-medium text-gray-400 hover:text-white
-                         border border-gray-200 hover:border-white/20 transition-colors"
+              className="px-3 py-2 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900
+                         border border-gray-300 hover:border-gray-400 transition-colors"
             >
               Cancel
             </button>
@@ -297,6 +298,7 @@ export default function DownstreamImpactDialog({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

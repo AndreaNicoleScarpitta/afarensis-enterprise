@@ -104,7 +104,7 @@ const DAGResponseSchema = z.object({
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }: Props) {
+export default function StudyDAG({ selectedStudy, protocolLocked }: Props) {
   const navigate = useNavigate()
   const [dagData, setDagData] = useState<DAGData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -127,7 +127,7 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
         `/projects/${selectedStudy.id}/dag`,
         DAGResponseSchema,
       )
-      setDagData(data)
+      setDagData(data as DAGData)
     } catch (err: any) {
       console.error('Failed to fetch DAG:', err)
       // Provide demo data if backend not available
@@ -433,8 +433,8 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
                     </div>
                   )}
                   {phase.nodes.map(node => {
-                    const meta = CATEGORY_META[node.category] || CATEGORY_META.primary
-                    const status = STATUS_STYLES[node.status] || STATUS_STYLES.pending
+                    const meta = (CATEGORY_META[node.category] || CATEGORY_META.primary)!
+                    const status = (STATUS_STYLES[node.status] || STATUS_STYLES.pending)!
                     const IconComp = meta.icon
                     const isUpdating = updatingNode === node.key
 

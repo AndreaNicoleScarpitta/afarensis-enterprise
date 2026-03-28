@@ -37,7 +37,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import jwt
-from fastapi import HTTPException, status, Request, Response, Depends
+from fastapi import HTTPException, status, Request, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import RedirectResponse
@@ -145,32 +145,32 @@ def get_password_hash(password: str) -> str:
 def verify_password_strength(password: str) -> tuple[bool, List[str]]:
     """
     Verify password meets security requirements
-    
+
     Returns: (is_valid, list_of_issues)
     """
     issues = []
-    
+
     if len(password) < 8:
         issues.append("Password must be at least 8 characters long")
-    
+
     if not any(c.isupper() for c in password):
         issues.append("Password must contain at least one uppercase letter")
-    
+
     if not any(c.islower() for c in password):
         issues.append("Password must contain at least one lowercase letter")
-    
+
     if not any(c.isdigit() for c in password):
         issues.append("Password must contain at least one number")
-    
+
     special_chars = "!@#$%^&*()_+-=[]{}|;:,.<>?"
     if not any(c in special_chars for c in password):
         issues.append("Password must contain at least one special character")
-    
+
     # Check for common patterns
     common_patterns = ['123456', 'password', 'admin', 'qwerty']
     if any(pattern in password.lower() for pattern in common_patterns):
         issues.append("Password contains common patterns")
-    
+
     return len(issues) == 0, issues
 
 
@@ -186,7 +186,7 @@ else:
 
 class SecurityHeaders(BaseHTTPMiddleware):
     """Middleware to add security headers to all responses"""
-    
+
     # Paths excluded from HTTPS redirect (health checks from load balancers use HTTP)
     _NO_REDIRECT = frozenset({"/health", "/api/v1/health"})
 
@@ -232,17 +232,17 @@ class SecurityHeaders(BaseHTTPMiddleware):
 
 class RateLimiter:
     """Simple in-memory rate limiter with exponential backoff"""
-    
+
     def __init__(self):
         self.requests: Dict[str, List[datetime]] = {}
         self.failed_attempts: Dict[str, int] = {}
-    
+
     def is_allowed(self, identifier: str, max_requests: int = None, window_minutes: int = 1) -> bool:
         """Check if request is within rate limit"""
         max_requests = max_requests or settings.RATE_LIMIT_PER_MINUTE
         now = datetime.utcnow()
         window_start = now - timedelta(minutes=window_minutes)
-        
+
         # Apply exponential backoff for failed attempts
         failed_count = self.failed_attempts.get(identifier, 0)
         if failed_count > 3:
@@ -250,28 +250,28 @@ class RateLimiter:
             backoff_start = now - timedelta(minutes=backoff_minutes)
             if any(req_time > backoff_start for req_time in self.requests.get(identifier, [])):
                 return False
-        
+
         # Clean old requests
         if identifier in self.requests:
             self.requests[identifier] = [
-                req_time for req_time in self.requests[identifier] 
+                req_time for req_time in self.requests[identifier]
                 if req_time > window_start
             ]
         else:
             self.requests[identifier] = []
-        
+
         # Check limit
         if len(self.requests[identifier]) >= max_requests:
             return False
-        
+
         # Add current request
         self.requests[identifier].append(now)
         return True
-    
+
     def record_failed_attempt(self, identifier: str):
         """Record a failed authentication attempt for rate limiting"""
         self.failed_attempts[identifier] = self.failed_attempts.get(identifier, 0) + 1
-    
+
     def reset_failed_attempts(self, identifier: str):
         """Reset failed attempts on successful authentication"""
         if identifier in self.failed_attempts:
@@ -284,10 +284,10 @@ rate_limiter = RateLimiter()
 
 class JWTBearer(HTTPBearer):
     """Custom JWT Bearer authentication with enhanced security"""
-    
+
     def __init__(self, auto_error: bool = True):
         super().__init__(auto_error=auto_error)
-    
+
     async def __call__(self, request: Request) -> Optional[str]:
         credentials: HTTPAuthorizationCredentials = await super().__call__(request)
         if credentials:
@@ -298,7 +298,7 @@ class JWTBearer(HTTPBearer):
                         detail="Invalid authentication scheme"
                     )
                 return None
-            
+
             if not self.verify_jwt(credentials.credentials):
                 if self.auto_error:
                     raise HTTPException(
@@ -306,41 +306,41 @@ class JWTBearer(HTTPBearer):
                         detail="Invalid token or expired token"
                     )
                 return None
-            
+
             return credentials.credentials
         return None
-    
+
     def verify_jwt(self, token: str) -> bool:
         """Verify JWT token"""
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-            
+
             # Additional security checks
             if payload.get("iss") != "afarensis-enterprise":
                 return False
-            
+
             if payload.get("aud") != "afarensis-api":
                 return False
-            
+
             return True
         except jwt.PyJWTError:
             return False
 
 
 def create_access_token(
-    data: Dict[str, Any], 
+    data: Dict[str, Any],
     expires_delta: Optional[timedelta] = None
 ) -> str:
     """Create JWT access token with enhanced security claims"""
     to_encode = data.copy()
-    
+
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    
+
     to_encode.update({"exp": expire, "type": "access"})
-    
+
     # Add additional security claims
     to_encode.update({
         "iat": datetime.utcnow(),
@@ -348,7 +348,7 @@ def create_access_token(
         "aud": "afarensis-api",
         "jti": secrets.token_urlsafe(16)  # JWT ID for revocation
     })
-    
+
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -359,12 +359,12 @@ def create_refresh_token(
 ) -> str:
     """Create JWT refresh token"""
     to_encode = data.copy()
-    
+
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
-    
+
     to_encode.update({"exp": expire, "type": "refresh"})
     to_encode.update({
         "iat": datetime.utcnow(),
@@ -372,7 +372,7 @@ def create_refresh_token(
         "aud": "afarensis-api",
         "jti": secrets.token_urlsafe(16)
     })
-    
+
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
@@ -381,8 +381,8 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
     """Verify and decode JWT token"""
     try:
         payload = jwt.decode(
-            token, 
-            settings.SECRET_KEY, 
+            token,
+            settings.SECRET_KEY,
             algorithms=[ALGORITHM],
             audience="afarensis-api",
             issuer="afarensis-enterprise"
@@ -403,13 +403,13 @@ def verify_token(token: str) -> Optional[Dict[str, Any]]:
 def get_current_user_from_token(token: str) -> Dict[str, Any]:
     """Extract user info from valid JWT token"""
     payload = verify_token(token)
-    
+
     if payload.get("type") != "access":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token type"
         )
-    
+
     return {
         "user_id": payload.get("sub"),
         "username": payload.get("username"),
@@ -426,7 +426,7 @@ def encrypt_data(data: str) -> Optional[str]:
     """Encrypt sensitive data"""
     if not cipher_suite or not settings.ENABLE_DATA_ENCRYPTION:
         return data
-    
+
     try:
         encrypted_data = cipher_suite.encrypt(data.encode())
         return encrypted_data.decode()
@@ -439,7 +439,7 @@ def decrypt_data(encrypted_data: str) -> Optional[str]:
     """Decrypt sensitive data"""
     if not cipher_suite or not settings.ENABLE_DATA_ENCRYPTION:
         return encrypted_data
-    
+
     try:
         decrypted_data = cipher_suite.decrypt(encrypted_data.encode())
         return decrypted_data.decode()
@@ -451,31 +451,31 @@ def decrypt_data(encrypted_data: str) -> Optional[str]:
 # Role-based access control
 class Permissions:
     """Define system permissions"""
-    
+
     # Project permissions
     PROJECT_READ = "project:read"
     PROJECT_WRITE = "project:write"
     PROJECT_DELETE = "project:delete"
-    
+
     # Evidence permissions
     EVIDENCE_READ = "evidence:read"
     EVIDENCE_WRITE = "evidence:write"
     EVIDENCE_DELETE = "evidence:delete"
-    
+
     # Review permissions
     REVIEW_CREATE = "review:create"
     REVIEW_APPROVE = "review:approve"
     REVIEW_REJECT = "review:reject"
-    
+
     # Administrative permissions
     USER_MANAGE = "user:manage"
     SYSTEM_CONFIG = "system:config"
     AUDIT_READ = "audit:read"
-    
+
     # Regulatory permissions
     ARTIFACT_GENERATE = "artifact:generate"
     ARTIFACT_SIGN = "artifact:sign"
-    
+
     # Federated network permissions
     FEDERATED_READ = "federated:read"
     FEDERATED_WRITE = "federated:write"
@@ -483,7 +483,7 @@ class Permissions:
 
 class Roles:
     """Define system roles with associated permissions"""
-    
+
     VIEWER = {
         "name": "viewer",
         "permissions": [
@@ -491,7 +491,7 @@ class Roles:
             Permissions.EVIDENCE_READ
         ]
     }
-    
+
     ANALYST = {
         "name": "analyst",
         "permissions": [
@@ -502,9 +502,9 @@ class Roles:
             Permissions.REVIEW_CREATE
         ]
     }
-    
+
     REVIEWER = {
-        "name": "reviewer", 
+        "name": "reviewer",
         "permissions": [
             Permissions.PROJECT_READ,
             Permissions.PROJECT_WRITE,
@@ -516,7 +516,7 @@ class Roles:
             Permissions.ARTIFACT_GENERATE
         ]
     }
-    
+
     ADMIN = {
         "name": "admin",
         "permissions": [
@@ -561,7 +561,7 @@ def validate_file_type(filename: str) -> bool:
     """Validate uploaded file type"""
     if not filename:
         return False
-    
+
     file_extension = Path(filename).suffix.lower()
     return file_extension in settings.ALLOWED_FILE_TYPES
 
@@ -570,13 +570,13 @@ def generate_secure_filename(original_filename: str) -> str:
     """Generate secure filename for uploads"""
     # Remove any path information
     filename = Path(original_filename).name
-    
+
     # Generate secure prefix
     secure_prefix = secrets.token_urlsafe(16)
-    
+
     # Combine with sanitized original name
     safe_filename = f"{secure_prefix}_{filename}"
-    
+
     return safe_filename
 
 
@@ -629,7 +629,7 @@ def log_authentication_attempt(
         },
         severity="warning" if not success else "info"
     )
-    
+
     # Update rate limiter
     if not success:
         rate_limiter.record_failed_attempt(ip_address)

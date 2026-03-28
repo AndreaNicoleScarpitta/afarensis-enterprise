@@ -500,8 +500,8 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                     <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-2 font-mono font-bold text-[#2563EB]">{c.code}</td>
                       <td className="px-4 py-2 text-gray-700">{c.display}</td>
-                      <td className="px-4 py-2 text-center text-gray-500">{CODE_LISTS[activeCodeList].system}</td>
-                      <td className="px-4 py-2 text-center text-gray-500">{CODE_LISTS[activeCodeList].version}</td>
+                      <td className="px-4 py-2 text-center text-gray-500">{CODE_LISTS[activeCodeList]?.system}</td>
+                      <td className="px-4 py-2 text-center text-gray-500">{CODE_LISTS[activeCodeList]?.version}</td>
                       <td className="px-4 py-2 text-center">
                         {c.included ? (
                           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mx-auto" />

@@ -8,12 +8,10 @@ evidence processing, and regulatory artifact generation.
 import uuid
 import asyncio
 import logging
-from typing import Dict, Any, List, Optional
-from datetime import datetime, timedelta
+from typing import Dict, Any, List
+from datetime import datetime
 from celery import Celery
 from celery.result import AsyncResult
-from celery.exceptions import Retry
-import json
 import time
 
 from app.core.config import settings
@@ -21,7 +19,6 @@ from app.core.database import get_async_session
 from app.services.enhanced_ai import EnhancedAIService
 from app.services.enhanced_security import ZeroTrustSecurityService
 from app.services.intelligent_workflow import IntelligentWorkflowService
-from app.models import Project, EvidenceRecord, User, AuditLog
 
 logger = logging.getLogger(__name__)
 
@@ -67,29 +64,29 @@ def ai_comprehensive_analysis_task(self, evidence_id: str, analysis_depth: str =
     """Perform comprehensive AI analysis on evidence record"""
     try:
         self.update_state(state="PROGRESS", meta={"step": "initializing", "progress": 0})
-        
+
         async def run_analysis():
             async with get_async_session() as db:
                 ai_service = EnhancedAIService(db, {"user_id": user_id} if user_id else None)
-                
+
                 # Update progress
                 self.update_state(state="PROGRESS", meta={"step": "extracting_data", "progress": 20})
-                
+
                 result = await ai_service.analyze_evidence_comprehensive(
                     evidence_id=uuid.UUID(evidence_id),
                     analysis_depth=analysis_depth
                 )
-                
+
                 # Update progress
                 self.update_state(state="PROGRESS", meta={"step": "finalizing", "progress": 90})
-                
+
                 return result
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             result = loop.run_until_complete(run_analysis())
-            
+
             return {
                 "status": "completed",
                 "evidence_id": evidence_id,
@@ -98,7 +95,7 @@ def ai_comprehensive_analysis_task(self, evidence_id: str, analysis_depth: str =
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"AI analysis task failed: {str(exc)}")
         self.update_state(
@@ -114,19 +111,19 @@ def batch_evidence_processing_task(self, evidence_ids: List[str], processing_con
         total_count = len(evidence_ids)
         processed_count = 0
         results = []
-        
+
         async def process_batch():
             nonlocal processed_count
-            
+
             async with get_async_session() as db:
                 ai_service = EnhancedAIService(db, {"user_id": user_id} if user_id else None)
-                
+
                 for evidence_id in evidence_ids:
                     try:
                         # Update progress
                         progress = int((processed_count / total_count) * 100)
                         self.update_state(
-                            state="PROGRESS", 
+                            state="PROGRESS",
                             meta={
                                 "step": f"processing_evidence_{evidence_id}",
                                 "progress": progress,
@@ -134,24 +131,24 @@ def batch_evidence_processing_task(self, evidence_ids: List[str], processing_con
                                 "total": total_count
                             }
                         )
-                        
+
                         # Process individual evidence
                         result = await ai_service.analyze_evidence_comprehensive(
                             evidence_id=uuid.UUID(evidence_id),
                             analysis_depth=processing_config.get("analysis_depth", "standard")
                         )
-                        
+
                         results.append({
                             "evidence_id": evidence_id,
                             "status": "success",
                             "result": result
                         })
-                        
+
                         processed_count += 1
-                        
+
                         # Small delay to prevent overwhelming
                         await asyncio.sleep(0.1)
-                        
+
                     except Exception as e:
                         logger.error(f"Failed to process evidence {evidence_id}: {str(e)}")
                         results.append({
@@ -160,14 +157,14 @@ def batch_evidence_processing_task(self, evidence_ids: List[str], processing_con
                             "error": str(e)
                         })
                         processed_count += 1
-                
+
                 return results
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             batch_results = loop.run_until_complete(process_batch())
-            
+
             return {
                 "status": "completed",
                 "batch_id": self.request.id,
@@ -178,7 +175,7 @@ def batch_evidence_processing_task(self, evidence_ids: List[str], processing_con
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"Batch processing task failed: {str(exc)}")
         self.update_state(
@@ -198,21 +195,21 @@ def continuous_threat_monitoring_task(self, monitoring_config: Dict[str, Any] = 
                 "threat_threshold": 0.7,
                 "auto_respond": True
             }
-        
+
         async def monitor_threats():
             async with get_async_session() as db:
                 security_service = ZeroTrustSecurityService(db)
-                
+
                 # Simulate ongoing monitoring
                 threats_detected = []
                 monitoring_duration = monitoring_config.get("duration", 300)  # 5 minutes default
                 start_time = time.time()
-                
+
                 while time.time() - start_time < monitoring_duration:
                     # Update task state
                     elapsed = time.time() - start_time
                     progress = int((elapsed / monitoring_duration) * 100)
-                    
+
                     self.update_state(
                         state="PROGRESS",
                         meta={
@@ -222,7 +219,7 @@ def continuous_threat_monitoring_task(self, monitoring_config: Dict[str, Any] = 
                             "elapsed_time": int(elapsed)
                         }
                     )
-                    
+
                     # Simulate threat detection
                     session_data = {
                         "active_sessions": 25,
@@ -230,20 +227,20 @@ def continuous_threat_monitoring_task(self, monitoring_config: Dict[str, Any] = 
                         "suspicious_activity": False,
                         "timestamp": datetime.utcnow().isoformat()
                     }
-                    
+
                     detected_threats = await security_service.detect_and_respond_to_threats(session_data)
                     threats_detected.extend(detected_threats)
-                    
+
                     # Wait for next check
                     await asyncio.sleep(monitoring_config["check_interval"])
-                
+
                 return threats_detected
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             threats = loop.run_until_complete(monitor_threats())
-            
+
             return {
                 "status": "completed",
                 "monitoring_session_id": self.request.id,
@@ -253,7 +250,7 @@ def continuous_threat_monitoring_task(self, monitoring_config: Dict[str, Any] = 
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"Threat monitoring task failed: {str(exc)}")
         self.update_state(
@@ -267,29 +264,29 @@ def user_behavior_analysis_task(self, user_id: str, analysis_period_days: int = 
     """Analyze user behavior patterns for anomaly detection"""
     try:
         self.update_state(state="PROGRESS", meta={"step": "collecting_data", "progress": 10})
-        
+
         async def analyze_behavior():
             async with get_async_session() as db:
                 security_service = ZeroTrustSecurityService(db)
-                
+
                 # Simulate behavior analysis
                 self.update_state(state="PROGRESS", meta={"step": "analyzing_patterns", "progress": 50})
-                
+
                 behavior_analysis = await security_service.behavior_analyzer.analyze_behavior(
                     user_id=uuid.UUID(user_id),
                     request_pattern={"analysis_period": analysis_period_days},
                     historical_context=[]  # Would fetch from database
                 )
-                
+
                 self.update_state(state="PROGRESS", meta={"step": "generating_recommendations", "progress": 80})
-                
+
                 return behavior_analysis
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             analysis_result = loop.run_until_complete(analyze_behavior())
-            
+
             return {
                 "status": "completed",
                 "user_id": user_id,
@@ -299,7 +296,7 @@ def user_behavior_analysis_task(self, user_id: str, analysis_period_days: int = 
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"User behavior analysis task failed: {str(exc)}")
         self.update_state(
@@ -314,37 +311,37 @@ def intelligent_workflow_optimization_task(self, project_id: str, user_id: str =
     """Optimize workflow based on project data and user patterns"""
     try:
         self.update_state(state="PROGRESS", meta={"step": "analyzing_project", "progress": 10})
-        
+
         async def optimize_workflow():
             async with get_async_session() as db:
                 workflow_service = IntelligentWorkflowService(db, {"user_id": user_id} if user_id else None)
-                
+
                 # Get workflow guidance
                 self.update_state(state="PROGRESS", meta={"step": "generating_guidance", "progress": 40})
-                
+
                 guidance = await workflow_service.get_intelligent_workflow_guidance(
                     project_id=uuid.UUID(project_id)
                 )
-                
+
                 # Optimize for user if specified
                 if user_id:
                     self.update_state(state="PROGRESS", meta={"step": "personalizing", "progress": 70})
-                    
+
                     optimization = await workflow_service.optimize_workflow_for_user(
                         user_id=uuid.UUID(user_id),
                         workflow_history=[],  # Would fetch from database
                         performance_metrics={}
                     )
-                    
+
                     guidance["user_optimization"] = optimization
-                
+
                 return guidance
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             optimization_result = loop.run_until_complete(optimize_workflow())
-            
+
             return {
                 "status": "completed",
                 "project_id": project_id,
@@ -354,7 +351,7 @@ def intelligent_workflow_optimization_task(self, project_id: str, user_id: str =
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"Workflow optimization task failed: {str(exc)}")
         self.update_state(
@@ -369,7 +366,7 @@ def enhanced_evidence_discovery_task(self, project_id: str, discovery_config: Di
     """Enhanced evidence discovery with AI-powered search optimization"""
     try:
         self.update_state(state="PROGRESS", meta={"step": "initializing_discovery", "progress": 5})
-        
+
         async def discover_evidence():
             # Simulate evidence discovery process
             discovery_phases = [
@@ -379,9 +376,9 @@ def enhanced_evidence_discovery_task(self, project_id: str, discovery_config: Di
                 ("ai_enhancement", 80),
                 ("quality_scoring", 90)
             ]
-            
+
             discovered_evidence = []
-            
+
             for phase, progress in discovery_phases:
                 self.update_state(
                     state="PROGRESS",
@@ -391,10 +388,10 @@ def enhanced_evidence_discovery_task(self, project_id: str, discovery_config: Di
                         "evidence_found": len(discovered_evidence)
                     }
                 )
-                
+
                 # Simulate work
                 await asyncio.sleep(2)
-                
+
                 # Add simulated evidence
                 if phase == "pubmed_search":
                     discovered_evidence.extend([f"pubmed_evidence_{i}" for i in range(15)])
@@ -402,14 +399,14 @@ def enhanced_evidence_discovery_task(self, project_id: str, discovery_config: Di
                     discovered_evidence.extend([f"trial_evidence_{i}" for i in range(8)])
                 elif phase == "institutional_search":
                     discovered_evidence.extend([f"institutional_evidence_{i}" for i in range(5)])
-            
+
             return discovered_evidence
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             evidence_list = loop.run_until_complete(discover_evidence())
-            
+
             return {
                 "status": "completed",
                 "project_id": project_id,
@@ -420,7 +417,7 @@ def enhanced_evidence_discovery_task(self, project_id: str, discovery_config: Di
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"Evidence discovery task failed: {str(exc)}")
         self.update_state(
@@ -441,10 +438,10 @@ def generate_regulatory_artifact_task(self, project_id: str, artifact_type: str,
             ("quality_validation", 75),
             ("final_generation", 90)
         ]
-        
+
         async def generate_artifact():
             artifact_content = {}
-            
+
             for step, progress in generation_steps:
                 self.update_state(
                     state="PROGRESS",
@@ -455,27 +452,27 @@ def generate_regulatory_artifact_task(self, project_id: str, artifact_type: str,
                         "format": format
                     }
                 )
-                
+
                 # Simulate processing
                 await asyncio.sleep(3)
-                
+
                 if step == "data_collection":
                     artifact_content["evidence_summary"] = "Comprehensive evidence review completed"
                 elif step == "evidence_synthesis":
                     artifact_content["regulatory_analysis"] = "FDA guidance alignment assessment"
                 elif step == "regulatory_formatting":
                     artifact_content["formatted_sections"] = ["executive_summary", "methodology", "results"]
-            
+
             return artifact_content
-        
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
             artifact = loop.run_until_complete(generate_artifact())
-            
+
             # Generate file path (would create actual file)
             file_path = f"/tmp/artifacts/{self.request.id}_{artifact_type}.{format}"
-            
+
             return {
                 "status": "completed",
                 "project_id": project_id,
@@ -488,7 +485,7 @@ def generate_regulatory_artifact_task(self, project_id: str, artifact_type: str,
             }
         finally:
             loop.close()
-            
+
     except Exception as exc:
         logger.error(f"Artifact generation task failed: {str(exc)}")
         self.update_state(
@@ -501,7 +498,7 @@ def generate_regulatory_artifact_task(self, project_id: str, artifact_type: str,
 def get_task_status(task_id: str) -> Dict[str, Any]:
     """Get status of a background task"""
     result = AsyncResult(task_id, app=celery_app)
-    
+
     return {
         "task_id": task_id,
         "status": result.status,
@@ -515,7 +512,7 @@ def get_task_status(task_id: str) -> Dict[str, Any]:
 def cancel_task(task_id: str) -> Dict[str, Any]:
     """Cancel a running task"""
     celery_app.control.revoke(task_id, terminate=True)
-    
+
     return {
         "task_id": task_id,
         "status": "cancelled",

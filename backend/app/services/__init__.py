@@ -12,27 +12,27 @@ FIXED: All String(36) UUID handling -- no uuid.UUID() casting on DB columns.
 import uuid
 import logging
 from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # noqa: F401
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, or_, desc, asc
-from sqlalchemy.orm import selectinload, joinedload
+from sqlalchemy import select, func, and_, or_, desc, asc  # noqa: F401
+from sqlalchemy.orm import selectinload, joinedload  # noqa: F401
 
-from app.models import (
+from app.models import (  # noqa: F401
     Project, ProjectStatus, User, EvidenceRecord, EvidenceSourceType,
     ComparabilityScore, BiasAnalysis, ReviewDecision, EvidenceCritique,
     RegulatoryArtifact, AuditLog, ParsedSpecification
 )
-from app.schemas import (
+from app.schemas import (  # noqa: F401
     ProjectCreateRequest, ProjectResponse, ProjectDetailResponse, ProjectUpdateRequest,
     EvidenceRecordResponse, ComparabilityScoreResponse, BiasAnalysisResponse,
     ReviewDecisionRequest, ReviewDecisionResponse, RegulatoryArtifactResponse
 )
-from app.core.exceptions import (
+from app.core.exceptions import (  # noqa: F401
     ResourceNotFoundError, ValidationError, ProcessingError,
     AuthorizationError, raise_not_found, raise_processing_error
 )
 from app.core.logging import audit_logger
-from app.core.security import Permissions, check_permission
+from app.core.security import Permissions, check_permission  # noqa: F401
 
 
 logger = logging.getLogger(__name__)
@@ -476,7 +476,7 @@ class EvidenceService(BaseService):
         project_id_str = _str_uuid(project_id)
 
         # Get project evidence for critique
-        evidence_records = await self.get_project_evidence(project_id_str)
+        await self.get_project_evidence(project_id_str)
 
         # Generate critique (in production: would call LLM)
         critique = EvidenceCritique(
@@ -571,7 +571,7 @@ class EvidenceService(BaseService):
 
 
 # Import additional services
-from .additional import (
+from .additional import (  # noqa: E402
     ComparabilityService,
     BiasAnalysisService,
     ReviewService,

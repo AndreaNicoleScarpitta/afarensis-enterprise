@@ -8,16 +8,15 @@ and regulatory context analysis for enterprise-grade evidence review.
 import uuid
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional, Tuple, Union
-from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional, Tuple
+from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 import numpy as np
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import EvidenceRecord, Project, BiasAnalysis, ComparabilityScore
-from app.core.exceptions import ProcessingError, ValidationError
-from app.core.config import settings
+from app.models import EvidenceRecord
+from app.core.exceptions import ProcessingError
 from app.services import BaseService
 # CRITICAL FIX: Remove circular import - use lazy import instead
 # from app.services.llm_integration import llm_service
@@ -50,7 +49,7 @@ class BiasType(Enum):
 class RegulatoryRiskLevel(Enum):
     """Regulatory risk assessment levels"""
     MINIMAL = "minimal"
-    LOW = "low" 
+    LOW = "low"
     MODERATE = "moderate"
     HIGH = "high"
     CRITICAL = "critical"
@@ -94,25 +93,25 @@ class RegulatoryContextAnalysis:
 
 class EnhancedAIService(BaseService):
     """Enhanced AI service with domain-specific models and advanced analytics"""
-    
+
     def __init__(self, db: AsyncSession, current_user: Dict[str, Any] = None):
         super().__init__(db, current_user)
         self.bias_detector = ComprehensiveBiasDetector()
         self.quality_assessor = EvidenceQualityAnalyzer()
         self.regulatory_engine = RegulatoryContextEngine()
         self.ml_extractor = DomainSpecificExtractor()
-    
+
     async def analyze_evidence_comprehensive(
         self,
         evidence_id: uuid.UUID,
         analysis_depth: str = "comprehensive"
     ) -> Dict[str, Any]:
         """Comprehensive AI-powered evidence analysis"""
-        
+
         try:
             # Get evidence record
             evidence = await self._get_evidence_record(evidence_id)
-            
+
             # Parallel analysis using multiple specialized models
             results = await asyncio.gather(
                 self._extract_structured_data(evidence, analysis_depth),
@@ -121,19 +120,19 @@ class EnhancedAIService(BaseService):
                 self._analyze_regulatory_context(evidence),
                 return_exceptions=True
             )
-            
+
             extraction_result, bias_analysis, quality_metrics, regulatory_context = results
-            
+
             # Cross-validate results between models
             confidence_score = await self._cross_validate_results(
                 extraction_result, bias_analysis, quality_metrics
             )
-            
+
             # Generate integrated recommendations
             recommendations = await self._generate_integrated_recommendations(
                 evidence, extraction_result, bias_analysis, quality_metrics, regulatory_context
             )
-            
+
             # Log analysis for audit trail
             await self.log_action(
                 action="comprehensive_ai_analysis",
@@ -147,7 +146,7 @@ class EnhancedAIService(BaseService):
                 },
                 regulatory_significance=True
             )
-            
+
             return {
                 "evidence_id": str(evidence_id),
                 "analysis_timestamp": datetime.utcnow().isoformat(),
@@ -159,7 +158,7 @@ class EnhancedAIService(BaseService):
                 "recommendations": recommendations,
                 "next_steps": await self._suggest_next_steps(evidence, results)
             }
-            
+
         except Exception as e:
             logger.error(f"Comprehensive AI analysis failed for evidence {evidence_id}: {str(e)}")
             raise ProcessingError(
@@ -167,14 +166,14 @@ class EnhancedAIService(BaseService):
                 error_code="AI_ANALYSIS_FAILED",
                 details={"evidence_id": str(evidence_id), "error": str(e)}
             )
-    
+
     async def _extract_structured_data(
-        self, 
-        evidence: EvidenceRecord, 
+        self,
+        evidence: EvidenceRecord,
         depth: str
     ) -> Dict[str, Any]:
         """Extract structured data using domain-specific models"""
-        
+
         # Use ensemble of specialized extractors
         extractors = {
             "population": self.ml_extractor.extract_population_characteristics,
@@ -184,7 +183,7 @@ class EnhancedAIService(BaseService):
             "safety": self.ml_extractor.extract_safety_data,
             "regulatory_markers": self.ml_extractor.extract_regulatory_markers
         }
-        
+
         if depth == "comprehensive":
             # Full extraction with all models
             extraction_tasks = [
@@ -198,13 +197,13 @@ class EnhancedAIService(BaseService):
                 extractors[name](evidence.abstract, evidence.full_text)
                 for name in core_extractors
             ]
-        
+
         results = await asyncio.gather(*extraction_tasks, return_exceptions=True)
-        
+
         # Combine results with confidence scoring
         structured_data = {}
         extraction_confidence = []
-        
+
         for i, (name, result) in enumerate(zip(extractors.keys(), results)):
             if isinstance(result, Exception):
                 logger.warning(f"Extraction failed for {name}: {str(result)}")
@@ -213,20 +212,20 @@ class EnhancedAIService(BaseService):
             else:
                 structured_data[name] = result
                 extraction_confidence.append(result.get("confidence", 0.5))
-        
+
         return {
             "structured_data": structured_data,
             "overall_confidence": np.mean(extraction_confidence),
             "extraction_method": "ensemble_domain_specific",
             "models_used": list(extractors.keys())
         }
-    
+
     async def _detect_comprehensive_bias(
-        self, 
+        self,
         evidence: EvidenceRecord
     ) -> Dict[str, Any]:
         """Comprehensive bias detection using real LLM analysis"""
-        
+
         try:
             # Use the real LLM service for bias analysis - CRITICAL FIX: Use lazy import
             llm_service = get_llm_service()
@@ -235,22 +234,22 @@ class EnhancedAIService(BaseService):
                 methodology=evidence.extracted_data.get("methodology", {}),
                 results=evidence.extracted_data.get("results", {})
             )
-            
+
             return bias_analysis
-            
+
         except Exception as e:
             logger.error(f"Comprehensive bias detection failed: {e}")
             # Fallback to heuristic analysis
             return await self._fallback_bias_detection(evidence)
-    
+
     async def _fallback_bias_detection(self, evidence: EvidenceRecord) -> Dict[str, Any]:
         """Fallback bias detection when LLM is unavailable"""
-        
+
         # Simple heuristic-based bias detection
         detected_biases = []
-        
+
         text = (evidence.title + " " + (evidence.abstract or "")).lower()
-        
+
         # Basic bias indicators
         if "randomized" not in text and "controlled" not in text:
             detected_biases.append({
@@ -259,15 +258,15 @@ class EnhancedAIService(BaseService):
                 "confidence": 0.4,
                 "rationale": "Non-randomized study design"
             })
-        
+
         if any(word in text for word in ["significant", "breakthrough", "remarkable"]):
             detected_biases.append({
-                "bias_type": "publication_bias", 
+                "bias_type": "publication_bias",
                 "severity": 0.5,
                 "confidence": 0.3,
                 "rationale": "Positive result emphasis detected"
             })
-        
+
         return {
             "detected_biases": detected_biases,
             "overall_risk_score": 0.5,
@@ -275,13 +274,13 @@ class EnhancedAIService(BaseService):
             "mitigation_strategies": ["Conduct additional validation", "Review with expert panel"],
             "note": "Fallback heuristic analysis - limited accuracy"
         }
-    
+
     async def _fallback_evidence_extraction(self, document_content: str, document_type: str) -> Dict[str, Any]:
         """Fallback evidence extraction when LLM is unavailable"""
-        
+
         # Basic keyword extraction
         content_lower = document_content.lower()
-        
+
         # Try to extract basic information
         sample_size = None
         if "n=" in content_lower:
@@ -290,7 +289,7 @@ class EnhancedAIService(BaseService):
             n_matches = re.findall(r'n\s*=\s*(\d+)', content_lower)
             if n_matches:
                 sample_size = int(n_matches[0])
-        
+
         study_type = "unknown"
         if "randomized" in content_lower:
             study_type = "randomized_controlled_trial"
@@ -298,56 +297,56 @@ class EnhancedAIService(BaseService):
             study_type = "cohort_study"
         elif "case-control" in content_lower:
             study_type = "case_control_study"
-        
+
         return {
             "study_design": {"type": study_type},
             "population": {"total_n": sample_size},
             "confidence_scores": {"overall_extraction_confidence": 0.3},
             "note": "Fallback extraction - limited accuracy"
         }
-    
+
     async def _assess_evidence_quality(
-        self, 
+        self,
         evidence: EvidenceRecord
     ) -> EvidenceQualityMetrics:
         """Comprehensive evidence quality assessment"""
-        
+
         # Statistical power analysis
         statistical_power = await self.quality_assessor.assess_statistical_power(
             sample_size=evidence.extracted_data.get("sample_size"),
             effect_size=evidence.extracted_data.get("effect_size"),
             study_design=evidence.extracted_data.get("methodology", {})
         )
-        
+
         # Endpoint validity assessment
         endpoint_validity = await self.quality_assessor.assess_endpoint_validity(
             primary_endpoints=evidence.extracted_data.get("endpoints", {}),
             regulatory_context=evidence.extracted_data.get("regulatory_context", {})
         )
-        
+
         # Methodology rigor scoring
         methodology_rigor = await self.quality_assessor.assess_methodology_rigor(
             study_design=evidence.extracted_data.get("methodology", {}),
             randomization=evidence.extracted_data.get("randomization", {}),
             blinding=evidence.extracted_data.get("blinding", {})
         )
-        
+
         # Regulatory precedent analysis
         regulatory_precedent = await self.quality_assessor.assess_regulatory_precedent(
             evidence_type=evidence.source_type.value,
             therapeutic_area=evidence.extracted_data.get("therapeutic_area"),
             endpoint_type=evidence.extracted_data.get("endpoint_type")
         )
-        
+
         # Data completeness assessment
         data_completeness = await self.quality_assessor.assess_data_completeness(
             extracted_data=evidence.extracted_data,
             required_fields=evidence.extracted_data.get("required_regulatory_fields", [])
         )
-        
+
         # Bias risk from previous analysis
         bias_risk = 1.0 - (evidence.extracted_data.get("bias_analysis", {}).get("overall_risk_score", 0.5))
-        
+
         # Calculate overall quality score
         quality_components = [
             statistical_power * 0.25,
@@ -357,14 +356,14 @@ class EnhancedAIService(BaseService):
             data_completeness * 0.10,
             bias_risk * 0.10
         ]
-        
+
         overall_quality = sum(quality_components)
-        
+
         # Calculate confidence intervals for key metrics
         confidence_intervals = await self._calculate_quality_confidence_intervals(
             statistical_power, endpoint_validity, methodology_rigor, overall_quality
         )
-        
+
         return EvidenceQualityMetrics(
             statistical_power=statistical_power,
             endpoint_validity=endpoint_validity,
@@ -375,13 +374,13 @@ class EnhancedAIService(BaseService):
             overall_quality=overall_quality,
             confidence_intervals=confidence_intervals
         )
-    
+
     async def _analyze_regulatory_context(
-        self, 
+        self,
         evidence: EvidenceRecord
     ) -> RegulatoryContextAnalysis:
         """Analyze regulatory context and guidance alignment"""
-        
+
         # Identify applicable FDA/EMA guidances
         applicable_guidances = await self.regulatory_engine.identify_applicable_guidances(
             therapeutic_area=evidence.extracted_data.get("therapeutic_area"),
@@ -389,41 +388,41 @@ class EnhancedAIService(BaseService):
             endpoint_type=evidence.extracted_data.get("endpoint_type"),
             study_type=evidence.extracted_data.get("study_type")
         )
-        
+
         # Find regulatory precedents
         regulatory_precedents = await self.regulatory_engine.find_regulatory_precedents(
             evidence_profile=evidence.extracted_data,
             approval_outcomes=["approved", "complete_response_letter"]
         )
-        
+
         # Calculate success probability
         success_probability = await self.regulatory_engine.calculate_success_probability(
             evidence_quality=evidence.extracted_data.get("quality_score", 0.5),
             bias_risk=evidence.extracted_data.get("bias_risk", 0.5),
             precedent_analysis=regulatory_precedents
         )
-        
+
         # Identify risk factors
         risk_factors = await self.regulatory_engine.identify_risk_factors(
             evidence=evidence,
             bias_analysis=evidence.extracted_data.get("bias_analysis", {}),
             quality_metrics=evidence.extracted_data.get("quality_metrics", {})
         )
-        
+
         # Generate strategic recommendations
         strategic_recommendations = await self.regulatory_engine.generate_strategic_recommendations(
             evidence_profile=evidence.extracted_data,
             success_probability=success_probability,
             risk_factors=risk_factors
         )
-        
+
         # Suggest optimal submission timing
         submission_timing = await self.regulatory_engine.suggest_submission_timing(
             evidence_maturity=evidence.extracted_data.get("evidence_maturity"),
             regulatory_landscape=evidence.extracted_data.get("regulatory_landscape", {}),
             competitive_intelligence=evidence.extracted_data.get("competitive_intelligence", {})
         )
-        
+
         return RegulatoryContextAnalysis(
             applicable_guidances=applicable_guidances,
             regulatory_precedents=regulatory_precedents,
@@ -436,17 +435,17 @@ class EnhancedAIService(BaseService):
 
 class ComprehensiveBiasDetector:
     """Advanced bias detection using multiple analytical approaches"""
-    
+
     async def detect_statistical_bias(
-        self, 
-        evidence_text: str, 
-        methodology: Dict[str, Any], 
+        self,
+        evidence_text: str,
+        methodology: Dict[str, Any],
         results: Dict[str, Any]
     ) -> List[BiasDetectionResult]:
         """Detect statistical biases in study design and analysis"""
-        
+
         detected_biases = []
-        
+
         # Selection bias detection
         if await self._detect_selection_bias(methodology, results):
             detected_biases.append(BiasDetectionResult(
@@ -458,7 +457,7 @@ class ComprehensiveBiasDetector:
                 mitigation_strategies=["Propensity score matching", "Sensitivity analyses"],
                 regulatory_precedents=["FDA_2019_external_controls"]
             ))
-        
+
         # Survivorship bias detection
         if await self._detect_survivorship_bias(methodology, results):
             detected_biases.append(BiasDetectionResult(
@@ -470,7 +469,7 @@ class ComprehensiveBiasDetector:
                 mitigation_strategies=["Include all enrolled patients", "Intention-to-treat analysis"],
                 regulatory_precedents=["EMA_2018_survivorship_guidance"]
             ))
-        
+
         # Publication bias assessment
         publication_bias_score = await self._assess_publication_bias(evidence_text, methodology)
         if publication_bias_score > 0.5:
@@ -483,18 +482,18 @@ class ComprehensiveBiasDetector:
                 mitigation_strategies=["Comprehensive literature search", "Include unpublished studies"],
                 regulatory_precedents=["FDA_2020_publication_bias_guidance"]
             ))
-        
+
         return detected_biases
-    
+
     async def detect_textual_bias(
-        self, 
-        text: str, 
+        self,
+        text: str,
         title: str
     ) -> List[BiasDetectionResult]:
         """Detect bias in textual content using NLP"""
-        
+
         detected_biases = []
-        
+
         # Confirmation bias in language
         if await self._detect_confirmation_bias_language(text, title):
             detected_biases.append(BiasDetectionResult(
@@ -506,7 +505,7 @@ class ComprehensiveBiasDetector:
                 mitigation_strategies=["Objective language review", "Independent validation"],
                 regulatory_precedents=["FDA_2021_objective_reporting"]
             ))
-        
+
         # Cherry picking detection
         cherry_picking_score = await self._detect_cherry_picking(text)
         if cherry_picking_score > 0.6:
@@ -519,19 +518,19 @@ class ComprehensiveBiasDetector:
                 mitigation_strategies=["Complete results reporting", "Pre-specified analyses"],
                 regulatory_precedents=["EMA_2019_selective_reporting"]
             ))
-        
+
         return detected_biases
-    
+
     async def analyze_causal_inference(
-        self, 
-        study_design: str, 
-        population: Dict[str, Any], 
+        self,
+        study_design: str,
+        population: Dict[str, Any],
         interventions: List[Dict[str, Any]]
     ) -> List[BiasDetectionResult]:
         """Analyze causal inference validity and confounding"""
-        
+
         detected_issues = []
-        
+
         # Confounding assessment
         confounding_risk = await self._assess_confounding_risk(study_design, population, interventions)
         if confounding_risk > 0.5:
@@ -544,18 +543,18 @@ class ComprehensiveBiasDetector:
                 mitigation_strategies=["Covariate adjustment", "Instrumental variables"],
                 regulatory_precedents=["FDA_2022_causal_inference_guidance"]
             ))
-        
+
         return detected_issues
-    
+
     async def assess_regulatory_bias_risk(
-        self, 
-        evidence: EvidenceRecord, 
+        self,
+        evidence: EvidenceRecord,
         submission_context: Dict[str, Any]
     ) -> List[BiasDetectionResult]:
         """Assess regulatory-specific bias risks"""
-        
+
         regulatory_biases = []
-        
+
         # Outcome switching bias
         if await self._detect_outcome_switching(evidence, submission_context):
             regulatory_biases.append(BiasDetectionResult(
@@ -567,43 +566,29 @@ class ComprehensiveBiasDetector:
                 mitigation_strategies=["Protocol adherence", "Pre-specification"],
                 regulatory_precedents=["FDA_2023_endpoint_switching"]
             ))
-        
+
         return regulatory_biases
-    
+
     # Helper methods for bias detection
     async def _detect_selection_bias(self, methodology: Dict, results: Dict) -> bool:
         """Detect selection bias indicators using LLM analysis"""
         # Create prompt for LLM analysis
-        prompt = f"""
-        Analyze the following study methodology and results for selection bias indicators:
-        
-        Methodology: {methodology}
-        Results: {results}
-        
-        Look for:
-        1. Non-random patient selection
-        2. Differential dropout rates >20%
-        3. Exclusion criteria that may bias outcomes
-        4. Missing data patterns that correlate with outcomes
-        
-        Return only "true" if selection bias is detected, "false" otherwise.
-        """
-        
+
         try:
             # TODO: Replace with actual LLM API call
             # response = await self._call_llm(prompt)
             # return response.strip().lower() == "true"
-            
+
             # Current heuristic-based detection
             has_randomization = "randomization" in str(methodology).lower()
             high_dropout = results.get("dropout_rate", 0) > 0.2
             missing_baseline = not methodology.get("baseline_characteristics", {})
-            
+
             return not has_randomization or high_dropout or missing_baseline
         except Exception as e:
             logger.warning(f"Selection bias detection failed: {e}")
             return False
-    
+
     async def _detect_survivorship_bias(self, methodology: Dict, results: Dict) -> bool:
         """Detect survivorship bias indicators using advanced analysis"""
         try:
@@ -611,67 +596,67 @@ class ComprehensiveBiasDetector:
             is_longitudinal = "longitudinal" in str(methodology).lower() or "time_to_event" in str(methodology).lower()
             has_censoring = "censoring" in str(results).lower() or results.get("censoring_rate", 0) > 0
             missing_failed_outcomes = "failure" not in str(results).lower() and "adverse" not in str(results).lower()
-            
+
             # Check for truncated follow-up periods
             follow_up_period = methodology.get("follow_up_months", 0)
             short_follow_up = follow_up_period > 0 and follow_up_period < 12
-            
+
             return is_longitudinal and (has_censoring or missing_failed_outcomes or short_follow_up)
         except Exception as e:
             logger.warning(f"Survivorship bias detection failed: {e}")
             return False
-    
+
     async def _assess_publication_bias(self, text: str, methodology: Dict) -> float:
         """Assess publication bias likelihood using text analysis"""
         try:
             # Analyze language patterns associated with publication bias
             text_lower = text.lower()
-            
+
             # Positive result emphasis indicators
             positive_indicators = [
                 "significant improvement", "statistically significant", "superior efficacy",
                 "breakthrough", "revolutionary", "unprecedented", "remarkable"
             ]
-            
-            # Negative result de-emphasis indicators  
+
+            # Negative result de-emphasis indicators
             negative_deemphasis = [
                 "trending toward", "approached significance", "marginally significant",
                 "numerical improvement", "clinically meaningful"
             ]
-            
+
             # Calculate bias score
             positive_score = sum(1 for indicator in positive_indicators if indicator in text_lower)
             negative_score = sum(1 for indicator in negative_deemphasis if indicator in text_lower)
-            
+
             # Check for selective outcome reporting
             primary_outcomes = methodology.get("primary_endpoints", [])
             reported_outcomes = methodology.get("reported_endpoints", [])
-            
+
             selective_reporting = len(primary_outcomes) > 0 and len(reported_outcomes) < len(primary_outcomes)
-            
+
             # Combine scores (0-1 scale)
             bias_score = min(1.0, (positive_score * 0.1 + negative_score * 0.15 + (0.3 if selective_reporting else 0)))
-            
+
             return bias_score
         except Exception as e:
             logger.warning(f"Publication bias assessment failed: {e}")
             return 0.0
         # Simplified scoring - would use trained models
-        positive_language_score = len([word for word in text.lower().split() 
+        positive_language_score = len([word for word in text.lower().split()
                                      if word in ["significant", "improved", "effective"]]) / len(text.split())
         return min(positive_language_score * 2, 1.0)
-    
+
     async def _detect_confirmation_bias_language(self, text: str, title: str) -> bool:
         """Detect confirmation bias in language"""
         bias_words = ["clearly", "obviously", "undoubtedly", "certainly"]
         return any(word in text.lower() for word in bias_words)
-    
+
     async def _detect_cherry_picking(self, text: str) -> float:
         """Detect cherry picking patterns"""
         selective_phrases = ["favorable subgroup", "post hoc", "exploratory analysis", "data mining"]
         score = sum([1 for phrase in selective_phrases if phrase in text.lower()]) / len(selective_phrases)
         return score
-    
+
     async def _assess_confounding_risk(self, study_design: str, population: Dict, interventions: List) -> float:
         """Assess confounding risk"""
         if "randomized" in study_design.lower():
@@ -680,7 +665,7 @@ class ComprehensiveBiasDetector:
             return 0.7  # High risk for observational studies
         else:
             return 0.5  # Moderate risk for unclear design
-    
+
     async def _detect_outcome_switching(self, evidence: EvidenceRecord, context: Dict) -> bool:
         """Detect outcome switching indicators"""
         # Would check for protocol amendments, endpoint changes, etc.
@@ -689,17 +674,17 @@ class ComprehensiveBiasDetector:
 
 class EvidenceQualityAnalyzer:
     """Comprehensive evidence quality assessment"""
-    
+
     async def assess_statistical_power(
-        self, 
-        sample_size: Optional[int], 
-        effect_size: Optional[float], 
+        self,
+        sample_size: Optional[int],
+        effect_size: Optional[float],
         study_design: Dict[str, Any]
     ) -> float:
         """Assess statistical power of the study"""
         if not sample_size:
             return 0.3  # Low score for unknown sample size
-        
+
         # Simplified power calculation - would use proper statistical methods
         if sample_size < 100:
             return 0.4
@@ -707,10 +692,10 @@ class EvidenceQualityAnalyzer:
             return 0.7
         else:
             return 0.9
-    
+
     async def assess_endpoint_validity(
-        self, 
-        primary_endpoints: Dict[str, Any], 
+        self,
+        primary_endpoints: Dict[str, Any],
         regulatory_context: Dict[str, Any]
     ) -> float:
         """Assess validity of study endpoints"""
@@ -721,38 +706,38 @@ class EvidenceQualityAnalyzer:
             return 0.7
         else:
             return 0.5
-    
+
     async def assess_methodology_rigor(
-        self, 
-        study_design: Dict[str, Any], 
-        randomization: Dict[str, Any], 
+        self,
+        study_design: Dict[str, Any],
+        randomization: Dict[str, Any],
         blinding: Dict[str, Any]
     ) -> float:
         """Assess methodology rigor"""
         score = 0.0
-        
+
         # Randomization quality
         if randomization.get("method") == "stratified":
             score += 0.4
         elif randomization.get("method") == "simple":
             score += 0.3
-        
+
         # Blinding quality
         if blinding.get("double_blind"):
             score += 0.3
         elif blinding.get("single_blind"):
             score += 0.2
-        
+
         # Study design
         if "randomized controlled trial" in study_design.get("type", "").lower():
             score += 0.3
-        
+
         return min(score, 1.0)
-    
+
     async def assess_regulatory_precedent(
-        self, 
-        evidence_type: str, 
-        therapeutic_area: Optional[str], 
+        self,
+        evidence_type: str,
+        therapeutic_area: Optional[str],
         endpoint_type: Optional[str]
     ) -> float:
         """Assess regulatory precedent strength"""
@@ -763,39 +748,39 @@ class EvidenceQualityAnalyzer:
             return 0.6
         else:
             return 0.4
-    
+
     async def assess_data_completeness(
-        self, 
-        extracted_data: Dict[str, Any], 
+        self,
+        extracted_data: Dict[str, Any],
         required_fields: List[str]
     ) -> float:
         """Assess completeness of extracted data"""
         if not required_fields:
             return 0.8  # Default score when no specific requirements
-        
+
         present_fields = sum([1 for field in required_fields if field in extracted_data])
         return present_fields / len(required_fields)
 
 
 class RegulatoryContextEngine:
     """Regulatory context analysis and strategic guidance"""
-    
+
     async def identify_applicable_guidances(
-        self, 
-        therapeutic_area: Optional[str], 
-        indication: Optional[str], 
-        endpoint_type: Optional[str], 
+        self,
+        therapeutic_area: Optional[str],
+        indication: Optional[str],
+        endpoint_type: Optional[str],
         study_type: Optional[str]
     ) -> List[str]:
         """Identify applicable FDA/EMA guidances"""
         guidances = []
-        
+
         # Core guidances that apply broadly
         guidances.extend([
             "ICH E9 - Statistical Principles for Clinical Trials",
             "ICH E6 - Good Clinical Practice"
         ])
-        
+
         # Therapeutic area specific guidances
         if therapeutic_area:
             if "oncology" in therapeutic_area.lower():
@@ -808,19 +793,19 @@ class RegulatoryContextEngine:
                     "FDA Cardiovascular Outcome Trials Guidance",
                     "EMA Cardiovascular Medicinal Products Guideline"
                 ])
-        
+
         # Endpoint-specific guidances
         if endpoint_type:
             if "patient_reported_outcome" in endpoint_type.lower():
                 guidances.append("FDA PRO Measures Guidance")
             elif "real_world" in endpoint_type.lower():
                 guidances.append("FDA Real-World Evidence Guidance")
-        
+
         return guidances
-    
+
     async def find_regulatory_precedents(
-        self, 
-        evidence_profile: Dict[str, Any], 
+        self,
+        evidence_profile: Dict[str, Any],
         approval_outcomes: List[str]
     ) -> List[Dict[str, Any]]:
         """Find similar regulatory precedents"""
@@ -836,93 +821,93 @@ class RegulatoryContextEngine:
                 "regulatory_considerations": ["accelerated_approval", "confirmatory_trial_required"]
             }
         ]
-        
+
         return precedents
-    
+
     async def calculate_success_probability(
-        self, 
-        evidence_quality: float, 
-        bias_risk: float, 
+        self,
+        evidence_quality: float,
+        bias_risk: float,
         precedent_analysis: List[Dict[str, Any]]
     ) -> float:
         """Calculate regulatory success probability"""
         # Base probability from evidence quality
         base_prob = evidence_quality
-        
+
         # Adjust for bias risk
         bias_adjustment = 1.0 - (bias_risk * 0.5)
-        
+
         # Adjust for precedent strength
         precedent_strength = len([p for p in precedent_analysis if p.get("outcome") == "approved"]) / max(len(precedent_analysis), 1)
-        
+
         # Combined probability
         success_prob = base_prob * bias_adjustment * (0.5 + precedent_strength * 0.5)
-        
+
         return min(max(success_prob, 0.1), 0.95)  # Bound between 10% and 95%
-    
+
     async def identify_risk_factors(
-        self, 
-        evidence: EvidenceRecord, 
-        bias_analysis: Dict[str, Any], 
+        self,
+        evidence: EvidenceRecord,
+        bias_analysis: Dict[str, Any],
         quality_metrics: Dict[str, Any]
     ) -> List[str]:
         """Identify regulatory risk factors"""
         risk_factors = []
-        
+
         # High bias risk
         if bias_analysis.get("overall_risk_score", 0) > 0.7:
             risk_factors.append("High bias risk detected")
-        
+
         # Low statistical power
         if quality_metrics.get("statistical_power", 1.0) < 0.8:
             risk_factors.append("Insufficient statistical power")
-        
+
         # Non-standard endpoints
         if quality_metrics.get("endpoint_validity", 1.0) < 0.7:
             risk_factors.append("Non-standard or unvalidated endpoints")
-        
+
         # Limited precedent
         if quality_metrics.get("regulatory_precedent", 1.0) < 0.6:
             risk_factors.append("Limited regulatory precedent")
-        
+
         return risk_factors
-    
+
     async def generate_strategic_recommendations(
-        self, 
-        evidence_profile: Dict[str, Any], 
-        success_probability: float, 
+        self,
+        evidence_profile: Dict[str, Any],
+        success_probability: float,
         risk_factors: List[str]
     ) -> List[str]:
         """Generate strategic regulatory recommendations"""
         recommendations = []
-        
+
         if success_probability < 0.5:
             recommendations.append("Consider strengthening evidence package before submission")
-        
+
         if "High bias risk detected" in risk_factors:
             recommendations.append("Conduct additional analyses to address bias concerns")
-        
+
         if "Insufficient statistical power" in risk_factors:
             recommendations.append("Consider pooling additional studies or extending follow-up")
-        
+
         if success_probability > 0.8:
             recommendations.append("Evidence package suitable for standard regulatory pathway")
-        
+
         return recommendations
-    
+
     async def suggest_submission_timing(
-        self, 
-        evidence_maturity: Optional[Dict[str, Any]], 
-        regulatory_landscape: Dict[str, Any], 
+        self,
+        evidence_maturity: Optional[Dict[str, Any]],
+        regulatory_landscape: Dict[str, Any],
         competitive_intelligence: Dict[str, Any]
     ) -> Optional[str]:
         """Suggest optimal submission timing"""
         # Would analyze regulatory calendar, competitive filings, etc.
         return "Consider submission in Q2 2025 after additional safety follow-up"
-    
+
     async def _call_llm(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         model: str = "claude-3-sonnet-20240229",
         max_tokens: int = 1000
     ) -> str:
@@ -937,11 +922,11 @@ class RegulatoryContextEngine:
             #     messages=[{"role": "user", "content": prompt}]
             # )
             # return response.content[0].text
-            
+
             # Placeholder response for development
             logger.info(f"LLM analysis requested: {prompt[:100]}...")
             return "Analysis placeholder - integrate with actual LLM API"
-            
+
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
             raise ProcessingError(
@@ -953,10 +938,10 @@ class RegulatoryContextEngine:
 
 class DomainSpecificExtractor:
     """Domain-specific AI models for evidence extraction"""
-    
+
     async def extract_population_characteristics(
-        self, 
-        abstract: str, 
+        self,
+        abstract: str,
         full_text: Optional[str] = None
     ) -> Dict[str, Any]:
         """Extract population characteristics using specialized model"""
@@ -969,25 +954,25 @@ class DomainSpecificExtractor:
             "exclusion_criteria": ["prior therapy", "significant comorbidities"],
             "confidence": 0.85
         }
-    
+
     async def extract_primary_endpoints(
-        self, 
-        abstract: str, 
+        self,
+        abstract: str,
         full_text: Optional[str] = None
     ) -> Dict[str, Any]:
         """Extract primary endpoints using specialized model"""
         return {
             "primary_endpoint": "overall survival",
-            "measurement_timepoint": "24 months", 
+            "measurement_timepoint": "24 months",
             "endpoint_type": "time_to_event",
             "clinical_meaningfulness": True,
             "regulatory_acceptance": "high",
             "confidence": 0.82
         }
-    
+
     async def extract_study_methodology(
-        self, 
-        abstract: str, 
+        self,
+        abstract: str,
         full_text: Optional[str] = None
     ) -> Dict[str, Any]:
         """Extract study methodology using specialized model"""
@@ -999,10 +984,10 @@ class DomainSpecificExtractor:
             "statistical_plan": {"primary_analysis": "intention_to_treat"},
             "confidence": 0.78
         }
-    
+
     async def extract_statistical_plan(
-        self, 
-        abstract: str, 
+        self,
+        abstract: str,
         full_text: Optional[str] = None
     ) -> Dict[str, Any]:
         """Extract statistical analysis plan details"""
@@ -1014,10 +999,10 @@ class DomainSpecificExtractor:
             "multiplicity_adjustment": "hochberg",
             "confidence": 0.75
         }
-    
+
     async def extract_safety_data(
-        self, 
-        abstract: str, 
+        self,
+        abstract: str,
         full_text: Optional[str] = None
     ) -> Dict[str, Any]:
         """Extract safety and tolerability data"""
@@ -1028,10 +1013,10 @@ class DomainSpecificExtractor:
             "safety_profile": "manageable",
             "confidence": 0.71
         }
-    
+
     async def extract_regulatory_markers(
-        self, 
-        abstract: str, 
+        self,
+        abstract: str,
         full_text: Optional[str] = None
     ) -> Dict[str, Any]:
         """Extract regulatory significance markers"""
@@ -1048,7 +1033,7 @@ class DomainSpecificExtractor:
 # Export enhanced services
 __all__ = [
     "EnhancedAIService",
-    "ComprehensiveBiasDetector", 
+    "ComprehensiveBiasDetector",
     "EvidenceQualityAnalyzer",
     "RegulatoryContextEngine",
     "DomainSpecificExtractor",

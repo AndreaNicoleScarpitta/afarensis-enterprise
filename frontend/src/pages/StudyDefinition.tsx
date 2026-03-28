@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { FlaskConical, Lock, Eye, ChevronRight, AlertCircle, CheckCircle2, Info, FileText, GitCompare, Calculator, Loader2, Brain, Upload, X, Plus } from 'lucide-react'
+import { FlaskConical, Lock, Eye, ChevronRight, AlertCircle, CheckCircle2, Info, FileText, GitCompare, Calculator, Loader2, Brain, Upload, X, Plus, Cpu, ShieldCheck, ShieldAlert, ChevronDown, Lightbulb, AlertTriangle, XCircle, CircleDot } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
 import LiteratureEvidence from '@/components/ui/LiteratureEvidence'
@@ -76,6 +76,11 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
   const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('definition')
   const [showWorkOpen, setShowWorkOpen] = useState(false)
   const [activeSpecTab, setActiveSpecTab] = useState<'spec' | 'model' | 'diff'>('spec')
+
+  // ── Compiler state ──
+  const [compilerResult, setCompilerResult] = useState<any>(null)
+  const [compiling, setCompiling] = useState(false)
+  const [compilerOpen, setCompilerOpen] = useState(false)
 
   // ── Document upload state ──
   const [uploadFile, setUploadFile] = useState<File | null>(null)
@@ -155,6 +160,30 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
       setShowImpactDialog(true)
     } else {
       confirmSave()
+    }
+  }
+
+  // ── Compiler ──
+  const handleCompile = async () => {
+    setCompiling(true)
+    setCompilerResult(null)
+    setCompilerOpen(true)
+    try {
+      const token = localStorage.getItem('_afarensis_token') || localStorage.getItem('access_token') || localStorage.getItem('auth_token') || 'dev-token'
+      const resp = await fetch(`/api/v1/projects/${selectedStudy.id}/study/compile-definition`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+      if (!resp.ok) throw new Error('Compilation failed')
+      const result = await resp.json()
+      setCompilerResult(result)
+    } catch {
+      setCompilerResult({ verdict: 'ERROR', warnings: [], assumptions: [], missing_critical: ['Compiler service unavailable. Check API key configuration.'], completeness_score: 0 })
+    } finally {
+      setCompiling(false)
     }
   }
 
@@ -1120,9 +1149,17 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
           )}
         </section>
 
-        {/* Save button */}
+        {/* Save + Compile buttons */}
         {!locked && !reviewerMode && (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={handleCompile}
+              disabled={compiling}
+              className="flex items-center gap-2 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
+            >
+              {compiling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Cpu className="h-4 w-4" />}
+              {compiling ? 'Compiling...' : 'Compile Definition'}
+            </button>
             <button
               onClick={handleSave}
               disabled={saving}
@@ -1132,6 +1169,154 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
               {saving ? 'Saving...' : 'Save Definition'}
             </button>
           </div>
+        )}
+
+        {/* ── Compiler Output Panel ── */}
+        {compilerOpen && (
+          <section className="border border-gray-200 rounded-xl overflow-hidden">
+            {/* Header */}
+            <button
+              onClick={() => setCompilerOpen(v => !v)}
+              className="w-full flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  !compilerResult ? 'bg-gray-200' :
+                  compilerResult.verdict === 'PASS' ? 'bg-emerald-100' :
+                  compilerResult.verdict === 'WARN' ? 'bg-amber-100' :
+                  'bg-red-100'
+                }`}>
+                  {compiling ? <Loader2 className="h-4 w-4 animate-spin text-gray-500" /> :
+                   !compilerResult ? <Cpu className="h-4 w-4 text-gray-400" /> :
+                   compilerResult.verdict === 'PASS' ? <ShieldCheck className="h-4 w-4 text-emerald-600" /> :
+                   compilerResult.verdict === 'WARN' ? <ShieldAlert className="h-4 w-4 text-amber-600" /> :
+                   <XCircle className="h-4 w-4 text-red-600" />}
+                </div>
+                <div className="text-left">
+                  <h3 className="text-sm font-bold text-gray-900">Study Definition Compiler</h3>
+                  <p className="text-[10px] text-gray-500">
+                    {compiling ? 'Analyzing definition...' :
+                     compilerResult ? `Verdict: ${compilerResult.verdict} — ${Math.round((compilerResult.completeness_score || 0) * 100)}% complete` :
+                     'Ready'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {compilerResult && !compiling && (
+                  <div className="flex items-center gap-1.5">
+                    {compilerResult.warnings?.filter((w: any) => w.severity === 'error').length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold">
+                        {compilerResult.warnings.filter((w: any) => w.severity === 'error').length} errors
+                      </span>
+                    )}
+                    {compilerResult.warnings?.filter((w: any) => w.severity === 'warning').length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold">
+                        {compilerResult.warnings.filter((w: any) => w.severity === 'warning').length} warnings
+                      </span>
+                    )}
+                    {compilerResult.assumptions?.length > 0 && (
+                      <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold">
+                        {compilerResult.assumptions.length} inferred
+                      </span>
+                    )}
+                  </div>
+                )}
+                <X className="h-4 w-4 text-gray-400" onClick={(e) => { e.stopPropagation(); setCompilerOpen(false) }} />
+              </div>
+            </button>
+
+            {/* Body */}
+            {compilerResult && !compiling && (
+              <div className="px-5 py-4 space-y-4 max-h-[60vh] overflow-y-auto">
+
+                {/* Missing Critical */}
+                {compilerResult.missing_critical?.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-red-600 uppercase tracking-widest flex items-center gap-1.5">
+                      <XCircle className="h-3 w-3" /> Blocking Issues
+                    </p>
+                    {compilerResult.missing_critical.map((msg: string, i: number) => (
+                      <div key={i} className="rounded-md border border-red-200 bg-red-50 px-3 py-2">
+                        <p className="text-xs text-red-800">{msg}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Validation Warnings */}
+                {compilerResult.warnings?.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <AlertTriangle className="h-3 w-3" /> Validation Findings ({compilerResult.warnings.length})
+                    </p>
+                    {compilerResult.warnings.map((w: any, i: number) => (
+                      <div key={i} className={`rounded-md border px-3 py-2.5 ${
+                        w.severity === 'error' ? 'border-red-200 bg-red-50' :
+                        w.severity === 'warning' ? 'border-amber-200 bg-amber-50' :
+                        'border-blue-200 bg-blue-50'
+                      }`}>
+                        <div className="flex items-center gap-2 mb-1">
+                          {w.severity === 'error' ? <XCircle className="h-3 w-3 text-red-500 shrink-0" /> :
+                           w.severity === 'warning' ? <AlertCircle className="h-3 w-3 text-amber-500 shrink-0" /> :
+                           <Info className="h-3 w-3 text-blue-500 shrink-0" />}
+                          <span className={`text-[10px] font-bold uppercase ${
+                            w.severity === 'error' ? 'text-red-600' : w.severity === 'warning' ? 'text-amber-600' : 'text-blue-600'
+                          }`}>{w.category?.replace(/_/g, ' ')}</span>
+                          <span className="text-[10px] text-gray-400 ml-auto font-mono">{w.field}</span>
+                        </div>
+                        <p className="text-xs text-gray-800 mb-1">{w.message}</p>
+                        <p className="text-[11px] text-gray-500 flex items-start gap-1">
+                          <Lightbulb className="h-3 w-3 text-amber-400 shrink-0 mt-0.5" />
+                          {w.recommendation}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Assumptions */}
+                {compilerResult.assumptions?.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
+                      <CircleDot className="h-3 w-3" /> Compiler Assumptions ({compilerResult.assumptions.length})
+                    </p>
+                    {compilerResult.assumptions.map((a: any, i: number) => (
+                      <div key={i} className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2.5">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-mono text-blue-600">{a.field}</span>
+                          <span className="text-[10px] text-gray-400">=</span>
+                          <span className="text-[10px] font-semibold text-gray-900">{a.assumed_value}</span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 leading-relaxed">{a.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Compiled definition preview (collapsed) */}
+                {compilerResult.compiled_definition && (
+                  <details className="group">
+                    <summary className="text-[10px] font-bold text-gray-500 uppercase tracking-widest cursor-pointer flex items-center gap-1.5">
+                      <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" />
+                      Compiled Schema Output
+                    </summary>
+                    <pre className="mt-2 p-3 bg-gray-900 text-gray-100 text-[10px] rounded-lg overflow-x-auto font-mono leading-relaxed max-h-[30vh] overflow-y-auto">
+                      {JSON.stringify(compilerResult.compiled_definition, null, 2)}
+                    </pre>
+                  </details>
+                )}
+              </div>
+            )}
+
+            {/* Loading state */}
+            {compiling && (
+              <div className="px-5 py-8 flex flex-col items-center gap-3">
+                <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                <p className="text-xs text-gray-500">Compiling study definition...</p>
+                <p className="text-[10px] text-gray-400">Enforcing ICH E9(R1) consistency, filling gaps, validating schema</p>
+              </div>
+            )}
+          </section>
         )}
 
         {/* Next step CTA */}

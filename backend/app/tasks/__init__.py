@@ -3,23 +3,23 @@ Afarensis Enterprise Background Tasks Package
 
 Provides comprehensive background task processing for:
 - AI-powered evidence analysis
-- Security monitoring and threat detection  
+- Security monitoring and threat detection
 - Workflow optimization and intelligence
 - Evidence discovery and processing
 - Regulatory artifact generation
 """
 
 from .enhanced_tasks import celery_app
-from .ai_tasks import *
-from .security_tasks import *
-from .workflow_tasks import *
-from .evidence_tasks import *
+from .ai_tasks import *  # noqa: F403
+from .security_tasks import *  # noqa: F403
+from .workflow_tasks import *  # noqa: F403
+from .evidence_tasks import *  # noqa: F403
 
-__all__ = [
+__all__ = [  # noqa: F405
     'celery_app',
     # AI Tasks
     'evidence_extraction_task',
-    'comparability_analysis_task', 
+    'comparability_analysis_task',
     'bias_detection_task',
     'regulatory_critique_task',
     'model_ensemble_inference_task',

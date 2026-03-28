@@ -43,7 +43,7 @@ export function useToast(): ToastContextValue {
 
 // ─── Icons & colours per type ─────────────────────────────────────────────────
 
-const ICON_MAP: Record<ToastType, React.FC<{ className?: string }>> = {
+const ICON_MAP: Record<ToastType, React.ComponentType<any>> = {
   success: CheckCircle,
   error: XCircle,
   warning: AlertTriangle,

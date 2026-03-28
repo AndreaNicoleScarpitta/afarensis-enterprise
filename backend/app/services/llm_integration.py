@@ -3,22 +3,18 @@ Real LLM Integration Service for Afarensis Enterprise
 Connects to Claude, OpenAI, and other LLM providers with actual API calls
 """
 
-import os
-import asyncio
 import logging
 import json
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
 
-import httpx
 import anthropic
-import openai
 from openai import AsyncOpenAI
 
 from app.core.config import settings
-from app.core.exceptions import ProcessingError, ValidationError
+from app.core.exceptions import ProcessingError
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +40,11 @@ class LLMResponse:
 
 class LLMServiceIntegration:
     """Real LLM integration service with multiple provider support"""
-    
+
     def __init__(self):
         self.setup_clients()
         self.fallback_order = [LLMProvider.CLAUDE, LLMProvider.OPENAI, LLMProvider.GEMINI]
-    
+
     def setup_clients(self):
         """Initialize LLM API clients"""
         # Claude/Anthropic
@@ -61,7 +57,7 @@ class LLMServiceIntegration:
                 logger.info("[OK] Claude client initialized")
             except Exception as e:
                 logger.warning(f"Claude client setup failed: {e}")
-        
+
         # OpenAI
         self.openai_client = None
         if settings.OPENAI_API_KEY:
@@ -72,7 +68,7 @@ class LLMServiceIntegration:
                 logger.info("[OK] OpenAI client initialized")
             except Exception as e:
                 logger.warning(f"OpenAI client setup failed: {e}")
-        
+
         # Google Gemini
         self.gemini_client = None
         if settings.GOOGLE_AI_API_KEY:
@@ -81,10 +77,10 @@ class LLMServiceIntegration:
                 logger.info("[OK] Gemini client would be initialized here")
             except Exception as e:
                 logger.warning(f"Gemini client setup failed: {e}")
-    
+
     async def call_claude(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         system_prompt: Optional[str] = None,
         model: str = "claude-3-5-sonnet-20241022",
         max_tokens: int = 4000,
@@ -93,12 +89,12 @@ class LLMServiceIntegration:
         """Call Claude API"""
         if not self.claude_client:
             raise ProcessingError("Claude client not available")
-        
+
         start_time = datetime.now()
-        
+
         try:
             messages = [{"role": "user", "content": prompt}]
-            
+
             response = await self.claude_client.messages.create(
                 model=model,
                 max_tokens=max_tokens,
@@ -106,9 +102,9 @@ class LLMServiceIntegration:
                 system=system_prompt or "You are an expert in clinical evidence review and regulatory affairs.",
                 messages=messages
             )
-            
+
             processing_time = (datetime.now() - start_time).total_seconds() * 1000
-            
+
             return LLMResponse(
                 content=response.content[0].text,
                 provider="claude",
@@ -122,11 +118,11 @@ class LLMServiceIntegration:
                     "stop_reason": response.stop_reason
                 }
             )
-            
+
         except Exception as e:
             logger.error(f"Claude API call failed: {e}")
             raise ProcessingError(f"Claude API error: {str(e)}")
-    
+
     async def call_openai(
         self,
         prompt: str,
@@ -138,24 +134,24 @@ class LLMServiceIntegration:
         """Call OpenAI API"""
         if not self.openai_client:
             raise ProcessingError("OpenAI client not available")
-        
+
         start_time = datetime.now()
-        
+
         try:
             messages = []
             if system_prompt:
                 messages.append({"role": "system", "content": system_prompt})
             messages.append({"role": "user", "content": prompt})
-            
+
             response = await self.openai_client.chat.completions.create(
                 model=model,
                 messages=messages,
                 max_tokens=max_tokens,
                 temperature=temperature
             )
-            
+
             processing_time = (datetime.now() - start_time).total_seconds() * 1000
-            
+
             return LLMResponse(
                 content=response.choices[0].message.content,
                 provider="openai",
@@ -169,11 +165,11 @@ class LLMServiceIntegration:
                     "finish_reason": response.choices[0].finish_reason
                 }
             )
-            
+
         except Exception as e:
             logger.error(f"OpenAI API call failed: {e}")
             raise ProcessingError(f"OpenAI API error: {str(e)}")
-    
+
     async def call_llm_with_fallback(
         self,
         prompt: str,
@@ -182,13 +178,13 @@ class LLMServiceIntegration:
         **kwargs
     ) -> LLMResponse:
         """Call LLM with automatic fallback to available providers"""
-        
+
         # Choose optimal provider based on task type
         preferred_provider = self._get_preferred_provider(task_type)
         providers_to_try = [preferred_provider] + [p for p in self.fallback_order if p != preferred_provider]
-        
+
         last_error = None
-        
+
         for provider in providers_to_try:
             try:
                 if provider == LLMProvider.CLAUDE and self.claude_client:
@@ -196,15 +192,15 @@ class LLMServiceIntegration:
                 elif provider == LLMProvider.OPENAI and self.openai_client:
                     return await self.call_openai(prompt, system_prompt, **kwargs)
                 # Add Gemini support here when available
-                
+
             except Exception as e:
                 last_error = e
                 logger.warning(f"{provider.value} failed, trying next provider: {e}")
                 continue
-        
+
         # All providers failed
         raise ProcessingError(f"All LLM providers failed. Last error: {last_error}")
-    
+
     def _get_preferred_provider(self, task_type: str) -> LLMProvider:
         """Choose optimal provider based on task type"""
         task_preferences = {
@@ -216,11 +212,11 @@ class LLMServiceIntegration:
             "summarization": LLMProvider.CLAUDE,  # Excellent summarization
             "code_generation": LLMProvider.OPENAI,  # Strong coding
         }
-        
+
         return task_preferences.get(task_type, LLMProvider.CLAUDE)
 
     # Specialized methods for Afarensis tasks
-    
+
     async def analyze_bias_comprehensive(
         self,
         evidence_text: str,
@@ -228,7 +224,7 @@ class LLMServiceIntegration:
         results: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Comprehensive bias analysis using LLM"""
-        
+
         prompt = f"""
         Analyze the following clinical study for potential biases. Provide a comprehensive assessment across all major bias categories.
 
@@ -264,29 +260,29 @@ class LLMServiceIntegration:
 
         Return only valid JSON.
         """
-        
+
         system_prompt = """You are an expert clinical epidemiologist and biostatistician with deep expertise in bias detection for regulatory submissions. Provide thorough, evidence-based bias assessments that regulatory agencies would find credible."""
-        
+
         response = await self.call_llm_with_fallback(
             prompt=prompt,
             system_prompt=system_prompt,
             task_type="bias_analysis",
             max_tokens=4000
         )
-        
+
         try:
             return json.loads(response.content)
         except json.JSONDecodeError:
             logger.warning("LLM returned invalid JSON, attempting to extract")
             return self._extract_json_from_text(response.content)
-    
+
     async def extract_evidence_structured(
         self,
         document_text: str,
         document_type: str = "research_paper"
     ) -> Dict[str, Any]:
         """Extract structured evidence from clinical documents"""
-        
+
         prompt = f"""
         Extract key information from this clinical document and structure it for regulatory evidence review.
 
@@ -348,7 +344,7 @@ class LLMServiceIntegration:
             }},
             "quality_metrics": {{
                 "sample_size_adequate": "boolean",
-                "randomization_adequate": "boolean", 
+                "randomization_adequate": "boolean",
                 "blinding_adequate": "boolean",
                 "dropout_rate": "number (proportion)",
                 "protocol_deviations": "boolean (significant deviations noted)",
@@ -363,28 +359,28 @@ class LLMServiceIntegration:
 
         Return only valid JSON. If information is not available, use null for that field.
         """
-        
+
         system_prompt = """You are an expert clinical research analyst specializing in evidence extraction for regulatory submissions. Extract information accurately and completely, noting confidence levels for each extraction."""
-        
+
         response = await self.call_llm_with_fallback(
             prompt=prompt,
             system_prompt=system_prompt,
             task_type="evidence_extraction",
             max_tokens=4000
         )
-        
+
         try:
             return json.loads(response.content)
         except json.JSONDecodeError:
             return self._extract_json_from_text(response.content)
-    
+
     async def generate_regulatory_critique(
         self,
         evidence_package: Dict[str, Any],
         submission_context: Dict[str, Any]
     ) -> str:
         """Generate regulatory critique and recommendations"""
-        
+
         prompt = f"""
         As a senior regulatory affairs expert, provide a comprehensive critique of this evidence package for regulatory submission.
 
@@ -428,27 +424,27 @@ class LLMServiceIntegration:
 
         Structure as a professional regulatory assessment memo with clear recommendations.
         """
-        
+
         system_prompt = """You are a senior regulatory affairs consultant with 20+ years of experience in FDA and EMA submissions. Provide thorough, actionable regulatory guidance that regulatory teams would find valuable."""
-        
+
         response = await self.call_llm_with_fallback(
             prompt=prompt,
             system_prompt=system_prompt,
             task_type="regulatory_review",
             max_tokens=4000
         )
-        
+
         return response.content
-    
+
     async def calculate_comparability_scores(
         self,
         target_study: Dict[str, Any],
         reference_studies: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """Calculate detailed comparability scores between studies"""
-        
+
         comparability_results = []
-        
+
         for ref_study in reference_studies:
             prompt = f"""
             Calculate detailed comparability scores between these two clinical studies for regulatory evidence review.
@@ -481,16 +477,16 @@ class LLMServiceIntegration:
 
             Return as JSON.
             """
-            
+
             system_prompt = """You are a expert biostatistician and regulatory scientist specializing in comparative effectiveness research. Provide precise, defensible comparability assessments."""
-            
+
             response = await self.call_llm_with_fallback(
                 prompt=prompt,
                 system_prompt=system_prompt,
                 task_type="regulatory_review",
                 max_tokens=3000
             )
-            
+
             try:
                 result = json.loads(response.content)
                 result['reference_study_id'] = ref_study.get('id', 'unknown')
@@ -498,31 +494,31 @@ class LLMServiceIntegration:
             except json.JSONDecodeError:
                 logger.warning(f"Failed to parse comparability analysis for study {ref_study.get('id')}")
                 continue
-        
+
         return comparability_results
-    
+
     def _extract_json_from_text(self, text: str) -> Dict[str, Any]:
         """Extract JSON from LLM text response that might have extra content"""
         try:
             # Try to find JSON in the text
             start_idx = text.find('{')
             end_idx = text.rfind('}') + 1
-            
+
             if start_idx >= 0 and end_idx > start_idx:
                 json_text = text[start_idx:end_idx]
                 return json.loads(json_text)
             else:
                 logger.warning("No valid JSON found in LLM response")
                 return {"error": "Could not extract valid JSON", "raw_response": text}
-                
+
         except Exception as e:
             logger.error(f"Failed to extract JSON: {e}")
             return {"error": str(e), "raw_response": text}
-    
+
     async def health_check(self) -> Dict[str, Any]:
         """Check health of all LLM providers"""
         health_status = {}
-        
+
         # Test Claude
         if self.claude_client:
             try:
@@ -536,13 +532,13 @@ class LLMServiceIntegration:
                 health_status['claude'] = {"available": False, "error": str(e)}
         else:
             health_status['claude'] = {"available": False, "error": "Client not initialized"}
-        
+
         # Test OpenAI
         if self.openai_client:
             try:
                 test_response = await self.call_openai("Hello", max_tokens=10)
                 health_status['openai'] = {
-                    "available": True, 
+                    "available": True,
                     "response_time_ms": test_response.processing_time_ms,
                     "model": test_response.model
                 }
@@ -550,7 +546,7 @@ class LLMServiceIntegration:
                 health_status['openai'] = {"available": False, "error": str(e)}
         else:
             health_status['openai'] = {"available": False, "error": "Client not initialized"}
-        
+
         return health_status
 
 

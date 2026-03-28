@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Save, 
-  TrendingUp, 
-  Network, 
+import {
+  Search,
+  Filter,
+  Save,
+  TrendingUp,
+  Network,
   Brain,
   FileText,
   Users,
   Calendar,
-  Target,
   ArrowRight,
   Star,
   Clock,
@@ -17,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useApiRequest } from '../services/hooks';
 import { apiClient } from '../services/apiClient';
+import { z } from 'zod';
 
 interface SearchResult {
   evidence_id: string;
@@ -65,7 +65,7 @@ const AdvancedSearchComponent: React.FC = () => {
 
   // API hooks
   const { data: savedSearchesData } = useApiRequest<{ saved_searches: SavedSearch[] }>(
-    '/api/v1/search/saved'
+    () => apiClient.request('/api/v1/search/saved', z.object({ saved_searches: z.array(z.any()) }))
   );
 
   useEffect(() => {
@@ -90,12 +90,13 @@ const AdvancedSearchComponent: React.FC = () => {
         ...(searchType === 'hybrid' && { semantic_weight: semanticWeight })
       };
 
-      const response = await apiClient.post<{
-        results: SearchResult[];
-        total_results: number;
-      }>(endpoint, searchRequest);
+      const response = await apiClient.request(
+        endpoint,
+        z.object({ results: z.array(z.any()), total_results: z.number() }),
+        { method: 'POST', body: JSON.stringify(searchRequest) }
+      );
 
-      setResults(response.data.results || []);
+      setResults(response.results || []);
     } catch (error) {
       console.error('Search failed:', error);
       setResults([]);
@@ -108,17 +109,27 @@ const AdvancedSearchComponent: React.FC = () => {
     if (!saveSearchName.trim() || !query.trim()) return;
 
     try {
-      await apiClient.post('/api/v1/search/save', {
-        name: saveSearchName,
-        query,
-        search_type: searchType,
-        filters,
-        alert_frequency: null
-      });
+      await apiClient.request(
+        '/api/v1/search/save',
+        z.object({}),
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            name: saveSearchName,
+            query,
+            search_type: searchType,
+            filters,
+            alert_frequency: null
+          })
+        }
+      );
 
       // Refresh saved searches
-      const savedData = await apiClient.get<{ saved_searches: SavedSearch[] }>('/api/v1/search/saved');
-      setSavedSearches(savedData.data.saved_searches || []);
+      const savedData = await apiClient.request(
+        '/api/v1/search/saved',
+        z.object({ saved_searches: z.array(z.any()) })
+      );
+      setSavedSearches(savedData.saved_searches || []);
       
       setShowSaveDialog(false);
       setSaveSearchName('');
@@ -130,16 +141,17 @@ const AdvancedSearchComponent: React.FC = () => {
   const loadSavedSearch = (savedSearch: SavedSearch) => {
     setQuery(savedSearch.query);
     setSearchType(savedSearch.search_type as any);
-    setFilters(savedSearch.filters);
+    setFilters(savedSearch.filters as typeof filters);
   };
 
   const getRecommendations = async (evidenceId: string) => {
     try {
-      const response = await apiClient.get<{
-        recommendations: SearchResult[];
-      }>(`/api/v1/search/recommendations/${evidenceId}?recommendation_type=similar&limit=5`);
-      
-      setRecommendations(response.data.recommendations || []);
+      const response = await apiClient.request(
+        `/api/v1/search/recommendations/${evidenceId}?recommendation_type=similar&limit=5`,
+        z.object({ recommendations: z.array(z.any()) })
+      );
+
+      setRecommendations(response.recommendations || []);
     } catch (error) {
       console.error('Failed to get recommendations:', error);
     }

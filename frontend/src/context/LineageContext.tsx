@@ -541,9 +541,9 @@ function loadInitialState(): StoredState & { _fromStorage?: boolean } {
 
 export function LineageProvider({ children }: { children: React.ReactNode }) {
   const initialState = loadInitialState()
-  const [state, setState] = useState<StoredState>(initialState)
+  const [state, _setState] = useState<StoredState>(initialState)
   // Data is demo when it was not loaded from localStorage (i.e. first visit, no API data)
-  const [isDemoData, setIsDemoData] = useState(!initialState._fromStorage)
+  const [isDemoData, _setIsDemoData] = useState(!initialState._fromStorage)
 
   // Persist to localStorage on every state change
   useEffect(() => {

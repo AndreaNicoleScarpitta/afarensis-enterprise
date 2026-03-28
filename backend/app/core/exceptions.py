@@ -7,7 +7,7 @@ structured error responses, and regulatory compliance logging.
 
 import logging
 from typing import Dict, Any, Optional, Union
-from fastapi import HTTPException, Request, status
+from fastapi import Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -21,10 +21,10 @@ logger = logging.getLogger(__name__)
 
 class AfarensisException(Exception):
     """Base exception for Afarensis-specific errors"""
-    
+
     def __init__(
-        self, 
-        message: str, 
+        self,
+        message: str,
         error_code: Optional[str] = None,
         details: Optional[Dict[str, Any]] = None
     ):
@@ -128,9 +128,9 @@ def create_error_response(
     request: Optional[Request] = None
 ) -> Dict[str, Any]:
     """Create standardized error response"""
-    
+
     correlation_id = get_correlation_id()
-    
+
     # Base error response — use .detail for HTTPException, str() otherwise
     message = getattr(error, 'detail', None) or str(error)
     error_response = {
@@ -143,13 +143,13 @@ def create_error_response(
         # Also set top-level "detail" for compatibility with clients that expect it
         "detail": message,
     }
-    
+
     # Add additional details for Afarensis exceptions
     if isinstance(error, AfarensisException):
         error_response["error"]["code"] = error.error_code
         if error.details:
             error_response["error"]["details"] = error.details
-    
+
     # Add request context if available
     if request:
         error_response["error"]["request"] = {
@@ -157,7 +157,7 @@ def create_error_response(
             "url": str(request.url).split('?')[0],
             "user_agent": request.headers.get("User-Agent"),
         }
-    
+
     # Log error for monitoring
     logger.error(
         f"Request error: {error.__class__.__name__}: {str(error)}",
@@ -170,19 +170,19 @@ def create_error_response(
         },
         exc_info=True if not isinstance(error, AfarensisException) else False
     )
-    
+
     return error_response
 
 
 async def afarensis_exception_handler(
-    request: Request, 
+    request: Request,
     exc: AfarensisException
 ) -> JSONResponse:
     """Handle Afarensis-specific exceptions"""
-    
+
     status_code = EXCEPTION_STATUS_MAP.get(type(exc), status.HTTP_500_INTERNAL_SERVER_ERROR)
     error_response = create_error_response(exc, status_code, request)
-    
+
     # Log regulatory compliance violations with high severity
     if isinstance(exc, RegulatoryComplianceError):
         audit_logger.log_system_event(
@@ -196,7 +196,7 @@ async def afarensis_exception_handler(
             },
             severity="error"
         )
-    
+
     # Log authorization failures for security monitoring
     elif isinstance(exc, (AuthenticationError, AuthorizationError)):
         audit_logger.log_system_event(
@@ -210,7 +210,7 @@ async def afarensis_exception_handler(
             },
             severity="warning"
         )
-    
+
     return JSONResponse(
         status_code=status_code,
         content=error_response,
@@ -222,13 +222,13 @@ async def afarensis_exception_handler(
 
 
 async def http_exception_handler(
-    request: Request, 
+    request: Request,
     exc: StarletteHTTPException
 ) -> JSONResponse:
     """Handle standard HTTP exceptions"""
-    
+
     error_response = create_error_response(exc, exc.status_code, request)
-    
+
     return JSONResponse(
         status_code=exc.status_code,
         content=error_response,
@@ -240,11 +240,11 @@ async def http_exception_handler(
 
 
 async def validation_exception_handler(
-    request: Request, 
+    request: Request,
     exc: RequestValidationError
 ) -> JSONResponse:
     """Handle request validation errors"""
-    
+
     # Extract validation details
     validation_details = []
     for error in exc.errors():
@@ -254,19 +254,19 @@ async def validation_exception_handler(
             "type": error["type"],
             "input": error.get("input")
         })
-    
+
     validation_error = ValidationError(
         message="Request validation failed",
         error_code="VALIDATION_ERROR",
         details={"validation_errors": validation_details}
     )
-    
+
     error_response = create_error_response(
-        validation_error, 
-        status.HTTP_422_UNPROCESSABLE_ENTITY, 
+        validation_error,
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
         request
     )
-    
+
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=error_response,
@@ -278,11 +278,11 @@ async def validation_exception_handler(
 
 
 async def general_exception_handler(
-    request: Request, 
+    request: Request,
     exc: Exception
 ) -> JSONResponse:
     """Handle unexpected exceptions"""
-    
+
     # Log full traceback for debugging
     logger.error(
         f"Unhandled exception: {exc.__class__.__name__}: {str(exc)}",
@@ -294,7 +294,7 @@ async def general_exception_handler(
         },
         exc_info=True
     )
-    
+
     # Log security event for potential attacks
     audit_logger.log_system_event(
         event="Unhandled exception",
@@ -307,7 +307,7 @@ async def general_exception_handler(
         },
         severity="error"
     )
-    
+
     # Create generic error response (don't expose internal details)
     error_response = {
         "error": {
@@ -317,12 +317,12 @@ async def general_exception_handler(
             "code": "INTERNAL_SERVER_ERROR"
         }
     }
-    
+
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=error_response,
         headers={
-            "X-Error-Type": "InternalServerError", 
+            "X-Error-Type": "InternalServerError",
             "X-Correlation-ID": get_correlation_id(),
         }
     )
@@ -330,19 +330,19 @@ async def general_exception_handler(
 
 def setup_exception_handlers(app):
     """Setup all exception handlers for the FastAPI app"""
-    
+
     # Afarensis-specific exceptions
     app.add_exception_handler(AfarensisException, afarensis_exception_handler)
-    
+
     # Standard HTTP exceptions
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
-    
+
     # Validation exceptions
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
-    
+
     # Catch-all for unexpected exceptions
     app.add_exception_handler(Exception, general_exception_handler)
-    
+
     logger.info("[INIT] Exception handlers configured")
 
 
@@ -352,7 +352,7 @@ def raise_not_found(resource: str, identifier: str = None):
     message = f"{resource} not found"
     if identifier:
         message += f" (ID: {identifier})"
-    
+
     raise ResourceNotFoundError(
         message=message,
         error_code="RESOURCE_NOT_FOUND",

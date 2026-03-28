@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import type React from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
-  Users, UserPlus, Search, Shield, ShieldCheck,
+  UserPlus, Search, Shield, ShieldCheck,
   Mail, Clock, CheckCircle, XCircle,
   RefreshCw, Loader2, AlertTriangle, Building2,
   Eye, BarChart3, Copy, Check, X

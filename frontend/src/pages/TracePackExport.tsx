@@ -185,8 +185,6 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
   const [generated, setGenerated] = useState(false)
 
   const totalSize = '18.3 MB'
-  const allChecksPass = VALIDATION_CHECKS.every(c => c.pass)
-
   const handleGenerate = async () => {
     setGenerating(true)
     try {

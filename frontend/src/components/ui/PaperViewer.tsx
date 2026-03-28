@@ -3,7 +3,7 @@ import {
   X, ExternalLink, Download, Users, Calendar,
   Quote, Maximize2, Minimize2,
   Copy, CheckCircle2, FileText, Hash, Layers, AlertCircle,
-  BookOpen, Plus, BookMarked,
+  BookOpen, BookMarked,
 } from 'lucide-react'
 import { useLiterature, AnchorCategory, ANCHOR_CATEGORIES } from '@/context/LiteratureContext'
 
@@ -155,7 +155,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
     saveAnchor({
       paperTitle: paper.title,
       paperSource: paper.source,
-      paperUrl: sourceUrl ?? undefined,
+      paperUrl: sourceUrl ?? '',
       text: anchor.text,
       section: anchor.section,
       relevance: anchor.relevance,
@@ -409,7 +409,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                 anchors.map(anchor => {
                   const saved = isAlreadySaved(anchor.text) || justSaved.has(anchor.id)
                   const selectedCat = anchorCategories[anchor.id] ?? 'general'
-                  const catMeta = ANCHOR_CATEGORIES.find(c => c.id === selectedCat)!
+                  /* catMeta available if needed: ANCHOR_CATEGORIES.find(c => c.id === selectedCat) */
 
                   return (
                     <div key={anchor.id} className={`rounded-xl border p-4 ${

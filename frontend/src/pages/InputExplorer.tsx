@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import {
   Database, Lock, Eye, ChevronDown, ChevronRight, Search,
-  Table2, Grid3X3, BarChart3, AlertTriangle, CheckCircle2,
+  Table2, AlertTriangle, CheckCircle2,
   FileText, Link2, Clock, Shield, Hash, Layers, ArrowRight,
-  Activity, TrendingUp, Tag, Box, Fingerprint,
+  Activity, Tag, Fingerprint,
 } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useLineage } from '../context/LineageContext'

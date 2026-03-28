@@ -3,23 +3,19 @@ External API Integration Service for Afarensis Enterprise
 Real connections to PubMed, ClinicalTrials.gov, FDA, EMA, and other regulatory data sources
 """
 
-import os
 import asyncio
 import logging
-import json
 import random
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timedelta
-from urllib.parse import urlencode
+from datetime import datetime
 import re
 
-import httpx
 import aiohttp
 from bs4 import BeautifulSoup
 
 from app.core.config import settings
-from app.core.exceptions import ProcessingError, ValidationError
+from app.core.exceptions import ProcessingError
 
 logger = logging.getLogger(__name__)
 
@@ -264,7 +260,7 @@ class ExternalAPIService:
         raise ProcessingError(f"{service} API error after {max_retries} attempts: {last_exc}")
 
     # PubMed Integration
-    
+
     async def search_pubmed(
         self,
         query: str,
@@ -273,16 +269,16 @@ class ExternalAPIService:
         study_types: Optional[List[str]] = None
     ) -> List[Dict[str, Any]]:
         """Search PubMed for literature"""
-        
+
         await self._rate_limit_wait('pubmed')
-        
+
         # Build search query
         search_terms = [query]
-        
+
         if publication_years:
             start_year, end_year = publication_years
             search_terms.append(f'("{start_year}"[PDAT] : "{end_year}"[PDAT])')
-        
+
         if study_types:
             type_filters = []
             study_type_mapping = {
@@ -295,12 +291,12 @@ class ExternalAPIService:
             for study_type in study_types:
                 if study_type.lower() in study_type_mapping:
                     type_filters.append(study_type_mapping[study_type.lower()])
-            
+
             if type_filters:
                 search_terms.append('(' + ' OR '.join(type_filters) + ')')
-        
+
         full_query = ' AND '.join(search_terms)
-        
+
         try:
             # Step 1: Search for PMIDs
             search_params = {
@@ -329,7 +325,7 @@ class ExternalAPIService:
         except Exception as e:
             logger.error(f"PubMed search failed: {e}")
             raise ProcessingError(f"PubMed API error: {str(e)}")
-    
+
     async def _fetch_pubmed_details_safe(self, pmids: List[str]) -> List[Dict[str, Any]]:
         """Fetch detailed PubMed records with per-batch retry and jitter."""
         batch_size = 50
@@ -372,29 +368,29 @@ class ExternalAPIService:
     async def _fetch_pubmed_details(self, session: aiohttp.ClientSession, pmids: List[str]) -> List[Dict[str, Any]]:
         """Legacy method — delegates to _fetch_pubmed_details_safe."""
         return await self._fetch_pubmed_details_safe(pmids)
-    
+
     def _parse_pubmed_xml(self, xml_content: str) -> List[Dict[str, Any]]:
         """Parse PubMed XML response"""
-        
+
         try:
             root = ET.fromstring(xml_content)
             articles = []
-            
+
             for article_elem in root.findall('.//PubmedArticle'):
                 try:
                     # Extract basic information
                     pmid = article_elem.find('.//PMID').text if article_elem.find('.//PMID') is not None else None
-                    
+
                     # Title
                     title_elem = article_elem.find('.//ArticleTitle')
                     title = title_elem.text if title_elem is not None else "No title available"
-                    
+
                     # Abstract
                     abstract_texts = []
                     for abstract_elem in article_elem.findall('.//Abstract/AbstractText'):
                         abstract_texts.append(abstract_elem.text or "")
                     abstract = ' '.join(abstract_texts)
-                    
+
                     # Authors
                     authors = []
                     for author_elem in article_elem.findall('.//Author'):
@@ -405,39 +401,39 @@ class ExternalAPIService:
                             if first_name is not None:
                                 author_name += f", {first_name.text or ''}"
                             authors.append(author_name)
-                    
+
                     # Journal
                     journal_elem = article_elem.find('.//Journal/Title')
                     journal = journal_elem.text if journal_elem is not None else "Unknown journal"
-                    
+
                     # Publication date
                     pub_date = None
                     pub_year = None
                     date_elem = article_elem.find('.//PubDate/Year')
                     if date_elem is not None:
                         pub_year = int(date_elem.text)
-                        
+
                     month_elem = article_elem.find('.//PubDate/Month')
                     day_elem = article_elem.find('.//PubDate/Day')
-                    
+
                     if pub_year:
                         month = month_elem.text if month_elem is not None else "1"
                         day = day_elem.text if day_elem is not None else "1"
                         try:
                             pub_date = f"{pub_year}-{month.zfill(2)}-{day.zfill(2)}"
-                        except:
+                        except Exception:
                             pub_date = f"{pub_year}-01-01"
-                    
+
                     # DOI
                     doi = None
                     for id_elem in article_elem.findall('.//ArticleId'):
                         if id_elem.get('IdType') == 'doi':
                             doi = id_elem.text
                             break
-                    
+
                     # Study type detection
                     study_type = self._detect_study_type(title, abstract)
-                    
+
                     article_data = {
                         'pmid': pmid,
                         'title': title,
@@ -452,24 +448,24 @@ class ExternalAPIService:
                         'source': 'pubmed',
                         'extracted_at': datetime.utcnow().isoformat()
                     }
-                    
+
                     articles.append(article_data)
-                    
+
                 except Exception as e:
                     logger.warning(f"Failed to parse PubMed article: {e}")
                     continue
-            
+
             return articles
-            
+
         except Exception as e:
             logger.error(f"Failed to parse PubMed XML: {e}")
             return []
-    
+
     def _detect_study_type(self, title: str, abstract: str) -> str:
         """Detect study type from title and abstract"""
-        
+
         text = (title + " " + abstract).lower()
-        
+
         # Study type patterns
         if any(pattern in text for pattern in ['randomized', 'randomised', 'rct', 'placebo-controlled']):
             return 'randomized_controlled_trial'
@@ -487,7 +483,7 @@ class ExternalAPIService:
             return 'observational_study'
 
     # ClinicalTrials.gov Integration
-    
+
     async def search_clinical_trials(
         self,
         condition: str,
@@ -536,9 +532,9 @@ class ExternalAPIService:
                 desc_mod = proto.get('descriptionModule', {})
                 design_mod = proto.get('designModule', {})
                 arms_mod = proto.get('armsInterventionsModule', {})
-                outcomes_mod = proto.get('outcomesModule', {})
+                proto.get('outcomesModule', {})
                 eligibility = proto.get('eligibilityModule', {})
-                contacts = proto.get('contactsLocationsModule', {})
+                proto.get('contactsLocationsModule', {})
                 sponsor_mod = proto.get('sponsorCollaboratorsModule', {})
 
                 nct_id = ident.get('nctId', '')
@@ -604,14 +600,14 @@ class ExternalAPIService:
 
         logger.info(f"ClinicalTrials.gov v2 returned {len(results)} studies")
         return results
-    
+
     def _parse_clinical_trials_response(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Parse ClinicalTrials.gov API response"""
-        
+
         try:
             studies = data.get('StudyFieldsResponse', {}).get('StudyFields', [])
             parsed_studies = []
-            
+
             for study in studies:
                 try:
                     # Helper function to safely get field value
@@ -620,7 +616,7 @@ class ExternalAPIService:
                         if isinstance(field_data, list) and len(field_data) > index:
                             return field_data[index]
                         return None
-                    
+
                     parsed_study = {
                         'nct_id': get_field('NCTId'),
                         'brief_title': get_field('BriefTitle'),
@@ -646,21 +642,21 @@ class ExternalAPIService:
                         'source': 'clinicaltrials.gov',
                         'extracted_at': datetime.utcnow().isoformat()
                     }
-                    
+
                     parsed_studies.append(parsed_study)
-                    
+
                 except Exception as e:
                     logger.warning(f"Failed to parse clinical trial: {e}")
                     continue
-            
+
             return parsed_studies
-            
+
         except Exception as e:
             logger.error(f"Failed to parse ClinicalTrials.gov response: {e}")
             return []
 
     # FDA Integration
-    
+
     async def search_fda_guidance(
         self,
         topic: str,
@@ -668,47 +664,47 @@ class ExternalAPIService:
         max_results: int = 20
     ) -> List[Dict[str, Any]]:
         """Search FDA guidance documents"""
-        
+
         await self._rate_limit_wait('fda')
-        
+
         try:
             # FDA doesn't have a public API, so we'll scrape the guidance search
             search_params = {
                 'search_term': topic,
                 'sort_by': 'relevance'
             }
-            
+
             if document_type:
                 search_params['document_type'] = document_type
-            
+
             async with aiohttp.ClientSession(timeout=self.session_timeout) as session:
                 # Note: This is a simplified example. Real implementation would need
                 # to handle FDA's actual search interface
                 url = "https://www.fda.gov/regulatory-information/search-fda-guidance-documents"
-                
+
                 headers = {
                     'User-Agent': 'Afarensis-Enterprise-Research-Tool/1.0'
                 }
-                
+
                 async with session.get(url, params=search_params, headers=headers) as response:
                     if response.status != 200:
                         logger.warning(f"FDA guidance search returned {response.status}")
                         return []
-                    
+
                     html_content = await response.text()
                     return self._parse_fda_guidance_html(html_content, max_results)
-        
+
         except Exception as e:
             logger.error(f"FDA guidance search failed: {e}")
             return []
-    
+
     def _parse_fda_guidance_html(self, html_content: str, max_results: int) -> List[Dict[str, Any]]:
         """Parse FDA guidance search results from HTML"""
-        
+
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
             guidance_docs = []
-            
+
             # Look for guidance document links (simplified parsing)
             for link in soup.find_all('a', href=True)[:max_results]:
                 if 'guidance' in link['href'].lower():
@@ -718,15 +714,15 @@ class ExternalAPIService:
                         'source': 'fda_guidance',
                         'extracted_at': datetime.utcnow().isoformat()
                     })
-            
+
             return guidance_docs[:max_results]
-            
+
         except Exception as e:
             logger.error(f"Failed to parse FDA guidance HTML: {e}")
             return []
 
     # EMA Integration
-    
+
     async def search_ema_documents(
         self,
         therapeutic_area: str,
@@ -734,9 +730,9 @@ class ExternalAPIService:
         max_results: int = 20
     ) -> List[Dict[str, Any]]:
         """Search EMA documents and guidelines"""
-        
+
         await self._rate_limit_wait('ema')
-        
+
         try:
             # EMA document search
             search_params = {
@@ -744,38 +740,38 @@ class ExternalAPIService:
                 'type': document_type or 'guideline',
                 'size': min(max_results, 100)
             }
-            
+
             async with aiohttp.ClientSession(timeout=self.session_timeout) as session:
                 url = "https://www.ema.europa.eu/en/search/search"
-                
+
                 headers = {
                     'User-Agent': 'Afarensis-Enterprise-Research-Tool/1.0'
                 }
-                
+
                 async with session.get(url, params=search_params, headers=headers) as response:
                     if response.status != 200:
                         logger.warning(f"EMA document search returned {response.status}")
                         return []
-                    
+
                     html_content = await response.text()
                     return self._parse_ema_documents_html(html_content, max_results)
-        
+
         except Exception as e:
             logger.error(f"EMA document search failed: {e}")
             return []
-    
+
     def _parse_ema_documents_html(self, html_content: str, max_results: int) -> List[Dict[str, Any]]:
         """Parse EMA document search results"""
-        
+
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
             documents = []
-            
+
             # Look for document links (simplified parsing)
             for item in soup.find_all(['div', 'article'], class_=re.compile('search-result'))[:max_results]:
                 title_elem = item.find(['h3', 'h2', 'a'])
                 link_elem = item.find('a', href=True)
-                
+
                 if title_elem and link_elem:
                     documents.append({
                         'title': title_elem.get_text(strip=True),
@@ -783,9 +779,9 @@ class ExternalAPIService:
                         'source': 'ema',
                         'extracted_at': datetime.utcnow().isoformat()
                     })
-            
+
             return documents[:max_results]
-            
+
         except Exception as e:
             logger.error(f"Failed to parse EMA documents HTML: {e}")
             return []
@@ -873,24 +869,24 @@ class ExternalAPIService:
             return []
 
     # Comprehensive search across all sources
-    
+
     async def comprehensive_evidence_search(
         self,
         query: str,
         search_config: Dict[str, Any]
     ) -> Dict[str, List[Dict[str, Any]]]:
         """Search across all available evidence sources"""
-        
+
         results = {
             'pubmed_articles': [],
             'clinical_trials': [],
             'fda_guidance': [],
             'ema_documents': []
         }
-        
+
         # Create search tasks
         search_tasks = []
-        
+
         # PubMed search
         if search_config.get('include_pubmed', True):
             pubmed_task = self.search_pubmed(
@@ -900,8 +896,8 @@ class ExternalAPIService:
                 study_types=search_config.get('study_types')
             )
             search_tasks.append(('pubmed_articles', pubmed_task))
-        
-        # ClinicalTrials.gov search  
+
+        # ClinicalTrials.gov search
         if search_config.get('include_clinical_trials', True):
             trials_task = self.search_clinical_trials(
                 condition=query,
@@ -911,7 +907,7 @@ class ExternalAPIService:
                 max_results=search_config.get('trials_max_results', 50)
             )
             search_tasks.append(('clinical_trials', trials_task))
-        
+
         # FDA guidance search
         if search_config.get('include_fda_guidance', True):
             fda_task = self.search_fda_guidance(
@@ -919,7 +915,7 @@ class ExternalAPIService:
                 max_results=search_config.get('fda_max_results', 20)
             )
             search_tasks.append(('fda_guidance', fda_task))
-        
+
         # EMA documents search
         if search_config.get('include_ema_documents', True):
             ema_task = self.search_ema_documents(
@@ -927,28 +923,28 @@ class ExternalAPIService:
                 max_results=search_config.get('ema_max_results', 20)
             )
             search_tasks.append(('ema_documents', ema_task))
-        
+
         # Execute all searches concurrently
         if search_tasks:
             search_results = await asyncio.gather(
                 *[task for _, task in search_tasks],
                 return_exceptions=True
             )
-            
+
             # Collect results
             for i, (result_key, _) in enumerate(search_tasks):
                 if i < len(search_results) and not isinstance(search_results[i], Exception):
                     results[result_key] = search_results[i]
                 else:
                     logger.warning(f"Search failed for {result_key}: {search_results[i] if i < len(search_results) else 'Unknown error'}")
-        
+
         return results
-    
+
     async def health_check(self) -> Dict[str, Any]:
         """Check connectivity to external APIs"""
-        
+
         health_status = {}
-        
+
         # Test PubMed
         try:
             test_params = {
@@ -959,7 +955,7 @@ class ExternalAPIService:
             }
             if settings.PUBMED_API_KEY:
                 test_params['api_key'] = settings.PUBMED_API_KEY
-            
+
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
                 url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
                 async with session.get(url, params=test_params) as response:
@@ -970,7 +966,7 @@ class ExternalAPIService:
                     }
         except Exception as e:
             health_status['pubmed'] = {'available': False, 'error': str(e)}
-        
+
         # Test ClinicalTrials.gov
         try:
             test_params = {
@@ -980,7 +976,7 @@ class ExternalAPIService:
                 'fmt': 'json',
                 'fields': 'NCTId'
             }
-            
+
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
                 url = "https://clinicaltrials.gov/api/query/study_fields"
                 async with session.get(url, params=test_params) as response:
@@ -990,7 +986,7 @@ class ExternalAPIService:
                     }
         except Exception as e:
             health_status['clinicaltrials'] = {'available': False, 'error': str(e)}
-        
+
         # Test FDA (basic connectivity)
         try:
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10)) as session:
@@ -1003,7 +999,7 @@ class ExternalAPIService:
                     }
         except Exception as e:
             health_status['fda'] = {'available': False, 'error': str(e)}
-        
+
         return health_status
 
 

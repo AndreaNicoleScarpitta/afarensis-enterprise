@@ -1,4 +1,3 @@
-import React from 'react'
 import { Database, Clock, Hash, Users, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -48,7 +47,6 @@ export default function DatasetContextBar({ dataset, analysisResults, onClick }:
 
   const name = dataset?.name || 'Uploaded Dataset'
   const rowCount = analysisResults?.column_detection?.n_records_analyzed || dataset?.records_count || 0
-  const inputRows = analysisResults?.column_detection?.n_records_input || dataset?.records_count || 0
   const droppedRows = analysisResults?.column_detection?.n_records_dropped || 0
   const nEvents = analysisResults?.column_detection?.n_events || 0
   const timestamp = analysisResults?.analysis_timestamp || dataset?.upload_timestamp || null

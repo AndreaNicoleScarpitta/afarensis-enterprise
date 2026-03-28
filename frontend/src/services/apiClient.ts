@@ -64,7 +64,7 @@ export const PaginatedSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
       has_next: z.boolean().optional(),
       has_prev: z.boolean().optional(),
     }).optional(),
-    total: z.number().nonnegative().optional(),
+    total: z.number().nonnegative().optional().default(0),
     page: z.number().positive().optional(),
     pageSize: z.number().positive().optional(),
     page_size: z.number().positive().optional(),
@@ -99,8 +99,8 @@ export const ProjectStatusSchema = z.string().transform(s => s.toLowerCase()).pi
 
 export const ProjectSchema = z.object({
   id: z.string().uuid(),
-  name: z.string().min(1).optional(),
-  title: z.string().min(1).optional(),
+  name: z.string().optional().default(''),
+  title: z.string().optional().default(''),
   description: z.string().nullable(),
   status: ProjectStatusSchema,
   owner_id: z.string().uuid().nullable().optional(),
@@ -127,15 +127,42 @@ export const BiasAnalysisSchema = z.object({
 });
 
 export type Evidence = z.infer<typeof EvidenceSchema>;
-export type Project = z.infer<typeof ProjectSchema>;
+export type Project = {
+  id: string;
+  name: string;
+  title: string;
+  description: string | null;
+  status: 'draft' | 'active' | 'completed' | 'archived' | 'on_hold' | 'review' | 'processing';
+  owner_id?: string | null;
+  created_by: string | null;
+  research_intent?: string | null;
+  created_at: string;
+  updated_at: string;
+};
 export type User = z.infer<typeof UserSchema>;
 export type Review = z.infer<typeof ReviewSchema>;
 export type EvidenceStatus = z.infer<typeof EvidenceStatusSchema>;
 export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
 export type UserRole = z.infer<typeof UserRoleSchema>;
 export type BiasAnalysis = z.infer<typeof BiasAnalysisSchema>;
-export type PaginatedResponse<T> = z.infer<ReturnType<typeof PaginatedSchema<z.ZodType<T>>>>;
-export type ApiError = z.infer<typeof ApiErrorSchema>;
+export type PaginatedResponse<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number | undefined;
+  total_pages: number | undefined;
+  pagination?: {
+    total: number;
+    page: number;
+    page_size?: number;
+    total_pages?: number;
+    has_next?: boolean;
+    has_prev?: boolean;
+  };
+  pageSize?: number;
+  totalPages?: number;
+};
+export type ApiErrorType = z.infer<typeof ApiErrorSchema>;
 
 // ApiClientError: named export expected by hooks
 export class ApiClientError extends Error {
@@ -149,7 +176,7 @@ export class ApiClientError extends Error {
 // API CLIENT WITH RUNTIME VALIDATION
 // ============================================================================
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(public status: number, public detail: string, public errors?: any[]) {
     super(`HTTP ${status}: ${detail}`);
     this.name = 'ApiError';
@@ -370,7 +397,7 @@ class ApiClient {
     return this.request(
       `/evidence?${searchParams.toString()}`,
       PaginatedSchema(EvidenceSchema)
-    );
+    ) as Promise<PaginatedResponse<Evidence>>;
   }
 
   async createEvidence(evidence: Omit<Evidence, 'id' | 'createdAt' | 'updatedAt'>): Promise<Evidence> {
@@ -397,7 +424,7 @@ class ApiClient {
 
   async listReviews(evidenceId?: string): Promise<PaginatedResponse<Review>> {
     const url = evidenceId ? `/reviews?evidence_id=${evidenceId}` : '/reviews';
-    return this.request(url, PaginatedSchema(ReviewSchema));
+    return this.request(url, PaginatedSchema(ReviewSchema)) as Promise<PaginatedResponse<Review>>;
   }
 
   async createReview(review: Omit<Review, 'id' | 'createdAt' | 'updatedAt'>): Promise<Review> {
@@ -476,14 +503,14 @@ class ApiClient {
     return this.request('/projects', ProjectSchema, {
       method: 'POST',
       body: JSON.stringify(project),
-    });
+    }) as Promise<Project>;
   }
 
   async updateProject(id: string, project: Partial<Project>): Promise<Project> {
     return this.request(`/projects/${id}`, ProjectSchema, {
       method: 'PUT',
       body: JSON.stringify(project),
-    });
+    }) as Promise<Project>;
   }
 
   async deleteProject(id: string): Promise<void> {
@@ -635,7 +662,7 @@ class ApiClient {
   async runStudyComputation(projectId: string, action: string, body?: any): Promise<any> {
     return this.request(`/projects/${projectId}/study/${action}`, z.any(), {
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ? JSON.stringify(body) : null,
     });
   }
 

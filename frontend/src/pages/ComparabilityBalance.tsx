@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import AttackSignalBanner from '../components/AttackSignalBanner'
 import { BarChart2, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Loader2, BarChart3 } from 'lucide-react'
@@ -42,7 +42,7 @@ function SmdBar({ value, max = 0.7 }: { value: number; max?: number }) {
 }
 
 export default function ComparabilityBalance({ selectedStudy, protocolLocked, reviewerMode }: Props) {
-  const { data: balanceData, loading, error, saving, save, refetch, runComputation } = useStudyData(selectedStudy?.id, 'balance')
+  const { data: balanceData, loading, error, saving, save, refetch } = useStudyData(selectedStudy?.id, 'balance')
   const staleness = useStalenessCheck(selectedStudy?.id, 'balance')
 
   const [covariates, setCovariates] = useState<any[]>([])
@@ -100,11 +100,6 @@ export default function ComparabilityBalance({ selectedStudy, protocolLocked, re
 
   // Defensive: ensure state is always an array
   const safeCovariates = Array.isArray(covariates) ? covariates : []
-
-  const handleComputeBalance = async () => {
-    const result = await runComputation('balance/compute')
-    if (result?.covariates) setCovariates(result.covariates)
-  }
 
   const passCount = safeCovariates.filter(c => c.pass).length
 

@@ -8,14 +8,11 @@ import {
   FileText,
   BarChart3,
   Download,
-  Plus,
   Search,
   Clock,
-  CheckCircle,
   AlertTriangle,
   Zap,
   Brain,
-  Shield,
   Target
 } from 'lucide-react'
 
@@ -113,10 +110,10 @@ const ProjectDetail: React.FC = () => {
         title: apiProject.name || apiProject.title || 'Untitled Project',
         description: apiProject.description || '',
         status: (apiProject.status as ProjectDetails['status']) || 'active',
-        created_at: apiProject.createdAt || apiProject.created_at || new Date().toISOString(),
-        updated_at: apiProject.updatedAt || apiProject.updated_at || new Date().toISOString(),
+        created_at: apiProject.created_at || new Date().toISOString(),
+        updated_at: apiProject.updated_at || new Date().toISOString(),
         owner_name: (apiProject as any).owner_name || 'Project Owner',
-        owner_id: (apiProject as any).owner_id || apiProject.createdBy || '',
+        owner_id: (apiProject as any).owner_id || apiProject.created_by || '',
         evidence_count: (apiProject as any).evidence_count ?? 0,
         completion_percentage: (apiProject as any).completion_percentage ?? 0,
         regulatory_path: (apiProject as any).regulatory_path || '',
@@ -425,19 +422,33 @@ const ProjectDetail: React.FC = () => {
 
       {activeTab === 'workflow' && (
         <div className="bg-white rounded-lg shadow-sm border">
-          <SmartWorkflowGuide projectId={project.id} />
+          <SmartWorkflowGuide
+            projectId={project.id}
+            userExpertise="intermediate"
+            onStepSelect={() => {}}
+            onRecommendationApply={() => {}}
+          />
         </div>
       )}
 
       {activeTab === 'evidence' && (
         <div className="bg-white rounded-lg shadow-sm border">
-          <EvidenceNetworkVisualization projectId={project.id} />
+          <EvidenceNetworkVisualization
+            projectId={project.id}
+            onNodeSelect={() => {}}
+            onRelationshipExplore={() => {}}
+          />
         </div>
       )}
 
       {activeTab === 'collaboration' && (
         <div className="bg-white rounded-lg shadow-sm border">
-          <CollaborativeReview projectId={project.id} />
+          <CollaborativeReview
+            evidenceId={project.id}
+            currentUser={{ id: 'current', name: 'Current User', email: '', role: 'reviewer' as any, expertise: [], avatar: '', isOnline: true }}
+            onDecisionSubmit={() => {}}
+            onConflictEscalate={() => {}}
+          />
         </div>
       )}
 

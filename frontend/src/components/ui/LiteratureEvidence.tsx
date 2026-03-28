@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { BookOpen, ExternalLink, X, ChevronDown, ChevronUp, Hash } from 'lucide-react'
 import { useLiterature, AnchorCategory, ANCHOR_CATEGORIES } from '@/context/LiteratureContext'
 

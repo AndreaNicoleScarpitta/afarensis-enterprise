@@ -12,7 +12,6 @@ If SENTRY_DSN is not set, Sentry is silently disabled.
 
 import time
 import logging
-from typing import Optional
 from collections import defaultdict
 from datetime import datetime
 
@@ -153,7 +152,7 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             # Add server timing header for APM tools
             response.headers["Server-Timing"] = f"total;dur={duration * 1000:.1f}"
             return response
-        except Exception as e:
+        except Exception:
             duration = time.time() - start
             metrics.record(request.method, request.url.path, 500, duration)
             raise

@@ -5,7 +5,7 @@ Provides cross-study submission tracking, NDA/BLA portfolio management,
 and program-level readiness views across multiple regulatory projects.
 """
 
-from typing import Dict, List, Any, Optional
+from typing import List, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime
@@ -66,7 +66,7 @@ class ProgramDashboardService:
 
         # Active users count
         active_users_result = await db.execute(
-            select(func.count(User.id)).where(User.is_active == True)
+            select(func.count(User.id)).where(User.is_active)
         )
         active_users = active_users_result.scalar() or 0
 

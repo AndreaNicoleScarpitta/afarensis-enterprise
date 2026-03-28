@@ -1146,7 +1146,7 @@ function App() {
     <ThemeProvider>
     <ToastProvider>
     <LiteratureProvider projectId={selectedStudy?.id ?? '__none__'}>
-    <RegulatoryPressureProvider projectId={selectedStudy?.id}>
+    <RegulatoryPressureProvider projectId={selectedStudy?.id ?? undefined}>
     <LineageProvider>
       <div className="min-h-screen bg-white">
         {/* Session timeout warning modal */}

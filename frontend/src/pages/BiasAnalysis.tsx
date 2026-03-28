@@ -1,18 +1,14 @@
-import React, { useState, useEffect } from 'react'
+import type React from 'react'
+import { useState, useEffect } from 'react'
 import { apiClient } from '../services/apiClient'
-import { 
-  AlertTriangle, 
-  Shield, 
-  Eye, 
-  Target, 
-  TrendingUp,
-  BarChart3,
+import {
+  AlertTriangle,
+  Shield,
   CheckCircle,
   XCircle,
   Info,
   Download,
   Settings,
-  Zap,
   Brain
 } from 'lucide-react'
 

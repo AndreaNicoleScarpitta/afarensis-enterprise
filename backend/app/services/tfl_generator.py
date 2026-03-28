@@ -12,10 +12,9 @@ matplotlib.use('Agg')
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
-from matplotlib.patches import FancyBboxPatch
 import io
 import base64
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Dict, List, Optional
 from datetime import datetime
 import logging
 
@@ -685,7 +684,7 @@ class TFLGenerator:
 
         # --- Number at risk table ---
         max_time = max(
-            max(curves[l]["time_points"]) for l in labels_order if l in curves
+            max(curves[lbl]["time_points"]) for lbl in labels_order if lbl in curves
         )
         risk_times = np.arange(0, max_time + 1, max(1, int(max_time / 8)))
 
@@ -726,7 +725,7 @@ class TFLGenerator:
 
         # Re-create for SVG (fig was closed by _fig_to_base64)
         # For efficiency, just generate a placeholder SVG note
-        svg_str = f"<!-- SVG not generated separately; use png_base64 -->"
+        svg_str = "<!-- SVG not generated separately; use png_base64 -->"
 
         summary = {
             "n_treatment": trt_curve.get("n_subjects"),

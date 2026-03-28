@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import {
   Target, TrendingUp, Brain, BarChart3, CheckCircle,
-  AlertTriangle, Search, Filter, Star, ArrowUpRight,
-  Shield, Users, Calendar, BookOpen, Zap
+  AlertTriangle, Search, Filter, Star,
+  BookOpen, Zap
 } from 'lucide-react'
 
 interface EvidencePattern {

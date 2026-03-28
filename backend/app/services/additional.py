@@ -15,24 +15,18 @@ from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
-from sqlalchemy.orm import selectinload
 
 from app.models import (
     Project, EvidenceRecord, ComparabilityScore, BiasAnalysis, BiasType,
-    ReviewDecision, ReviewDecisionEnum, EvidenceCritique, RegulatoryArtifact, User, AuditLog
+    ReviewDecision, ReviewDecisionEnum, RegulatoryArtifact, AuditLog
 )
 from app.schemas import (
-    ComparabilityScoreResponse, ComparabilityAnalysisRequest,
-    BiasAnalysisResponse, BiasAnalysisRequest,
-    ReviewDecisionRequest, ReviewDecisionResponse,
-    CritiqueGenerationRequest, EvidenceCritiqueResponse,
+    ComparabilityScoreResponse, BiasAnalysisResponse, ReviewDecisionRequest, ReviewDecisionResponse,
     ArtifactGenerationRequest, RegulatoryArtifactResponse
 )
 from app.core.exceptions import (
-    ResourceNotFoundError, ValidationError, ProcessingError,
-    AuthorizationError, raise_not_found, raise_processing_error
+    raise_not_found
 )
-from app.core.security import Permissions
 from app.services import BaseService
 
 logger = logging.getLogger(__name__)
@@ -1022,7 +1016,7 @@ class AuditService(BaseService):
         if resource_type:
             conditions.append(AuditLog.resource_type == resource_type)
         if regulatory_significance_only:
-            conditions.append(AuditLog.regulatory_significance == True)
+            conditions.append(AuditLog.regulatory_significance)
 
         query = select(AuditLog).order_by(desc(AuditLog.timestamp))
 
