@@ -468,6 +468,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
             </div>
 
             {/* Active code list metadata */}
+            {CODE_LISTS[activeCodeList] && (
             <div className="flex items-center gap-4 mb-3">
               <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
                 System: <span className="text-gray-900 font-bold normal-case">{CODE_LISTS[activeCodeList].system}</span>
@@ -479,8 +480,10 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                 Codes: <span className="text-gray-900 font-bold normal-case">{CODE_LISTS[activeCodeList].codes.length}</span>
               </span>
             </div>
+            )}
 
             {/* Code list table */}
+            {CODE_LISTS[activeCodeList] && (
             <div className="border border-gray-200 rounded-lg overflow-hidden">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -511,6 +514,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </section>
 

@@ -242,7 +242,7 @@ function PaperCard({ paper, onClick }: { paper: Paper; onClick: () => void }) {
 
       {/* Metadata row */}
       <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-500">
-        {paper.authors.length > 0 && (
+        {paper.authors?.length > 0 && (
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
             {paper.authors.slice(0, 3).join(', ')}{paper.authors.length > 3 ? ` +${paper.authors.length - 3}` : ''}
