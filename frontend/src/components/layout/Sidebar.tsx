@@ -5,7 +5,7 @@ import {
   CheckCircle2, Circle, FlaskConical, GitBranch, Database,
   Users2, BarChart2, TrendingUp, ShieldAlert, Archive,
   ClipboardList, FileOutput, Eye, Unlock, BookOpen,
-  LayoutDashboard,
+  LayoutDashboard, Swords, Link2,
 } from 'lucide-react'
 import AfarensisLogo from '@/components/ui/AfarensisLogo'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -42,23 +42,25 @@ export const STUDIES: Study[] = [
 
 // ── Workflow steps ────────────────────────────────────────────────────────────
 const STEPS = [
-  { num: 1,  label: 'Study Definition',      slug: 'study',              icon: FlaskConical, sub: 'Protocol · indication · endpoint' },
-  { num: 2,  label: 'Causal Framework',      slug: 'causal-framework',   icon: GitBranch,    sub: 'Estimand · DAG · covariates' },
-  { num: 3,  label: 'Data Provenance',       slug: 'data-provenance',    icon: Database,     sub: 'Sources · coverage · validation' },
-  { num: 4,  label: 'Cohort Construction',   slug: 'cohort',             icon: Users2,       sub: 'Attrition funnel · weighting' },
-  { num: 5,  label: 'Comparability & Balance', slug: 'comparability',   icon: BarChart2,    sub: 'SMD · overlap diagnostics' },
-  { num: 6,  label: 'Effect Estimation',     slug: 'effect-estimation',  icon: TrendingUp,   sub: 'Primary result · forest plot' },
-  { num: 7,  label: 'Bias & Sensitivity',    slug: 'bias-sensitivity',   icon: ShieldAlert,  sub: 'E-value · stress tests' },
-  { num: 8,  label: 'Reproducibility',       slug: 'reproducibility',    icon: Archive,      sub: 'Manifest · hash · lineage' },
-  { num: 9,  label: 'Audit Trail',           slug: 'audit',              icon: ClipboardList, sub: 'All transformations · locked' },
-  { num: 10, label: 'Regulatory Output',     slug: 'regulatory-output',  icon: FileOutput,   sub: 'SAR · export · submission' },
+  { num: 1,  label: 'Study Definition',        slug: 'study',                    icon: FlaskConical, sub: 'Protocol · indication · endpoint' },
+  { num: 2,  label: 'Causal Framework',        slug: 'causal-framework',         icon: GitBranch,    sub: 'Estimand · DAG · covariates' },
+  { num: 3,  label: 'Data Provenance',         slug: 'data-provenance',          icon: Database,     sub: 'Sources · coverage · validation' },
+  { num: 4,  label: 'Cohort Construction',     slug: 'cohort',                   icon: Users2,       sub: 'Attrition funnel · weighting' },
+  { num: 5,  label: 'Comparability & Balance', slug: 'comparability',            icon: BarChart2,    sub: 'SMD · overlap diagnostics' },
+  { num: 6,  label: 'Effect Estimation',       slug: 'effect-estimation',        icon: TrendingUp,   sub: 'Primary result · forest plot' },
+  { num: 7,  label: 'Bias & Sensitivity',      slug: 'bias-sensitivity',         icon: ShieldAlert,  sub: 'E-value · stress tests' },
+  { num: 8,  label: 'Regulatory Attack',       slug: 'regulatory-attack',        icon: Swords,       sub: 'Adversarial review · robustness' },
+  { num: 9,  label: 'Assumption Traceability', slug: 'assumption-traceability',  icon: Link2,        sub: 'Causal assumptions · evidence' },
+  { num: 10, label: 'Reproducibility',         slug: 'reproducibility',          icon: Archive,      sub: 'Manifest · hash · lineage' },
+  { num: 11, label: 'Audit Trail',             slug: 'audit',                    icon: ClipboardList, sub: 'All transformations · locked' },
+  { num: 12, label: 'Regulatory Output',       slug: 'regulatory-output',        icon: FileOutput,   sub: 'SAR · export · submission' },
 ]
 
 // Map step number to section key for staleness lookup
 const STEP_SECTION_MAP: Record<number, string> = {
   1: 'definition', 2: 'covariates', 3: 'data_sources', 4: 'cohort',
-  5: 'balance', 6: 'effect_estimation', 7: 'bias', 8: 'reproducibility',
-  9: 'audit', 10: 'regulatory',
+  5: 'balance', 6: 'effect_estimation', 7: 'bias', 8: 'regulatory_attack',
+  9: 'assumption_traceability', 10: 'reproducibility', 11: 'audit', 12: 'regulatory',
 }
 
 /** Build a project-scoped path */

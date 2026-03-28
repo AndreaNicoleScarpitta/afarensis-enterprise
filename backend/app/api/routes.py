@@ -8487,3 +8487,139 @@ async def compare_to_reference_population(
     await db.commit()
 
     return comparison
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# REGULATORY ATTACK MODE & ASSUMPTION TRACEABILITY
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ── 22. POST regulatory-attack/run ──────────────────────────────────────────
+
+@api_router.post("/projects/{project_id}/study/regulatory-attack/run")
+async def run_regulatory_attack(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Run adversarial statistical review — stress-tests all causal estimates."""
+    project = await get_project_with_org_check(project_id, current_user, db)
+
+    attack_result = {}
+    try:
+        from app.services.regulatory_attack import RegulatoryAttackService
+        from app.services.statistical_models import StatisticalAnalysisService
+
+        stats_svc = StatisticalAnalysisService()
+        attack_svc = RegulatoryAttackService(stats_svc)
+
+        # Get patient data if available
+        patient_data = await _get_active_patient_data(project_id, db)
+
+        # Run full attack
+        attack_result = attack_svc.run_full_attack(patient_data=patient_data)
+
+    except Exception as e:
+        logger.exception("Regulatory attack failed")
+        attack_result = {"error": str(e), "status": "failed"}
+
+    # Store in processing_config with staleness tracking
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
+    config = dict(project.processing_config or {})
+    config["regulatory_attack"] = attack_result
+    content_hash = _hl.sha256(_json.dumps(attack_result, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("regulatory_attack_meta", {})
+    config["regulatory_attack_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+    }
+    project.processing_config = config
+    flag_modified(project, "processing_config")
+    project.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return attack_result
+
+
+# ── 23. GET regulatory-attack ───────────────────────────────────────────────
+
+@api_router.get("/projects/{project_id}/study/regulatory-attack")
+async def get_regulatory_attack(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve stored regulatory attack report."""
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+    return config.get("regulatory_attack", {})
+
+
+# ── 24. POST assumption-traceability/run ────────────────────────────────────
+
+@api_router.post("/projects/{project_id}/study/assumption-traceability/run")
+async def run_assumption_traceability(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Build assumption registry, evaluate, and bind evidence."""
+    project = await get_project_with_org_check(project_id, current_user, db)
+
+    assumption_result = {}
+    try:
+        from app.services.assumption_traceability import AssumptionTraceabilityService
+
+        assumption_svc = AssumptionTraceabilityService()
+
+        # Pull existing analysis results and attack report for evidence binding
+        config = dict(project.processing_config or {})
+        analysis_results = config.get("bias", {})
+        attack_report = config.get("regulatory_attack", {})
+        causal_spec = config.get("covariates", {})
+
+        assumption_result = assumption_svc.generate_assumption_report(
+            causal_spec=causal_spec,
+            analysis_results=analysis_results,
+            attack_report=attack_report,
+        )
+
+    except Exception as e:
+        logger.exception("Assumption traceability failed")
+        assumption_result = {"error": str(e), "status": "failed"}
+
+    # Store with staleness tracking
+    from sqlalchemy.orm.attributes import flag_modified
+    import hashlib as _hl, json as _json
+    config = dict(project.processing_config or {})
+    config["assumption_traceability"] = assumption_result
+    content_hash = _hl.sha256(_json.dumps(assumption_result, sort_keys=True, default=str).encode()).hexdigest()
+    old_meta = config.get("assumption_traceability_meta", {})
+    config["assumption_traceability_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+        "version": old_meta.get("version", 0) + 1,
+        "content_hash": content_hash,
+    }
+    project.processing_config = config
+    flag_modified(project, "processing_config")
+    project.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return assumption_result
+
+
+# ── 25. GET assumption-traceability ─────────────────────────────────────────
+
+@api_router.get("/projects/{project_id}/study/assumption-traceability")
+async def get_assumption_traceability(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve stored assumption traceability report."""
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+    return config.get("assumption_traceability", {})

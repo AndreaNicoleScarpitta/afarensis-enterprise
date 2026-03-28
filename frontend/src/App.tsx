@@ -34,7 +34,7 @@ import { ToastProvider } from './context/ToastContext'
 import AfarensisLogo from '@/components/ui/AfarensisLogo'
 import Sidebar, { STUDIES, Study } from './components/layout/Sidebar'
 
-// Workflow pages — 10 steps
+// Workflow pages — 12 steps
 import StudyDefinition from './pages/StudyDefinition'
 import CausalFramework from './pages/CausalFramework'
 import DataProvenance from './pages/DataProvenance'
@@ -42,6 +42,8 @@ import CohortConstruction from './pages/CohortConstruction'
 import ComparabilityBalance from './pages/ComparabilityBalance'
 import EffectEstimation from './pages/EffectEstimation'
 import BiasSensitivity from './pages/BiasSensitivity'
+import RegulatoryAttack from './pages/RegulatoryAttack'
+import AssumptionTraceability from './pages/AssumptionTraceability'
 import Reproducibility from './pages/Reproducibility'
 import AuditTrail from './pages/AuditTrail'
 import RegulatoryOutput from './pages/RegulatoryOutput'
@@ -1304,6 +1306,8 @@ function App() {
                     <Route path="/projects/:projectId/comparability"     element={<ProjectRouteSync><ComparabilityBalance {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/effect-estimation" element={<ProjectRouteSync><EffectEstimation   {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/bias-sensitivity"  element={<ProjectRouteSync><BiasSensitivity    {...workflowProps} /></ProjectRouteSync>} />
+                    <Route path="/projects/:projectId/regulatory-attack" element={<ProjectRouteSync><RegulatoryAttack   {...workflowProps} /></ProjectRouteSync>} />
+                    <Route path="/projects/:projectId/assumption-traceability" element={<ProjectRouteSync><AssumptionTraceability {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/reproducibility"   element={<ProjectRouteSync><Reproducibility    {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/audit"             element={<ProjectRouteSync><AuditTrail         {...workflowProps} /></ProjectRouteSync>} />
                     <Route path="/projects/:projectId/regulatory-output" element={<ProjectRouteSync><RegulatoryOutput   {...workflowProps} /></ProjectRouteSync>} />
