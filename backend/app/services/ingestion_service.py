@@ -274,7 +274,25 @@ class IngestionService:
 
         return df, warnings
 
-    def run_all_checks(self, df, protocol_id: str = None, parse_warnings: list = None) -> dict:
+    # Default threshold values used when no overrides are provided
+    DEFAULT_THRESHOLDS = {
+        "max_overall_missingness": 20,
+        "max_differential_missingness": 10,
+        "max_smd": 0.30,
+        "max_nonstandard_vars": 5,
+        "pii_sensitivity": "standard",
+        "min_sdtm_vars": 2,
+        "max_future_years": 0,
+        "min_rows": 10,
+    }
+
+    def run_all_checks(
+        self,
+        df,
+        protocol_id: str = None,
+        parse_warnings: list = None,
+        thresholds: dict = None,
+    ) -> dict:
         """Run all 8 regulatory checks on the uploaded DataFrame.
 
         Args:
@@ -283,6 +301,11 @@ class IngestionService:
             parse_warnings: Findings from the CSV parser (phase 0).
                 These are prepended to the findings list so the compliance
                 report shows parse integrity issues first.
+            thresholds: Optional dict of threshold overrides. Keys may include
+                max_overall_missingness, max_differential_missingness,
+                max_smd, max_nonstandard_vars, pii_sensitivity,
+                min_sdtm_vars, max_future_years, min_rows.
+                Any omitted keys fall back to DEFAULT_THRESHOLDS.
 
         Returns:
             {
@@ -295,6 +318,11 @@ class IngestionService:
             }
         """
         import numpy as np
+
+        # Merge caller-supplied thresholds with defaults
+        t = dict(self.DEFAULT_THRESHOLDS)
+        if thresholds:
+            t.update(thresholds)
 
         findings = []
 
@@ -318,8 +346,10 @@ class IngestionService:
                     })
                     break
 
-        # Check values for PII patterns (sample first 1000 rows for perf)
-        sample = df.head(1000)
+        # Check values for PII patterns
+        # Strict mode scans all rows; standard mode samples first 1000
+        pii_sample_size = len(df) if t["pii_sensitivity"] == "strict" else 1000
+        sample = df.head(pii_sample_size)
         for col in sample.select_dtypes(include=["object", "string"]).columns:
             for pattern_name, pattern in self.PII_PATTERNS.items():
                 matches = sample[col].astype(str).str.contains(pattern, regex=True, na=False)
@@ -348,6 +378,10 @@ class IngestionService:
         has_usubjid = "USUBJID" in columns_upper
         has_arm = "ARM" in columns_upper or "ARMCD" in columns_upper
 
+        # Count how many of the required SDTM vars are present
+        required_present_count = sum([has_usubjid, has_arm])
+        min_sdtm = int(t["min_sdtm_vars"])
+
         if not has_usubjid:
             findings.append({
                 "check": "SDTM Conformance",
@@ -364,13 +398,22 @@ class IngestionService:
                 "detail": "Required variable ARM or ARMCD not found.",
                 "action": "Add ARM column to identify treatment groups."
             })
+        elif required_present_count < min_sdtm:
+            findings.append({
+                "check": "SDTM Conformance",
+                "result": "FAIL",
+                "severity": "MAJOR",
+                "detail": f"Only {required_present_count} required SDTM variables present (minimum: {min_sdtm}).",
+                "action": "Add missing required SDTM variables."
+            })
         else:
-            sev = "WARNING" if len(non_std) > 5 else "INFO"
+            max_nonstd = int(t["max_nonstandard_vars"])
+            sev = "WARNING" if len(non_std) > max_nonstd else "INFO"
             findings.append({
                 "check": "SDTM Conformance",
                 "result": "PASS" if sev == "INFO" else "WARN",
                 "severity": sev,
-                "detail": f"{len(present_std)} SDTM-standard variables found. {len(non_std)} non-standard variables detected (>8 chars).",
+                "detail": f"{len(present_std)} SDTM-standard variables found. {len(non_std)} non-standard variables detected (>8 chars, threshold: {max_nonstd}).",
                 "action": "Review non-standard variables for compliance." if non_std else "None required."
             })
 
@@ -380,6 +423,9 @@ class IngestionService:
             if c.upper() in ("ARM", "ARMCD", "TRT01P", "TRT01A"):
                 arm_col = c
                 break
+
+        diff_miss_thresh = float(t["max_differential_missingness"])
+        overall_miss_thresh = float(t["max_overall_missingness"])
 
         missingness = {}
         differential_flag = False
@@ -392,22 +438,22 @@ class IngestionService:
                 missingness[col]["by_arm"] = {str(k): round(v, 1) for k, v in by_arm.items()}
                 if len(by_arm) >= 2:
                     diff = abs(max(by_arm) - min(by_arm))
-                    if diff > 10:
+                    if diff > diff_miss_thresh:
                         differential_flag = True
                         findings.append({
                             "check": "Missing Data Pattern",
                             "result": "FAIL",
                             "severity": "MAJOR",
-                            "detail": f"Differential missingness in '{col}': {round(diff, 1)}% between arms (threshold: 10%)",
+                            "detail": f"Differential missingness in '{col}': {round(diff, 1)}% between arms (threshold: {diff_miss_thresh}%)",
                             "action": "Investigate whether missingness is informative. Consider sensitivity analysis."
                         })
 
-            if pct_missing > 20:
+            if pct_missing > overall_miss_thresh:
                 findings.append({
                     "check": "Missing Data Pattern",
                     "result": "WARN",
                     "severity": "WARNING",
-                    "detail": f"'{col}' has {round(pct_missing, 1)}% missing values (threshold: 20%)",
+                    "detail": f"'{col}' has {round(pct_missing, 1)}% missing values (threshold: {overall_miss_thresh}%)",
                     "action": "Document missing data handling strategy in SAP."
                 })
 
@@ -416,11 +462,12 @@ class IngestionService:
                 "check": "Missing Data Pattern",
                 "result": "PASS",
                 "severity": "INFO",
-                "detail": "No differential missingness >10% detected. No variables exceed 20% missing.",
+                "detail": f"No differential missingness >{diff_miss_thresh}% detected. No variables exceed {overall_miss_thresh}% missing.",
                 "action": "None required."
             })
 
         # -- CHECK 4: Baseline Balance Signal --
+        smd_threshold = float(t["max_smd"])
         if arm_col:
             arms = df[arm_col].dropna().unique()
             if len(arms) >= 2:
@@ -438,12 +485,12 @@ class IngestionService:
                     smd = abs(m1 - m2) / pooled_sd if pooled_sd > 0 else 0
                     smd_table.append({"variable": col, "smd": round(smd, 3), "arm1_mean": round(m1, 2), "arm2_mean": round(m2, 2)})
 
-                    if smd > 0.30:
+                    if smd > smd_threshold:
                         findings.append({
                             "check": "Baseline Balance",
                             "result": "WARN",
                             "severity": "WARNING",
-                            "detail": f"'{col}' has SMD={round(smd, 3)} between {arm1} and {arm2} (threshold: 0.30)",
+                            "detail": f"'{col}' has SMD={round(smd, 3)} between {arm1} and {arm2} (threshold: {smd_threshold})",
                             "action": "Consider propensity score adjustment for this covariate."
                         })
 
@@ -453,7 +500,7 @@ class IngestionService:
                         "check": "Baseline Balance",
                         "result": "PASS",
                         "severity": "INFO",
-                        "detail": f"All {len(smd_table)} numeric covariates have SMD <= 0.30.",
+                        "detail": f"All {len(smd_table)} numeric covariates have SMD <= {smd_threshold}.",
                         "action": "None required."
                     })
         else:
@@ -467,19 +514,22 @@ class IngestionService:
 
         # -- CHECK 5: Temporal Consistency --
         import pandas as pd
+        max_future_years = int(t["max_future_years"])
+        current_year = datetime.now().year
+        future_cutoff_year = current_year + max_future_years
         date_cols = [c for c in df.columns if any(d in c.upper() for d in ["DATE", "DTC", "DTM", "DT", "YEAR"])]
         temporal_issues = []
         for col in date_cols:
             try:
                 dates = pd.to_datetime(df[col], errors="coerce")
-                future_dates = dates[dates.dt.year > 2023]
+                future_dates = dates[dates.dt.year > future_cutoff_year]
                 if len(future_dates) > 0:
                     temporal_issues.append(col)
                     findings.append({
                         "check": "Temporal Consistency",
                         "result": "WARN",
                         "severity": "CRITICAL" if arm_col and len(df[df[arm_col] != df[arm_col].mode()[0]][col].dropna()) > 0 else "WARNING",
-                        "detail": f"Column '{col}' has {len(future_dates)} records with year > 2023 (potential contamination window).",
+                        "detail": f"Column '{col}' has {len(future_dates)} records with year > {future_cutoff_year} (tolerance: {max_future_years} year(s)).",
                         "action": "Verify these records are within the enrollment window."
                     })
             except Exception:
@@ -574,6 +624,25 @@ class IngestionService:
                 "result": "PASS",
                 "severity": "INFO",
                 "detail": "No values > 4 SD from column means detected.",
+                "action": "None required."
+            })
+
+        # -- CHECK 9: Minimum Row Count --
+        min_rows = int(t["min_rows"])
+        if len(df) < min_rows:
+            findings.append({
+                "check": "Minimum Row Count",
+                "result": "FAIL",
+                "severity": "CRITICAL",
+                "detail": f"Dataset has {len(df)} rows, below minimum threshold of {min_rows}.",
+                "action": "Ensure the dataset meets the minimum row count requirement."
+            })
+        else:
+            findings.append({
+                "check": "Minimum Row Count",
+                "result": "PASS",
+                "severity": "INFO",
+                "detail": f"Dataset has {len(df)} rows (minimum: {min_rows}).",
                 "action": "None required."
             })
 

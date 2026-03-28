@@ -10,6 +10,7 @@ from fastapi.security import HTTPBearer
 from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
+import json
 import os
 import uuid
 from datetime import datetime, timedelta
@@ -7635,8 +7636,20 @@ async def upload_patient_data(
     # Generate file hash
     file_hash = svc.generate_file_hash(file_content)
 
-    # Run all 8 regulatory checks (parse_warnings are prepended to findings)
-    report_data = svc.run_all_checks(df, parse_warnings=parse_warnings)
+    # Extract optional threshold overrides from the request
+    custom_thresholds = None
+    if "multipart/form-data" in content_type:
+        thresholds_raw = form.get("thresholds")
+        if thresholds_raw:
+            try:
+                custom_thresholds = json.loads(
+                    thresholds_raw if isinstance(thresholds_raw, str) else await thresholds_raw.read()
+                )
+            except (json.JSONDecodeError, TypeError):
+                pass  # Ignore malformed thresholds, fall back to defaults
+
+    # Run all regulatory checks (parse_warnings are prepended to findings)
+    report_data = svc.run_all_checks(df, parse_warnings=parse_warnings, thresholds=custom_thresholds)
 
     # Generate row hashes
     row_hashes = svc.generate_row_hashes(df)

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import AttackSignalBanner from '../components/AttackSignalBanner'
 import {
-  Database, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Clock,
+  Database, Lock, Eye, ChevronRight, ChevronLeft, ChevronDown, CheckCircle2, AlertCircle, Clock,
   Loader2, Upload, FileUp, XCircle, AlertTriangle, Activity, Shield, FileText, Trash2,
   RefreshCw, GitBranch, BarChart2, Info, ArrowRight, Hash, Layers, ListChecks,
 } from 'lucide-react'
@@ -153,6 +153,17 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
   const [dataSources, setDataSources] = useState<any[]>([])
   const [validationChecks, setValidationChecks] = useState<any[]>([])
   const [dataQualityThreshold, setDataQualityThreshold] = useState<number>(95)
+  const [thresholds, setThresholds] = useState({
+    max_overall_missingness: 20,
+    max_differential_missingness: 10,
+    max_smd: 0.30,
+    max_nonstandard_vars: 5,
+    pii_sensitivity: 'standard' as 'standard' | 'strict',
+    min_sdtm_vars: 2,
+    max_future_years: 0,
+    min_rows: 10,
+  })
+  const [thresholdsOpen, setThresholdsOpen] = useState(false)
   const locked = protocolLocked
   const [showImpactDialog, setShowImpactDialog] = useState(false)
   const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('data_sources')
@@ -187,6 +198,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       if (Array.isArray(provData.sources) && provData.sources.length) setDataSources(provData.sources)
       if (Array.isArray(provData.checks) && provData.checks.length) setValidationChecks(provData.checks)
       if (provData.data_quality_threshold != null) setDataQualityThreshold(provData.data_quality_threshold)
+      if (provData.thresholds) setThresholds(prev => ({ ...prev, ...provData.thresholds }))
     }
   }, [provData])
 
@@ -195,7 +207,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     const updated = [...dataSources]
     updated[index] = { ...updated[index], [field]: value }
     setDataSources(updated)
-    save({ sources: updated, data_quality_threshold: dataQualityThreshold })
+    save({ sources: updated, data_quality_threshold: dataQualityThreshold, thresholds })
   }
 
   const handleAddSource = () => {
@@ -210,22 +222,22 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     }
     const updated = [...dataSources, newSource]
     setDataSources(updated)
-    save({ sources: updated, data_quality_threshold: dataQualityThreshold })
+    save({ sources: updated, data_quality_threshold: dataQualityThreshold, thresholds })
   }
 
   const handleRemoveSource = (index: number) => {
     const updated = dataSources.filter((_, i) => i !== index)
     setDataSources(updated)
-    save({ sources: updated, data_quality_threshold: dataQualityThreshold })
+    save({ sources: updated, data_quality_threshold: dataQualityThreshold, thresholds })
   }
 
   const handleQualityThresholdChange = (value: number) => {
     setDataQualityThreshold(value)
-    save({ sources: dataSources, data_quality_threshold: value })
+    save({ sources: dataSources, data_quality_threshold: value, thresholds })
   }
 
   const confirmSave = () => {
-    save({ sources: dataSources, data_quality_threshold: dataQualityThreshold })
+    save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds })
     setShowImpactDialog(false)
   }
 
@@ -1322,6 +1334,245 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
               </div>
             ) : (
               <span className="text-sm font-bold text-gray-900 font-mono">{dataQualityThreshold}%</span>
+            )}
+          </div>
+
+          {/* Regulatory Check Thresholds (collapsible) */}
+          <div className="bg-white border border-gray-200 rounded-xl mb-5 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setThresholdsOpen(prev => !prev)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-gray-400 shrink-0" />
+                <span className="text-xs font-bold text-gray-700">Regulatory Check Thresholds</span>
+                <span className="text-[10px] text-gray-400 ml-1">Configure positive &amp; negative control limits</span>
+              </div>
+              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${thresholdsOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {thresholdsOpen && (
+              <div className="border-t border-gray-200 px-4 py-4 space-y-5">
+                {/* Positive Controls */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span className="text-xs font-bold text-emerald-700">Positive Controls</span>
+                    <span className="text-[10px] text-gray-400">— thresholds that define &ldquo;acceptable&rdquo;</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Max Overall Missingness */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                      <label className="text-[10px] text-gray-500 block mb-1">Max overall missingness %</label>
+                      {!locked && !reviewerMode ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={thresholds.max_overall_missingness}
+                            onChange={e => {
+                              const val = Number(e.target.value)
+                              setThresholds(prev => ({ ...prev, max_overall_missingness: val }))
+                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, max_overall_missingness: val } })
+                            }}
+                            className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                          />
+                          <span className="text-[10px] text-gray-400">% (default: 20)</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900 font-mono">{thresholds.max_overall_missingness}%</span>
+                      )}
+                    </div>
+
+                    {/* Max Differential Missingness */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                      <label className="text-[10px] text-gray-500 block mb-1">Max differential missingness % between arms</label>
+                      {!locked && !reviewerMode ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={thresholds.max_differential_missingness}
+                            onChange={e => {
+                              const val = Number(e.target.value)
+                              setThresholds(prev => ({ ...prev, max_differential_missingness: val }))
+                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, max_differential_missingness: val } })
+                            }}
+                            className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                          />
+                          <span className="text-[10px] text-gray-400">% (default: 10)</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900 font-mono">{thresholds.max_differential_missingness}%</span>
+                      )}
+                    </div>
+
+                    {/* Max SMD */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                      <label className="text-[10px] text-gray-500 block mb-1">Max SMD for baseline balance</label>
+                      {!locked && !reviewerMode ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={2}
+                            step={0.01}
+                            value={thresholds.max_smd}
+                            onChange={e => {
+                              const val = Number(e.target.value)
+                              setThresholds(prev => ({ ...prev, max_smd: val }))
+                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, max_smd: val } })
+                            }}
+                            className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                          />
+                          <span className="text-[10px] text-gray-400">(default: 0.30)</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900 font-mono">{thresholds.max_smd}</span>
+                      )}
+                    </div>
+
+                    {/* Max Non-standard Variables */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                      <label className="text-[10px] text-gray-500 block mb-1">Max non-standard variables</label>
+                      {!locked && !reviewerMode ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={1}
+                            value={thresholds.max_nonstandard_vars}
+                            onChange={e => {
+                              const val = Number(e.target.value)
+                              setThresholds(prev => ({ ...prev, max_nonstandard_vars: val }))
+                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, max_nonstandard_vars: val } })
+                            }}
+                            className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                          />
+                          <span className="text-[10px] text-gray-400">(default: 5)</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900 font-mono">{thresholds.max_nonstandard_vars}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Negative Controls */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <AlertCircle className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                    <span className="text-xs font-bold text-red-700">Negative Controls</span>
+                    <span className="text-[10px] text-gray-400">— thresholds that define &ldquo;unacceptable / blocked&rdquo;</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* PII Sensitivity */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                      <label className="text-[10px] text-gray-500 block mb-1">PII pattern detection sensitivity</label>
+                      {!locked && !reviewerMode ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={thresholds.pii_sensitivity}
+                            onChange={e => {
+                              const val = e.target.value as 'standard' | 'strict'
+                              setThresholds(prev => ({ ...prev, pii_sensitivity: val }))
+                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, pii_sensitivity: val } })
+                            }}
+                            className="bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                          >
+                            <option value="standard">Standard</option>
+                            <option value="strict">Strict</option>
+                          </select>
+                          <span className="text-[10px] text-gray-400">(default: Standard)</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900 font-mono capitalize">{thresholds.pii_sensitivity}</span>
+                      )}
+                    </div>
+
+                    {/* Min SDTM Variables */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                      <label className="text-[10px] text-gray-500 block mb-1">Min required SDTM variables count</label>
+                      {!locked && !reviewerMode ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            max={20}
+                            step={1}
+                            value={thresholds.min_sdtm_vars}
+                            onChange={e => {
+                              const val = Number(e.target.value)
+                              setThresholds(prev => ({ ...prev, min_sdtm_vars: val }))
+                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, min_sdtm_vars: val } })
+                            }}
+                            className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                          />
+                          <span className="text-[10px] text-gray-400">(default: 2 = USUBJID + ARM)</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900 font-mono">{thresholds.min_sdtm_vars}</span>
+                      )}
+                    </div>
+
+                    {/* Max Future Date Tolerance */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                      <label className="text-[10px] text-gray-500 block mb-1">Max future date tolerance (years)</label>
+                      {!locked && !reviewerMode ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={0}
+                            max={10}
+                            step={1}
+                            value={thresholds.max_future_years}
+                            onChange={e => {
+                              const val = Number(e.target.value)
+                              setThresholds(prev => ({ ...prev, max_future_years: val }))
+                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, max_future_years: val } })
+                            }}
+                            className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                          />
+                          <span className="text-[10px] text-gray-400">years (default: 0)</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900 font-mono">{thresholds.max_future_years}</span>
+                      )}
+                    </div>
+
+                    {/* Min Row Count */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                      <label className="text-[10px] text-gray-500 block mb-1">Min row count</label>
+                      {!locked && !reviewerMode ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            max={10000}
+                            step={1}
+                            value={thresholds.min_rows}
+                            onChange={e => {
+                              const val = Number(e.target.value)
+                              setThresholds(prev => ({ ...prev, min_rows: val }))
+                              save({ sources: dataSources, data_quality_threshold: dataQualityThreshold, thresholds: { ...thresholds, min_rows: val } })
+                            }}
+                            className="w-20 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                          />
+                          <span className="text-[10px] text-gray-400">(default: 10)</span>
+                        </div>
+                      ) : (
+                        <span className="text-sm font-bold text-gray-900 font-mono">{thresholds.min_rows}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
