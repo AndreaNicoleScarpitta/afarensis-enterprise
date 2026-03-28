@@ -8642,3 +8642,59 @@ async def get_regulatory_confidence(
     report = engine.run()
 
     return report
+
+
+# ── 27. POST run-with-provenance ──────────────────────────────────────────
+
+@api_router.post("/projects/{project_id}/study/run-with-provenance")
+async def run_analysis_with_provenance(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Run the full analysis pipeline with computation provenance tracking.
+
+    Records an ExecutionManifest for each sub-computation, builds a data
+    lineage DAG, and produces code references mapping SAR artifacts to
+    exact source code.
+    """
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+
+    from app.services.computation_provenance import ProvenanceAnalysisRunner
+    runner = ProvenanceAnalysisRunner(project_id=project_id, processing_config=config)
+    results = runner.run_full_pipeline()
+
+    # Persist results back to processing_config
+    config["analysis_results"] = results
+    config["computation_provenance"] = results.get("computation_provenance", {})
+    config["data_provenance"] = results.get("data_provenance", {})
+    project.processing_config = config
+    await db.commit()
+
+    return {
+        "status": "complete",
+        "computation_provenance": results.get("computation_provenance", {}),
+        "data_provenance": results.get("data_provenance", {}),
+    }
+
+
+# ── 28. GET computation-provenance ────────────────────────────────────────
+
+@api_router.get("/projects/{project_id}/study/computation-provenance")
+async def get_computation_provenance(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve stored computation provenance (manifests, lineage DAG, code refs)."""
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+    provenance = config.get("computation_provenance", {})
+    data_prov = config.get("data_provenance", {})
+
+    return {
+        "computation_provenance": provenance,
+        "data_provenance": data_prov,
+        "has_provenance": bool(provenance.get("manifests")),
+    }

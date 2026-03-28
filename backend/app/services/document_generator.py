@@ -820,6 +820,87 @@ the external control arm as a supplementary source of evidence.
 </table>
 """)
 
+        # ---- Appendix D: Computation Provenance ----
+        provenance = st.get("computation_provenance", {})
+        code_refs = provenance.get("code_references", [])
+        manifests = provenance.get("manifests", [])
+        lineage_info = provenance.get("lineage", {})
+        lib_versions = provenance.get("library_versions", {})
+        data_prov = st.get("data_provenance", {})
+
+        if code_refs or manifests:
+            prov_rows = ""
+            for ref in code_refs:
+                prov_rows += (
+                    f"  <tr>"
+                    f"<td>{ref.get('artifact_label', '')}</td>"
+                    f"<td><code>{ref.get('function_path', '').split('.')[-1] if ref.get('function_path') else ''}</code></td>"
+                    f"<td><code>{ref.get('source_file', '').split('/')[-1] if ref.get('source_file') else ''}:{ref.get('source_line', '')}</code></td>"
+                    f"<td><code>{ref.get('input_data_hash', '')[:12]}</code></td>"
+                    f"<td><code>{ref.get('output_hash', '')[:12]}</code></td>"
+                    f"<td>{ref.get('computation_description', '')}</td>"
+                    f"</tr>\n"
+                )
+
+            manifest_rows = ""
+            for m in manifests:
+                manifest_rows += (
+                    f"  <tr>"
+                    f"<td>{m.get('computation_type', '').replace('_', ' ').title()}</td>"
+                    f"<td><code>{m.get('source_file', '').split('/')[-1] if m.get('source_file') else ''}:{m.get('source_line', '')}</code></td>"
+                    f"<td><code>{m.get('input_data_hash', '')[:12]}</code></td>"
+                    f"<td><code>{m.get('output_hash', '')[:12]}</code></td>"
+                    f"<td>{m.get('random_seed', '—')}</td>"
+                    f"<td>{m.get('duration_ms', 0):.0f}ms</td>"
+                    f"<td>{'Yes' if m.get('is_deterministic') else 'No'}</td>"
+                    f"</tr>\n"
+                )
+
+            lib_rows = ""
+            for lib, ver in lib_versions.items():
+                lib_rows += f"  <tr><td>{lib}</td><td>{ver}</td></tr>\n"
+
+            sections.append(f"""
+<div class="page-break"></div>
+<h3>Appendix D: Computation Provenance &mdash; &ldquo;Show Me the Code&rdquo;</h3>
+<p>
+Every statistical computation in this SAR is backed by an execution manifest recording
+the exact function, source file, line number, input/output hashes, random seed, and
+library versions used. This enables deterministic replay of any result.
+</p>
+<p><strong>Git SHA:</strong> <code>{provenance.get('git_sha', 'unknown')}</code>
+&nbsp;&nbsp;|&nbsp;&nbsp;
+<strong>All Deterministic:</strong> {'Yes' if provenance.get('all_deterministic') else 'No'}
+&nbsp;&nbsp;|&nbsp;&nbsp;
+<strong>Data Source:</strong> {'Simulated' if data_prov.get('is_simulated') else 'Real Patient Data'}
+</p>
+
+<h4>D.1 SAR Artifact &rarr; Source Code Mapping</h4>
+<table class="data-table">
+  <tr><th>SAR Artifact</th><th>Function</th><th>Source Location</th><th>Input Hash</th><th>Output Hash</th><th>Description</th></tr>
+{prov_rows}</table>
+
+<h4>D.2 Execution Manifests</h4>
+<table class="data-table">
+  <tr><th>Computation</th><th>Source</th><th>Input Hash</th><th>Output Hash</th><th>Seed</th><th>Duration</th><th>Deterministic</th></tr>
+{manifest_rows}</table>
+
+<h4>D.3 Pinned Library Versions</h4>
+<table class="data-table">
+  <tr><th>Library</th><th>Version</th></tr>
+{lib_rows}</table>
+
+<h4>D.4 Data Lineage</h4>
+<p>
+The data lineage DAG contains <strong>{lineage_info.get('node_count', 0)} nodes</strong> and
+<strong>{lineage_info.get('edge_count', 0)} edges</strong>, tracing every transformation
+from source patient data through propensity scoring, IPTW weighting, Cox PH regression,
+and sensitivity analyses to the final SAR output.
+Full lineage is available via the Afarensis API:
+<code>GET /projects/{{project_id}}/study/computation-provenance</code>
+</p>
+""")
+
         # ---- Footer ----
         sections.append(f"""
 <div class="footer">
