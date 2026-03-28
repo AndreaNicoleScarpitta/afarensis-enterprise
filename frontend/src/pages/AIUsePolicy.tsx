@@ -182,7 +182,7 @@ const sections = [
         contact us at{' '}
         <a
           href="mailto:compliance@syntheticascension.com"
-          className="text-blue-600 dark:text-blue-400 underline"
+          className="text-blue-600 underline"
         >
           compliance@syntheticascension.com
         </a>
@@ -194,12 +194,12 @@ const sections = [
 
 export default function AIUsePolicy() {
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-white">
       <div className="max-w-3xl mx-auto px-6 py-12">
         {/* Back link */}
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mb-8 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Afarensis
@@ -207,11 +207,11 @@ export default function AIUsePolicy() {
 
         {/* Header */}
         <div className="mb-10">
-          <h1 className="text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
             Computational Methods &amp; Automation Policy
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Last updated: March 2026</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-500">Last updated: March 2026</p>
+          <p className="text-sm text-gray-500 mt-1">
             Afarensis by Synthetic Ascension
           </p>
         </div>
@@ -221,12 +221,12 @@ export default function AIUsePolicy() {
           {sections.map((section) => (
             <section
               key={section.number}
-              className="border border-gray-200 dark:border-gray-800 rounded-lg p-6"
+              className="border border-gray-200 rounded-lg p-6"
             >
-              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
                 {section.number}. {section.title}
               </h2>
-              <div className="text-sm text-gray-700 dark:text-gray-300 space-y-3 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1">
+              <div className="text-sm text-gray-700 space-y-3 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1">
                 {section.content}
               </div>
             </section>
@@ -234,7 +234,7 @@ export default function AIUsePolicy() {
         </div>
 
         {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">
+        <div className="mt-12 pt-6 border-t border-gray-200 text-center text-xs text-gray-500">
           Synthetic Ascension, Inc. All rights reserved.
         </div>
       </div>

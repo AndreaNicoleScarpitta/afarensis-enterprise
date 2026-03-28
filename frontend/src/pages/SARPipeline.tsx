@@ -100,7 +100,7 @@ const StageTracker: React.FC<{ stages: Stage[] }> = ({ stages }) => (
                 ) : isActive ? (
                   <Loader2 className="h-5 w-5 text-white animate-spin" />
                 ) : (
-                  <Icon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <Icon className="h-4 w-4 text-gray-500" />
                 )}
               </div>
               {/* Label */}
@@ -109,13 +109,13 @@ const StageTracker: React.FC<{ stages: Stage[] }> = ({ stages }) => (
                   'text-[10px] font-semibold leading-tight',
                   isComplete ? 'text-success-700' :
                   isActive   ? 'text-primary-700' :
-                               'text-gray-500 dark:text-gray-400'
+                               'text-gray-500'
                 )}>{stage.shortLabel}</p>
                 <p className={cn(
                   'text-[9px] mt-0.5',
                   isComplete ? 'text-success-500' :
                   isActive   ? 'text-primary-500' :
-                               'text-gray-600 dark:text-gray-300'
+                               'text-gray-600'
                 )}>
                   {isComplete ? 'Complete' : isActive ? 'In Progress' : 'Pending'}
                 </p>
@@ -438,7 +438,7 @@ const SARPipeline: React.FC = () => {
             </div>
             <div className="text-right shrink-0 ml-4">
               <p className="text-2xl font-bold text-primary-700">{totalProgress}%</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Pipeline complete</p>
+              <p className="text-xs text-gray-500">Pipeline complete</p>
             </div>
           </div>
           <Progress value={totalProgress} className="h-2" />
@@ -503,7 +503,7 @@ const SARPipeline: React.FC = () => {
                       <p className="text-xs font-semibold text-gray-700 mt-0.5">{step.label}</p>
                       <p className="text-[10px] text-gray-500 mt-0.5">{step.sub}</p>
                     </div>
-                    {i < 2 && <ChevronRight className="h-5 w-5 text-gray-600 dark:text-gray-300 shrink-0 hidden sm:block" />}
+                    {i < 2 && <ChevronRight className="h-5 w-5 text-gray-600 shrink-0 hidden sm:block" />}
                   </React.Fragment>
                 ))}
               </div>
@@ -602,7 +602,7 @@ const SARPipeline: React.FC = () => {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 text-center">Good overlap region: 0.2–0.7</p>
+                  <p className="text-[10px] text-gray-500 mt-1 text-center">Good overlap region: 0.2–0.7</p>
                 </div>
               </div>
             </CardContent>
@@ -638,7 +638,7 @@ const SARPipeline: React.FC = () => {
                       <div key={m.label} className="bg-white border border-gray-200 rounded-lg p-2.5 text-center">
                         <p className={cn('text-base', m.color)}>{m.value}</p>
                         <p className="text-[10px] text-gray-500 mt-0.5">{m.label}</p>
-                        <p className="text-[9px] text-gray-500 dark:text-gray-400">{m.sub}</p>
+                        <p className="text-[9px] text-gray-500">{m.sub}</p>
                       </div>
                     ))}
                   </div>
@@ -736,7 +736,7 @@ const SARPipeline: React.FC = () => {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center mt-2">Stabilized IPW · 1st/99th percentile trimming applied · ESS = 18.6</p>
+              <p className="text-[10px] text-gray-500 text-center mt-2">Stabilized IPW · 1st/99th percentile trimming applied · ESS = 18.6</p>
             </CardContent>
           </Card>
 
@@ -770,7 +770,7 @@ const SARPipeline: React.FC = () => {
                         <p className="text-xs text-gray-600 mt-1 leading-relaxed">
                           An unmeasured confounder would need to be associated with both treatment and outcome by a factor of <strong>≥1.8×</strong> to fully explain away the observed effect.
                         </p>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 font-mono">VanderWeele & Ding (2017) methodology</p>
+                        <p className="text-[10px] text-gray-500 mt-1.5 font-mono">VanderWeele & Ding (2017) methodology</p>
                       </div>
                     </div>
                   </div>
@@ -850,7 +850,7 @@ const SARPipeline: React.FC = () => {
                   { name: 'Full R analysis scripts',   status: 'complete', detail: '847 lines · R 4.3.1 · tidyverse 2.0',      icon: CheckCircle2,  color: 'text-success-600 bg-success-50 border-success-200' },
                   { name: 'Docker environment hash',   status: 'complete', detail: 'sha256:a3f4b2c91d6e... · rocker/r-ver:4.3', icon: CheckCircle2,  color: 'text-success-600 bg-success-50 border-success-200' },
                   { name: 'Federated query logs',      status: 'active',   detail: 'Exporting node audit trails…',              icon: Loader2,       color: 'text-primary-600 bg-primary-50 border-primary-200' },
-                  { name: 'Cohort lineage graph',      status: 'pending',  detail: 'Awaiting query log completion',             icon: Circle,        color: 'text-gray-500 dark:text-gray-400 bg-gray-50 border-gray-200' },
+                  { name: 'Cohort lineage graph',      status: 'pending',  detail: 'Awaiting query log completion',             icon: Circle,        color: 'text-gray-500 bg-gray-50 border-gray-200' },
                 ].map(artifact => {
                   const Icon = artifact.icon
                   return (
@@ -881,7 +881,7 @@ const SARPipeline: React.FC = () => {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Lock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <Lock className="h-4 w-4 text-gray-500" />
                   Stage 8 — Report Assembly
                 </CardTitle>
                 <Badge variant="secondary">Pending Stage 7</Badge>
@@ -898,10 +898,10 @@ const SARPipeline: React.FC = () => {
                   { label: 'Unified Submission Package',            sub: 'Single document formatted for FDA Pre-IND or Type-C meeting submission' },
                 ].map(item => (
                   <div key={item.label} className="flex items-start gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                    <FileText className="h-4 w-4 text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" />
+                    <FileText className="h-4 w-4 text-gray-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-semibold text-gray-600">{item.label}</p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{item.sub}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">{item.sub}</p>
                     </div>
                   </div>
                 ))}

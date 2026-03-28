@@ -99,7 +99,7 @@ const FederatedNetwork: React.FC = () => {
   const getStatusIcon = (status: string) => {
     if (status === 'active') return <Wifi className="w-4 h-4 text-green-500" />
     if (status === 'pending') return <Clock className="w-4 h-4 text-yellow-500" />
-    return <WifiOff className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+    return <WifiOff className="w-4 h-4 text-gray-500" />
   }
 
   return (
@@ -213,7 +213,7 @@ const FederatedNetwork: React.FC = () => {
                           <RefreshCw className={`w-4 h-4 ${syncing === node.id ? 'animate-spin' : ''}`} />
                         </button>
                       )}
-                      <ArrowRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                      <ArrowRight className="w-4 h-4 text-gray-500" />
                     </div>
                   </div>
                 </div>
@@ -280,7 +280,7 @@ const FederatedNetwork: React.FC = () => {
             </div>
           ) : (
             <div className="bg-white rounded-lg border shadow-sm p-8 text-center">
-              <Globe className="w-10 h-10 text-gray-600 dark:text-gray-300 mx-auto mb-3" />
+              <Globe className="w-10 h-10 text-gray-600 mx-auto mb-3" />
               <p className="text-sm text-gray-500">Select a node to view details</p>
             </div>
           )}

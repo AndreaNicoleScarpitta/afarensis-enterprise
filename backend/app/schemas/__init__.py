@@ -284,6 +284,8 @@ class ProjectCreateRequest(ProjectBase):
     """Project creation request"""
     research_intent: Optional[str] = Field(None, description="Research intent / protocol text")
     protocol_text: Optional[str] = Field(None, description="Protocol or SAP text content")
+    phase: Optional[str] = Field(None, description="Clinical trial phase (e.g. Phase 1, Phase 2, Phase 3)")
+    agency: Optional[str] = Field(None, description="Regulatory agency (e.g. FDA, EMA, PMDA)")
     evidence_sources: List[EvidenceSourceEnum] = Field(
         default=[EvidenceSourceEnum.PUBMED, EvidenceSourceEnum.CLINICALTRIALS],
         description="Evidence sources to search"

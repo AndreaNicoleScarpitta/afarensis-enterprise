@@ -57,7 +57,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
           <div className="space-y-1">
             <p className="text-sm font-medium text-gray-500">{title}</p>
             <p className="text-3xl font-bold text-gray-900">{value}</p>
-            {sub && <p className="text-xs text-gray-500 dark:text-gray-400">{sub}</p>}
+            {sub && <p className="text-xs text-gray-500">{sub}</p>}
           </div>
           <div className={cn('p-3 rounded-xl ring-4', c.bg, c.ring)}>
             <Icon className={cn('h-5 w-5', c.icon)} />
@@ -249,7 +249,7 @@ const Dashboard: React.FC = () => {
                             <p className="text-sm font-semibold text-gray-800 truncate group-hover:text-primary-700">
                               {project.name || project.title || 'Untitled Project'}
                             </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                            <p className="text-xs text-gray-500 truncate mt-0.5">
                               {project.description || 'No description'} •{' '}
                               {project.updated_at ? new Date(project.updated_at).toLocaleDateString() : 'N/A'}
                             </p>
@@ -259,7 +259,7 @@ const Dashboard: React.FC = () => {
                           <Badge variant={statusVariant[project.status] ?? 'secondary'}>
                             {project.status}
                           </Badge>
-                          <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-gray-500" />
+                          <ChevronRight className="h-4 w-4 text-gray-600 group-hover:text-gray-500" />
                         </div>
                       </Link>
                       {idx < (projectsData.items.length - 1) && idx < 4 && (
@@ -271,10 +271,10 @@ const Dashboard: React.FC = () => {
               ) : (
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileText className="h-8 w-8 text-gray-500 dark:text-gray-400" />
+                    <FileText className="h-8 w-8 text-gray-500" />
                   </div>
                   <p className="text-sm font-medium text-gray-600">No projects yet</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4">Start your first evidence review</p>
+                  <p className="text-xs text-gray-500 mt-1 mb-4">Start your first evidence review</p>
                   <Button size="sm" asChild>
                     <Link to="/search">
                       <Search className="h-4 w-4" />
@@ -287,16 +287,16 @@ const Dashboard: React.FC = () => {
           </Card>
 
           {/* ── System Architecture Status (Demo) ─────────────────────────── */}
-          <div className="border-2 border-dashed border-amber-300 dark:border-amber-600 rounded-xl p-1">
+          <div className="border-2 border-dashed border-amber-300 rounded-xl p-1">
             <div className="flex items-center gap-2 px-3 pt-2 pb-1">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-              <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-amber-600 uppercase tracking-wide">
                 Demo Data — Not Connected to Live Systems
               </span>
             </div>
             <Card className="border-0 shadow-none">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base text-gray-500 dark:text-gray-400">12-Layer Architecture</CardTitle>
+                <CardTitle className="text-base text-gray-500">12-Layer Architecture</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -324,7 +324,7 @@ const Dashboard: React.FC = () => {
                       )} />
                       <div className="min-w-0">
                         <p className="text-xs font-medium text-gray-700 truncate">{layer.name}</p>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400">{layer.requests.toLocaleString()} req</p>
+                        <p className="text-[10px] text-gray-500">{layer.requests.toLocaleString()} req</p>
                       </div>
                     </div>
                   ))}
@@ -390,25 +390,25 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-gray-800 group-hover:text-primary-700">{action.label}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{action.sub}</p>
+                    <p className="text-xs text-gray-500">{action.sub}</p>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-300 group-hover:text-primary-500 shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-gray-600 group-hover:text-primary-500 shrink-0" />
                 </Link>
               ))}
             </CardContent>
           </Card>
 
           {/* System Health (Demo) */}
-          <div className="border-2 border-dashed border-amber-300 dark:border-amber-600 rounded-xl p-1">
+          <div className="border-2 border-dashed border-amber-300 rounded-xl p-1">
             <div className="flex items-center gap-2 px-3 pt-2 pb-1">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-              <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-amber-600 uppercase tracking-wide">
                 Demo Data
               </span>
             </div>
             <Card className="border-0 shadow-none">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base text-gray-500 dark:text-gray-400">System Health</CardTitle>
+                <CardTitle className="text-base text-gray-500">System Health</CardTitle>
               </CardHeader>
               <CardContent className="pt-0 opacity-60">
                 <div className="space-y-3">
@@ -460,7 +460,7 @@ const Dashboard: React.FC = () => {
                         <p className="text-xs font-semibold text-gray-800 truncate">
                           {evidence.title}
                         </p>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+                        <p className="text-[10px] text-gray-500 mt-0.5 truncate">
                           {evidence.source || 'Unknown source'} •{' '}
                           {evidence.createdAt || evidence.created_at
                             ? new Date(evidence.createdAt || evidence.created_at).toLocaleDateString()
@@ -471,7 +471,7 @@ const Dashboard: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No recent evidence records</p>
+                <p className="text-sm text-gray-500 text-center py-6">No recent evidence records</p>
               )}
             </CardContent>
           </Card>

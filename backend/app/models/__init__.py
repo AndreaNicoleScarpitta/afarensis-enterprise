@@ -1166,6 +1166,74 @@ class BackgroundTask(Base):
 
 
 # ============================================================================
+# EXECUTION EVENT STREAM (Causal DAG — first-class audit trail)
+# ============================================================================
+
+class ExecutionEventType(PyEnum):
+    DATA_PREPARATION = "data_preparation"
+    TRANSFORMATION = "transformation"
+    MODEL_FIT = "model_fit"
+    DIAGNOSTIC = "diagnostic"
+    ARTIFACT_GENERATION = "artifact_generation"
+    WARNING = "warning"
+    ERROR = "error"
+
+
+class ExecutionEventStatus(PyEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    WARNING = "warning"
+    FAILED = "failed"
+
+
+class ExecutionEvent(Base):
+    """
+    Unified execution event stream — every analysis step, transformation,
+    diagnostic check, and artifact generation is logged here.
+
+    Events are grouped by run_id (one analysis execution = one run).
+    Each event optionally references a causal DAG node, linking the
+    execution trace back to the scientific model.
+    """
+    __tablename__ = "execution_events"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = Column(String(36), ForeignKey("projects.id"), nullable=False, index=True)
+    run_id = Column(String(36), nullable=False, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Event classification
+    event_type = Column(Enum(ExecutionEventType, native_enum=False), nullable=False)
+    step_name = Column(String(200), nullable=False)
+    step_index = Column(Integer, nullable=True)
+    total_steps = Column(Integer, nullable=True)
+    status = Column(Enum(ExecutionEventStatus, native_enum=False), nullable=False)
+
+    # Human-readable summary
+    summary = Column(Text, nullable=False)
+
+    # Structured details (JSON dict of arbitrary metadata)
+    details = Column(JSON, default=dict)
+
+    # I/O tracking
+    inputs = Column(JSON, default=list)   # list of input identifiers
+    outputs = Column(JSON, default=list)  # list of output identifiers / artifact keys
+
+    # Link back to the causal DAG node that this step relates to
+    dag_node_ref = Column(String(100), nullable=True)
+
+    # Timing
+    duration_ms = Column(Integer, nullable=True)
+
+    __table_args__ = (
+        Index("idx_exec_events_project_run", "project_id", "run_id"),
+        Index("idx_exec_events_project_ts", "project_id", "timestamp"),
+        Index("idx_exec_events_run_step", "run_id", "step_index"),
+    )
+
+
+# ============================================================================
 # UPDATE EXISTING MODELS WITH NEW RELATIONSHIPS
 # ============================================================================
 

@@ -402,7 +402,7 @@ const ProgressiveDisclosure: React.FC<ProgressiveDisclosureProps> = ({
                       animate={{ rotate: isExpanded ? 90 : 0 }}
                       transition={{ duration: 0.2 }}
                     >
-                      <ChevronRight className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                      <ChevronRight className="w-5 h-5 text-gray-500" />
                     </motion.div>
                     
                     <Icon className="w-5 h-5 text-primary-600" />
@@ -459,7 +459,7 @@ const ProgressiveDisclosure: React.FC<ProgressiveDisclosureProps> = ({
                                     animate={{ rotate: isLayerVisible ? 180 : 0 }}
                                     transition={{ duration: 0.2 }}
                                   >
-                                    <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                    <ChevronDown className="w-4 h-4 text-gray-500" />
                                   </motion.div>
                                   
                                   {getExpertiseIcon(layer.level)}

@@ -324,9 +324,9 @@ function extractLineage(data: any) {
 
 function StatusBadge({ status }: { status: 'pass' | 'fail' | 'warn' }) {
   const styles = {
-    pass: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-    fail: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    warn: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+    pass: 'bg-emerald-50 text-emerald-700',
+    fail: 'bg-red-50 text-red-700',
+    warn: 'bg-amber-50 text-amber-700',
   }
   const icons = {
     pass: <CheckCircle2 className="w-3 h-3" />,
@@ -343,9 +343,9 @@ function StatusBadge({ status }: { status: 'pass' | 'fail' | 'warn' }) {
 
 function DirectionBadge({ direction }: { direction: 'consistent' | 'attenuated' | 'reversed' }) {
   const styles = {
-    consistent: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-    attenuated: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    reversed: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+    consistent: 'bg-emerald-50 text-emerald-700',
+    attenuated: 'bg-amber-50 text-amber-700',
+    reversed: 'bg-red-50 text-red-700',
   }
   return (
     <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize', styles[direction])}>
@@ -356,7 +356,7 @@ function DirectionBadge({ direction }: { direction: 'consistent' | 'attenuated' 
 
 function ChecksumBadge({ hash }: { hash: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded bg-gray-100 dark:bg-white/5 px-1.5 py-0.5 font-mono text-[10px] text-gray-500 dark:text-gray-400">
+    <span className="inline-flex items-center gap-1 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-[10px] text-gray-500">
       <Hash className="w-2.5 h-2.5" />
       {hash}
     </span>
@@ -365,16 +365,16 @@ function ChecksumBadge({ hash }: { hash: string }) {
 
 function KVRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-[160px_1fr] gap-2 py-2 border-b border-gray-100 dark:border-white/5 last:border-0">
-      <dt className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide pt-0.5">{label}</dt>
-      <dd className="text-sm text-gray-900 dark:text-gray-100">{children}</dd>
+    <div className="grid grid-cols-[160px_1fr] gap-2 py-2 border-b border-gray-100 last:border-0">
+      <dt className="text-xs font-medium text-gray-500 uppercase tracking-wide pt-0.5">{label}</dt>
+      <dd className="text-sm text-gray-900">{children}</dd>
     </div>
   )
 }
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 mt-6 first:mt-0">
+    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 mt-6 first:mt-0">
       {children}
     </h3>
   )
@@ -383,9 +383,9 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 function NoDataPlaceholder({ tab }: { tab: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <AlertTriangle className="w-8 h-8 text-amber-600 dark:text-amber-300 mb-3" />
-      <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No analysis data available</p>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs">
+      <AlertTriangle className="w-8 h-8 text-amber-600 mb-3" />
+      <p className="text-sm font-medium text-gray-700">No analysis data available</p>
+      <p className="text-xs text-gray-500 mt-1 max-w-xs">
         Run an analysis on uploaded patient data to populate the {tab} tab. All fields are derived from actual computation results.
       </p>
     </div>
@@ -413,8 +413,8 @@ function ModelCardTab({ data }: { data: any }) {
           <span className={cn(
             'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
             card.dataSource === 'uploaded'
-              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-              : 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-amber-50 text-amber-700'
           )}>
             {card.dataSource === 'uploaded' ? 'Uploaded Patient Data' : 'Simulated Data'}
           </span>
@@ -425,8 +425,8 @@ function ModelCardTab({ data }: { data: any }) {
       {card.covariates.length > 0 ? (
         <ul className="space-y-1">
           {card.covariates.map((c: string, i: number) => (
-            <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
-              <span className="text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-0.5 text-xs font-mono w-4 text-right shrink-0">{i + 1}.</span>
+            <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+              <span className="text-gray-500 mt-0.5 text-xs font-mono w-4 text-right shrink-0">{i + 1}.</span>
               {c}
             </li>
           ))}
@@ -463,21 +463,21 @@ function FormulaTab({ data }: { data: any }) {
   return (
     <div className="space-y-1">
       <SectionHeading>Plain English Description</SectionHeading>
-      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{formula.plainEnglish}</p>
+      <p className="text-sm text-gray-700 leading-relaxed">{formula.plainEnglish}</p>
 
       <SectionHeading>Statistical Formula</SectionHeading>
-      <div className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg p-4 overflow-x-auto">
-        <code className="text-sm font-mono text-gray-900 dark:text-gray-100 whitespace-pre">{formula.formula}</code>
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-x-auto">
+        <code className="text-sm font-mono text-gray-900 whitespace-pre">{formula.formula}</code>
       </div>
 
       <SectionHeading>Link Function</SectionHeading>
-      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{formula.linkFunction}</p>
+      <p className="text-sm text-gray-700 leading-relaxed">{formula.linkFunction}</p>
 
       <SectionHeading>Reference Groups</SectionHeading>
-      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{formula.referenceGroup}</p>
+      <p className="text-sm text-gray-700 leading-relaxed">{formula.referenceGroup}</p>
 
       <SectionHeading>Variance Estimation</SectionHeading>
-      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{formula.varianceNote}</p>
+      <p className="text-sm text-gray-700 leading-relaxed">{formula.varianceNote}</p>
     </div>
   )
 }
@@ -512,14 +512,14 @@ function InputsTab({ data }: { data: any }) {
       {inputs.nDropped > 0 && (
         <>
           <SectionHeading>Row Exclusions ({inputs.nDropped} rows)</SectionHeading>
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/30 rounded-lg p-3 mb-2">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-2">
             <div className="flex items-center gap-2 mb-1">
               <AlertTriangle className="w-4 h-4 text-amber-600" />
-              <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+              <span className="text-sm font-medium text-amber-800">
                 {inputs.nDropped} of {inputs.nInput} rows excluded from analysis
               </span>
             </div>
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+            <p className="text-xs text-amber-700">
               Every exclusion is documented. A regulatory-grade system must account for every excluded record.
             </p>
           </div>
@@ -527,16 +527,16 @@ function InputsTab({ data }: { data: any }) {
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="border-b border-gray-200 dark:border-white/10">
+                  <tr className="border-b border-gray-200">
                     <th className="text-left py-1.5 px-2 font-medium text-gray-500">Subject</th>
                     <th className="text-left py-1.5 px-2 font-medium text-gray-500">Reason(s)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {inputs.dropAudit.details.map((d: any, i: number) => (
-                    <tr key={i} className="border-b border-gray-100 dark:border-white/5">
-                      <td className="py-1.5 px-2 font-mono text-gray-700 dark:text-gray-300">{d.row}</td>
-                      <td className="py-1.5 px-2 text-gray-600 dark:text-gray-400">{Array.isArray(d.reasons) ? d.reasons.join(', ') : d.reasons}</td>
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="py-1.5 px-2 font-mono text-gray-700">{d.row}</td>
+                      <td className="py-1.5 px-2 text-gray-600">{Array.isArray(d.reasons) ? d.reasons.join(', ') : d.reasons}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -549,8 +549,8 @@ function InputsTab({ data }: { data: any }) {
       <SectionHeading>Covariates ({inputs.covariates.length})</SectionHeading>
       <ul className="space-y-1">
         {inputs.covariates.map((c: string, i: number) => (
-          <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
-            <span className="text-gray-500 dark:text-gray-400 text-xs font-mono w-4 text-right shrink-0">{i + 1}.</span>
+          <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+            <span className="text-gray-500 text-xs font-mono w-4 text-right shrink-0">{i + 1}.</span>
             {c}
           </li>
         ))}
@@ -576,8 +576,8 @@ function DiagnosticsTab({ data }: { data: any }) {
       <SectionHeading>Diagnostic Summary ({passCount}/{checks.length} passed)</SectionHeading>
       <div className="space-y-2">
         {checks.map((c, i) => (
-          <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-white/5">
-            <span className="text-sm text-gray-700 dark:text-gray-300">{c.name}</span>
+          <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-100">
+            <span className="text-sm text-gray-700">{c.name}</span>
             <StatusBadge status={c.status} />
           </div>
         ))}
@@ -589,7 +589,7 @@ function DiagnosticsTab({ data }: { data: any }) {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-white/10">
+                <tr className="border-b border-gray-200">
                   <th className="text-left py-1.5 px-2 font-medium text-gray-500">Covariate</th>
                   <th className="text-right py-1.5 px-2 font-medium text-gray-500">Pre-SMD</th>
                   <th className="text-right py-1.5 px-2 font-medium text-gray-500">Post-SMD</th>
@@ -598,8 +598,8 @@ function DiagnosticsTab({ data }: { data: any }) {
               </thead>
               <tbody>
                 {diag.balance.covariates.map((c: any, i: number) => (
-                  <tr key={i} className="border-b border-gray-100 dark:border-white/5">
-                    <td className="py-1.5 px-2 text-gray-700 dark:text-gray-300">{c.name}</td>
+                  <tr key={i} className="border-b border-gray-100">
+                    <td className="py-1.5 px-2 text-gray-700">{c.name}</td>
                     <td className="py-1.5 px-2 text-right font-mono">
                       <span className={c.preSMD > diag.balance.threshold ? 'text-amber-600' : 'text-gray-500'}>{c.preSMD.toFixed(3)}</span>
                     </td>
@@ -653,20 +653,20 @@ function SensitivityTab({ data }: { data: any }) {
       <SectionHeading>Sensitivity Analyses ({analyses.length})</SectionHeading>
       <div className="space-y-4">
         {analyses.map((a, i) => (
-          <div key={i} className="border border-gray-200 dark:border-white/10 rounded-lg p-3">
+          <div key={i} className="border border-gray-200 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{a.name}</span>
+              <span className="text-sm font-medium text-gray-800">{a.name}</span>
               <DirectionBadge direction={a.direction} />
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{a.rationale}</p>
+            <p className="text-xs text-gray-500 mb-2">{a.rationale}</p>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <span className="text-gray-500">Primary:</span>
-                <span className="ml-1 font-mono text-gray-700 dark:text-gray-300">{a.primaryEstimate}</span>
+                <span className="ml-1 font-mono text-gray-700">{a.primaryEstimate}</span>
               </div>
               <div>
                 <span className="text-gray-500">This analysis:</span>
-                <span className="ml-1 font-mono text-gray-700 dark:text-gray-300">{a.sensitivityEstimate}</span>
+                <span className="ml-1 font-mono text-gray-700">{a.sensitivityEstimate}</span>
               </div>
             </div>
           </div>
@@ -690,22 +690,22 @@ function LineageTab({ data }: { data: any }) {
           return (
             <div key={i} className="flex gap-3 relative">
               {!isLast && (
-                <div className="absolute left-[15px] top-[30px] bottom-0 w-px bg-gray-200 dark:bg-white/10" />
+                <div className="absolute left-[15px] top-[30px] bottom-0 w-px bg-gray-200" />
               )}
-              <div className="relative z-10 w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
-                <IconComp className="w-3.5 h-3.5 text-gray-600 dark:text-gray-400" />
+              <div className="relative z-10 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
+                <IconComp className="w-3.5 h-3.5 text-gray-600" />
               </div>
               <div className="flex-1 pb-4">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{node.type}</span>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">{node.type}</span>
                   {node.version && (
-                    <span className="text-[10px] font-mono bg-gray-100 dark:bg-white/5 px-1.5 py-0.5 rounded text-gray-500">
+                    <span className="text-[10px] font-mono bg-gray-100 px-1.5 py-0.5 rounded text-gray-500">
                       {node.version}
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-gray-800 dark:text-gray-200 mt-0.5">{node.name}</p>
-                <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-800 mt-0.5">{node.name}</p>
+                <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-500">
                   <span className="flex items-center gap-1"><User className="w-3 h-3" />{node.actor}</span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
@@ -750,16 +750,16 @@ export default function ShowYourWork({ isOpen, onClose, resultId, resultLabel, r
       <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 z-50 h-full w-full max-w-xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
+      <div className="fixed right-0 top-0 z-50 h-full w-full max-w-xl bg-white shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/10">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Show Your Work</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-sm truncate">{resultLabel}</p>
+            <h2 className="text-sm font-semibold text-gray-900">Show Your Work</h2>
+            <p className="text-xs text-gray-500 mt-0.5 max-w-sm truncate">{resultLabel}</p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 text-gray-500"
+            className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500"
           >
             <X className="w-4 h-4" />
           </button>
@@ -770,8 +770,8 @@ export default function ShowYourWork({ isOpen, onClose, resultId, resultLabel, r
           <div className={cn(
             'px-5 py-2 text-xs flex items-center gap-2 border-b',
             analysisData.data_source === 'uploaded'
-              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700/30 text-emerald-700 dark:text-emerald-400'
-              : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/30 text-blue-700 dark:text-blue-400'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+              : 'bg-blue-50 border-blue-200 text-blue-700'
           )}>
             <Database className="w-3.5 h-3.5" />
             <span className="font-medium">
@@ -786,19 +786,19 @@ export default function ShowYourWork({ isOpen, onClose, resultId, resultLabel, r
         )}
 
         {!hasData && (
-          <div className="px-5 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-700/30">
-            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+          <div className="px-5 py-3 bg-amber-50 border-b border-amber-200">
+            <div className="flex items-center gap-2 text-amber-700">
               <AlertTriangle className="w-4 h-4" />
               <span className="text-xs font-medium">No analysis results available</span>
             </div>
-            <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">
+            <p className="text-xs text-amber-600 mt-1">
               Upload patient data and run an analysis to populate this panel. All fields are derived from actual computation results.
             </p>
           </div>
         )}
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-white/10 px-5 overflow-x-auto">
+        <div className="flex border-b border-gray-200 px-5 overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.key}
@@ -806,8 +806,8 @@ export default function ShowYourWork({ isOpen, onClose, resultId, resultLabel, r
               className={cn(
                 'flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 transition-colors whitespace-nowrap',
                 activeTab === tab.key
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300',
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700',
               )}
             >
               {tab.icon}
@@ -822,8 +822,8 @@ export default function ShowYourWork({ isOpen, onClose, resultId, resultLabel, r
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 dark:border-white/10 px-5 py-3 bg-gray-50 dark:bg-white/5">
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500">
+        <div className="border-t border-gray-200 px-5 py-3 bg-gray-50">
+          <p className="text-[10px] text-gray-500">
             All values derived from the current analysis run. No hardcoded or cached data is displayed.
           </p>
         </div>

@@ -133,25 +133,25 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
   const signedCount = safeManifest.filter(m => m.signed).length
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] text-gray-900 dark:text-white">
-      <div className="border-b border-gray-200 dark:border-white/8 px-8 py-5">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
+      <div className="border-b border-gray-200 px-8 py-5">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <Archive className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
+              <Archive className="h-4 w-4 text-[#2563EB]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 08</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Reproducibility</h1>
+              <h1 className="text-xl font-bold text-gray-900">Reproducibility</h1>
               <p className="text-gray-500 text-xs mt-0.5">Code manifest · environment lock · Docker image · lineage chain</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs font-bold text-gray-900 dark:text-white">{selectedStudy.protocol}</p>
+            <p className="text-xs font-bold text-gray-900">{selectedStudy.protocol}</p>
             <p className="text-[10px] text-gray-500">{selectedStudy.indication}</p>
           </div>
         </div>
@@ -168,10 +168,10 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
           <div className="text-center py-8 text-gray-500 text-sm">Loading reproducibility data...</div>
         )}
         {error && (
-          <div className="flex items-center gap-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/30 rounded-xl p-4">
-            <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0" />
-            <p className="flex-1 text-sm text-red-600 dark:text-red-400">Error loading data: {error}</p>
-            <button onClick={() => refetch()} className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700/50 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+          <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4">
+            <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+            <p className="flex-1 text-sm text-red-600">Error loading data: {error}</p>
+            <button onClick={() => refetch()} className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 border border-red-300 rounded-lg hover:bg-red-100 transition-colors">
               Retry
             </button>
           </div>
@@ -180,7 +180,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
         {safeManifest.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
             <FileText className="h-10 w-10 text-gray-600 mb-3" />
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No data available</p>
+            <p className="text-sm font-medium text-gray-500">No data available</p>
             <p className="text-xs text-gray-600 mt-1">Generate analysis artifacts to populate the reproducibility manifest.</p>
           </div>
         )}
@@ -188,11 +188,11 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
         {/* Summary */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: 'Signed Artifacts', value: `${signedCount} / ${safeManifest.length}`, color: signedCount === safeManifest.length ? 'text-emerald-400' : 'text-amber-600 dark:text-amber-300' },
-            { label: 'Docker Image Hash', value: reproData?.docker_image_hash ?? '—', color: reproData?.docker_image_hash ? 'text-[#2563EB] dark:text-[#60a5fa]' : 'text-gray-500' },
+            { label: 'Signed Artifacts', value: `${signedCount} / ${safeManifest.length}`, color: signedCount === safeManifest.length ? 'text-emerald-400' : 'text-amber-600' },
+            { label: 'Docker Image Hash', value: reproData?.docker_image_hash ?? '—', color: reproData?.docker_image_hash ? 'text-[#2563EB]' : 'text-gray-500' },
             { label: 'renv Lockfile', value: reproData?.renv_version ? `${reproData.renv_version} · ${safeEnvPackages.length} packages` : '—', color: reproData?.renv_version ? 'text-emerald-400' : 'text-gray-500' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-4">
+            <div key={label} className="bg-gray-100/80 border border-gray-200 rounded-xl p-4">
               <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">{label}</p>
               <p className={`text-sm font-bold mt-1 font-mono ${color}`}>{value}</p>
             </div>
@@ -201,8 +201,8 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
 
         {/* Editable configuration — only when unlocked */}
         {!locked && !reviewerMode && (
-          <section className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-4">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Environment Configuration</h2>
+          <section className="bg-gray-100/80 border border-gray-200 rounded-xl p-5 space-y-4">
+            <h2 className="text-sm font-bold text-gray-900">Environment Configuration</h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1.5">Docker Image Tag</label>
@@ -211,7 +211,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                   value={dockerImageTag}
                   onChange={e => setDockerImageTag(e.target.value)}
                   placeholder="e.g. sha256:f1e4a3b9..."
-                  className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                  className="w-full bg-gray-200/60 border border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                 />
               </div>
               <div>
@@ -221,7 +221,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                   value={renvVersion}
                   onChange={e => setRenvVersion(e.target.value)}
                   placeholder="e.g. 1.0.3"
-                  className="w-full bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                  className="w-full bg-gray-200/60 border border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                 />
               </div>
             </div>
@@ -239,14 +239,14 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
         {/* Artifact manifest */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Reproducibility Manifest</h2>
-            <button className="flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] font-semibold hover:text-blue-300 transition-colors">
+            <h2 className="text-sm font-bold text-gray-900">Reproducibility Manifest</h2>
+            <button className="flex items-center gap-1.5 text-xs text-[#2563EB] font-semibold hover:text-blue-300 transition-colors">
               <Copy className="h-3.5 w-3.5" /> Copy all hashes
             </button>
           </div>
-          <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full text-xs">
-              <thead className="bg-gray-100/80 dark:bg-white/4 border-b border-gray-200 dark:border-white/8">
+              <thead className="bg-gray-100/80 border-b border-gray-200">
                 <tr>
                   <th className="text-left px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Artifact</th>
                   <th className="text-left px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">SHA-256 Hash</th>
@@ -259,8 +259,8 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
               </thead>
               <tbody>
                 {safeManifest.map((m, i) => (
-                  <tr key={i} className={`border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:bg-white/3 transition-colors`}>
-                    <td className="px-4 py-2.5 text-gray-900 dark:text-white font-medium font-mono text-xs">{m.artifact}</td>
+                  <tr key={i} className={`border-b border-gray-200 hover:bg-gray-50 transition-colors`}>
+                    <td className="px-4 py-2.5 text-gray-900 font-medium font-mono text-xs">{m.artifact}</td>
                     <td className="px-4 py-2.5 font-mono text-gray-500">{m.hash}</td>
                     <td className="px-4 py-2.5 text-center">
                       {!locked && !reviewerMode ? (
@@ -271,13 +271,13 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                         >
                           {m.signed
                             ? <CheckCircle2 className="h-4 w-4 text-emerald-400 mx-auto" />
-                            : <span className="text-[9px] text-amber-600 dark:text-amber-300 font-bold uppercase hover:text-amber-200 cursor-pointer">Pending</span>
+                            : <span className="text-[9px] text-amber-600 font-bold uppercase hover:text-amber-200 cursor-pointer">Pending</span>
                           }
                         </button>
                       ) : (
                         m.signed
                           ? <CheckCircle2 className="h-4 w-4 text-emerald-400 mx-auto" />
-                          : <span className="text-[9px] text-amber-600 dark:text-amber-300 font-bold uppercase">Pending</span>
+                          : <span className="text-[9px] text-amber-600 font-bold uppercase">Pending</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5 text-right text-gray-500">{m.date}</td>
@@ -305,12 +305,12 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                 value={newArtifactName}
                 onChange={e => setNewArtifactName(e.target.value)}
                 placeholder="Artifact filename..."
-                className="flex-1 bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                className="flex-1 bg-gray-200/60 border border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
               />
               <select
                 value={newArtifactType}
                 onChange={e => setNewArtifactType(e.target.value)}
-                className="bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                className="bg-gray-200/60 border border-gray-300 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
               >
                 <option value="script">Script</option>
                 <option value="data">Data</option>
@@ -332,20 +332,20 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
 
         {/* Environment */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Computational Environment</h2>
+          <h2 className="text-sm font-bold text-gray-900 mb-3">Computational Environment</h2>
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
               <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-3">Core Packages (renv lockfile)</p>
               <div className="space-y-1.5">
                 {safeEnvPackages.map(({ pkg, version }, idx) => (
                   <div key={pkg} className="flex items-center justify-between">
-                    <span className="text-sm text-gray-900 dark:text-white font-mono">{pkg}</span>
+                    <span className="text-sm text-gray-900 font-mono">{pkg}</span>
                     {!locked && !reviewerMode ? (
                       <input
                         type="text"
                         value={version}
                         onChange={e => handleUpdatePackageVersion(idx, e.target.value)}
-                        className="w-24 text-right bg-gray-200/60 dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded px-2 py-0.5 text-xs text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
+                        className="w-24 text-right bg-gray-200/60 border border-gray-300 rounded px-2 py-0.5 text-xs text-gray-900 font-mono focus:outline-none focus:ring-1 focus:ring-[#2563EB]"
                       />
                     ) : (
                       <span className="text-xs text-gray-500 font-mono">{version}</span>
@@ -354,14 +354,14 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                 ))}
               </div>
             </div>
-            <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-5">
               <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-3">Docker Container</p>
               {reproData?.docker ? (
                 <div className="space-y-2 text-xs font-mono">
                   {reproData.docker.base_image && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Base image</span>
-                      <span className="text-gray-600 dark:text-gray-300">{reproData.docker.base_image}</span>
+                      <span className="text-gray-600">{reproData.docker.base_image}</span>
                     </div>
                   )}
                   {reproData.docker.image_hash && (
@@ -373,20 +373,20 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                   {reproData.docker.built_at && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Built</span>
-                      <span className="text-gray-600 dark:text-gray-300">{reproData.docker.built_at}</span>
+                      <span className="text-gray-600">{reproData.docker.built_at}</span>
                     </div>
                   )}
                   {reproData.docker.registry && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Registry</span>
-                      <span className="text-[#2563EB] dark:text-[#60a5fa]">{reproData.docker.registry}</span>
+                      <span className="text-[#2563EB]">{reproData.docker.registry}</span>
                     </div>
                   )}
                 </div>
               ) : (
                 <p className="text-xs text-gray-500">Docker environment data not available.</p>
               )}
-              <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/8">
+              <div className="mt-4 pt-3 border-t border-gray-200">
                 <p className="text-[10px] text-gray-600 leading-relaxed">
                   Container pinning ensures identical computational environment across re-executions.
                 </p>
@@ -397,7 +397,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
 
         {/* Lineage chain — data-driven */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Provenance Lineage Chain</h2>
+          <h2 className="text-sm font-bold text-gray-900 mb-3">Provenance Lineage Chain</h2>
           {Array.isArray(reproData?.lineage_chain) && reproData.lineage_chain.length > 0 ? (
             <div className="space-y-1">
               {reproData.lineage_chain.map((item: any, i: number) => (
@@ -405,30 +405,30 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
                   <div className="flex flex-col items-center">
                     {item.status === 'verified'
                       ? <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-                      : <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-300 shrink-0" />}
+                      : <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />}
                     {i < reproData.lineage_chain.length - 1 && <div className="w-px h-5 bg-emerald-800/50" />}
                   </div>
                   <div className="flex items-center justify-between flex-1 py-1">
-                    <p className="text-sm text-gray-600 dark:text-gray-300">{item.step}</p>
+                    <p className="text-sm text-gray-600">{item.step}</p>
                     <span className="text-[10px] font-mono text-gray-600">{item.hash ?? '—'}</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="bg-gray-50 dark:bg-white/3 border border-gray-200 dark:border-white/8 rounded-xl p-6 text-center">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Lineage Chain Not Available</p>
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+              <p className="text-sm font-medium text-gray-500">Lineage Chain Not Available</p>
               <p className="text-xs text-gray-600 mt-1">Run analysis to generate provenance lineage.</p>
             </div>
           )}
         </section>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
-          <Link to={`/projects/${selectedStudy.id}/bias-sensitivity`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300 text-sm font-medium transition-colors">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+          <Link to={`/projects/${selectedStudy.id}/bias-sensitivity`} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors">
             <ChevronLeft className="h-4 w-4" /> Step 7: Bias & Sensitivity
           </Link>
-          <Link to={`/projects/${selectedStudy.id}/audit`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 dark:text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
+          <Link to={`/projects/${selectedStudy.id}/audit`} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-600 text-gray-900 text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
             Step 9: Audit Trail <ChevronRight className="h-4 w-4" />
           </Link>
         </div>

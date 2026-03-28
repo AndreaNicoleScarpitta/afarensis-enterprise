@@ -497,8 +497,8 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
                       </div>
                       {workflowProgress.pending_steps.map((step) => (
                         <div key={step} className="flex items-center gap-2 text-sm">
-                          <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                          <span className="text-gray-500 dark:text-gray-400">{step.replace('_', ' ')}</span>
+                          <Clock className="h-4 w-4 text-gray-500" />
+                          <span className="text-gray-500">{step.replace('_', ' ')}</span>
                         </div>
                       ))}
                     </div>

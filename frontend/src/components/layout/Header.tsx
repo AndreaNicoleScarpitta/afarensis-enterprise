@@ -91,14 +91,14 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onMenuToggle, onLogout }) 
 
           {/* Breadcrumb */}
           <nav className="hidden md:flex items-center gap-1.5 text-sm">
-            <span className="text-gray-500 dark:text-gray-400 font-medium">Afarensis Enterprise</span>
+            <span className="text-gray-500 font-medium">Afarensis Enterprise</span>
             {segments.map((seg, i) => {
               const segPath = '/' + segments.slice(0, i + 1).join('/')
               const label = pathLabel[segPath] || (seg.charAt(0).toUpperCase() + seg.slice(1))
               const isLast = i === segments.length - 1
               return (
                 <React.Fragment key={segPath}>
-                  <ChevronRight className="h-3.5 w-3.5 text-gray-600 dark:text-gray-300" />
+                  <ChevronRight className="h-3.5 w-3.5 text-gray-600" />
                   {isLast ? (
                     <span className="font-semibold text-gray-800">{label}</span>
                   ) : (
@@ -111,7 +111,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onMenuToggle, onLogout }) 
             })}
             {segments.length === 0 && (
               <>
-                <ChevronRight className="h-3.5 w-3.5 text-gray-600 dark:text-gray-300" />
+                <ChevronRight className="h-3.5 w-3.5 text-gray-600" />
                 <span className="font-semibold text-gray-800">Overview</span>
               </>
             )}
@@ -124,7 +124,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onMenuToggle, onLogout }) 
         {/* ── Center: Global Search ── */}
         <div className="hidden md:flex flex-1 max-w-md mx-6">
           <div className="relative w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
             <Input
               placeholder="Search projects, evidence, guidelines…"
               className="pl-9 bg-gray-50 border-gray-200 focus:bg-white h-9 text-sm"
@@ -234,7 +234,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onMenuToggle, onLogout }) 
           <span>Pending Reviews: <strong className="text-warning-600">—</strong></span>
           <span>Evidence Records: <strong className="text-gray-700">—</strong></span>
         </div>
-        <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-2 text-[10px] text-gray-500">
           <span>Session: {displayRole}</span>
           <span>•</span>
           <span>21 CFR Part 11 Compliant</span>

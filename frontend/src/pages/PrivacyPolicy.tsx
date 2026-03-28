@@ -25,7 +25,7 @@ const sections = [
     title: 'Data Categories',
     content: (
       <>
-        <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Customer Study Data</h3>
+        <h3 className="font-medium text-gray-900 mb-2">Customer Study Data</h3>
         <p>
           Clinical and real-world data (RWD) uploaded by customers for regulatory evidence review.
           This data is processed solely as directed by the customer. Customer study data is never
@@ -33,7 +33,7 @@ const sections = [
           without explicit, written opt-in from the customer.
         </p>
 
-        <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2 mt-4">
+        <h3 className="font-medium text-gray-900 mb-2 mt-4">
           Platform Usage Data
         </h3>
         <p>
@@ -43,7 +43,7 @@ const sections = [
           study-level data.
         </p>
 
-        <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-2 mt-4">
+        <h3 className="font-medium text-gray-900 mb-2 mt-4">
           Derived Analytics
         </h3>
         <p>
@@ -66,7 +66,7 @@ const sections = [
           <li>Improve platform reliability and performance</li>
           <li>Generate aggregated, de-identified insights for product improvement</li>
         </ul>
-        <p className="font-medium text-gray-900 dark:text-gray-100 mt-3">
+        <p className="font-medium text-gray-900 mt-3">
           We do NOT use customer study data for:
         </p>
         <ul>
@@ -214,7 +214,7 @@ const sections = [
         For questions regarding this Privacy Policy or our data handling practices, contact us at{' '}
         <a
           href="mailto:privacy@syntheticascension.com"
-          className="text-blue-600 dark:text-blue-400 underline"
+          className="text-blue-600 underline"
         >
           privacy@syntheticascension.com
         </a>
@@ -226,12 +226,12 @@ const sections = [
 
 export default function PrivacyPolicy() {
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-white">
       <div className="max-w-3xl mx-auto px-6 py-12">
         {/* Back link */}
         <Link
           to="/"
-          className="inline-flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mb-8 transition-colors"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Afarensis
@@ -239,11 +239,11 @@ export default function PrivacyPolicy() {
 
         {/* Header */}
         <div className="mb-10">
-          <h1 className="text-3xl font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          <h1 className="text-3xl font-semibold text-gray-900 mb-2">
             Privacy Policy
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Last updated: March 2026</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-500">Last updated: March 2026</p>
+          <p className="text-sm text-gray-500 mt-1">
             Afarensis by Synthetic Ascension
           </p>
         </div>
@@ -253,12 +253,12 @@ export default function PrivacyPolicy() {
           {sections.map((section) => (
             <section
               key={section.number}
-              className="border border-gray-200 dark:border-gray-800 rounded-lg p-6"
+              className="border border-gray-200 rounded-lg p-6"
             >
-              <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+              <h2 className="text-lg font-medium text-gray-900 mb-4">
                 {section.number}. {section.title}
               </h2>
-              <div className="text-sm text-gray-700 dark:text-gray-300 space-y-3 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1">
+              <div className="text-sm text-gray-700 space-y-3 leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1">
                 {section.content}
               </div>
             </section>
@@ -266,7 +266,7 @@ export default function PrivacyPolicy() {
         </div>
 
         {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-gray-200 dark:border-gray-800 text-center text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500">
+        <div className="mt-12 pt-6 border-t border-gray-200 text-center text-xs text-gray-500">
           Synthetic Ascension, Inc. All rights reserved.
         </div>
       </div>

@@ -396,7 +396,7 @@ const GenerateModal: React.FC<GenerateModalProps> = ({ onClose, onGenerated }) =
               Step {step} of 3 — {step === 1 ? 'Choose type' : step === 2 ? 'Configure' : 'Review & generate'}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -433,7 +433,7 @@ const GenerateModal: React.FC<GenerateModalProps> = ({ onClose, onGenerated }) =
                     }`}
                   >
                     <div className={`p-2 rounded-lg ${selected ? type.bg : 'bg-gray-100'} flex-shrink-0 mt-0.5`}>
-                      <Icon size={18} className={selected ? type.color : 'text-gray-500 dark:text-gray-400'} />
+                      <Icon size={18} className={selected ? type.color : 'text-gray-500'} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -443,7 +443,7 @@ const GenerateModal: React.FC<GenerateModalProps> = ({ onClose, onGenerated }) =
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 leading-relaxed">{type.description}</p>
-                      <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 font-mono">{type.regulatoryRef}</p>
+                      <p className="text-[10px] text-gray-500 mt-1 font-mono">{type.regulatoryRef}</p>
                     </div>
                     {selected && <CheckCircle size={18} className={type.color} />}
                   </button>
@@ -508,7 +508,7 @@ const GenerateModal: React.FC<GenerateModalProps> = ({ onClose, onGenerated }) =
               {/* Submission context */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  Submission context <span className="text-gray-500 dark:text-gray-400 font-normal">(optional)</span>
+                  Submission context <span className="text-gray-500 font-normal">(optional)</span>
                 </label>
                 <textarea
                   rows={3}
@@ -530,8 +530,8 @@ const GenerateModal: React.FC<GenerateModalProps> = ({ onClose, onGenerated }) =
                     >
                       Select all
                     </button>
-                    <span className="text-gray-600 dark:text-gray-300">·</span>
-                    <button onClick={() => setSelectedSections([])} className="text-xs text-gray-500 dark:text-gray-400 hover:underline">
+                    <span className="text-gray-600">·</span>
+                    <button onClick={() => setSelectedSections([])} className="text-xs text-gray-500 hover:underline">
                       Clear
                     </button>
                   </div>
@@ -703,7 +703,7 @@ const ArtifactCard: React.FC<ArtifactCardProps> = ({ artifact, onDownload }) => 
 
         {/* Title */}
         <h3 className="font-semibold text-sm text-gray-900 leading-snug mb-1 line-clamp-2">{artifact.title}</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-3">{typeConfig.shortLabel} · {typeConfig.regulatoryRef}</p>
+        <p className="text-xs text-gray-500 font-medium mb-3">{typeConfig.shortLabel} · {typeConfig.regulatoryRef}</p>
 
         {/* Meta */}
         <div className="space-y-1.5 text-xs text-gray-500 mb-4">
@@ -755,7 +755,7 @@ const ArtifactCard: React.FC<ArtifactCardProps> = ({ artifact, onDownload }) => 
           <div className="ml-auto">
             <Link
               to={`/projects/${artifact.project_id}`}
-              className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-600 transition-colors"
+              className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-600 transition-colors"
             >
               <ExternalLink size={10} />
               Project
@@ -821,7 +821,7 @@ const RegulatoryArtifacts: React.FC = () => {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setRefreshKey((k) => k + 1)}
-            className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             title="Refresh"
           >
             <RefreshCw size={17} />
@@ -883,7 +883,7 @@ const RegulatoryArtifacts: React.FC = () => {
       {/* Filters */}
       <div className="bg-white border border-gray-200 rounded-xl p-4 flex flex-col sm:flex-row gap-3">
         <div className="flex-1 relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 pointer-events-none" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
           <input
             type="text"
             placeholder="Search by title or document type…"
@@ -927,7 +927,7 @@ const RegulatoryArtifacts: React.FC = () => {
         /* Empty state */
         <div className="text-center py-16">
           <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <FileText size={28} className="text-gray-500 dark:text-gray-400" />
+            <FileText size={28} className="text-gray-500" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No documents yet</h3>
           <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
@@ -946,7 +946,7 @@ const RegulatoryArtifacts: React.FC = () => {
       {/* Document type reference */}
       <div className="bg-white border border-gray-200 rounded-xl p-5">
         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-          <BookOpen size={15} className="text-gray-500 dark:text-gray-400" />
+          <BookOpen size={15} className="text-gray-500" />
           Supported Regulatory Document Types
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

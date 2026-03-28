@@ -47,9 +47,9 @@ const ARTIFACTS: Artifact[] = [
 const TYPE_STYLES: Record<ArtifactType, { color: string; bg: string; border: string }> = {
   dataset:       { color: 'text-blue-400',    bg: 'bg-blue-900/20',    border: 'border-blue-700/30' },
   metadata:      { color: 'text-emerald-400', bg: 'bg-emerald-900/20', border: 'border-emerald-700/30' },
-  documentation: { color: 'text-amber-600 dark:text-amber-300',   bg: 'bg-amber-900/20',   border: 'border-amber-700/30' },
+  documentation: { color: 'text-amber-600',   bg: 'bg-amber-900/20',   border: 'border-amber-700/30' },
   program:       { color: 'text-purple-400',  bg: 'bg-purple-900/20',  border: 'border-purple-700/30' },
-  audit:         { color: 'text-gray-500 dark:text-gray-400',    bg: 'bg-gray-100 dark:bg-white/4',        border: 'border-gray-200 dark:border-white/8' },
+  audit:         { color: 'text-gray-500',    bg: 'bg-gray-100',        border: 'border-gray-200' },
 }
 
 const TYPE_ICONS: Record<ArtifactType, React.ReactNode> = {
@@ -151,16 +151,16 @@ const VALIDATION_CHECKS = [
 // ── Tree Renderer ───────────────────────────────────────────────────────────
 function TreeView({ nodes, depth = 0 }: { nodes: TreeNode[]; depth?: number }) {
   return (
-    <div className={depth > 0 ? 'ml-5 border-l border-gray-200 dark:border-white/8 pl-3' : ''}>
+    <div className={depth > 0 ? 'ml-5 border-l border-gray-200 pl-3' : ''}>
       {nodes.map((node, i) => (
         <div key={i}>
           <div className="flex items-center gap-2 py-1">
             {node.children ? (
-              <FolderTree className="h-3.5 w-3.5 text-amber-600 dark:text-amber-300 shrink-0" />
+              <FolderTree className="h-3.5 w-3.5 text-amber-600 shrink-0" />
             ) : (
               <FileText className="h-3 w-3 text-gray-500 shrink-0" />
             )}
-            <span className={`text-xs font-mono ${node.children ? 'text-amber-600 dark:text-amber-300 font-semibold' : 'text-gray-600 dark:text-gray-300'}`}>
+            <span className={`text-xs font-mono ${node.children ? 'text-amber-600 font-semibold' : 'text-gray-600'}`}>
               {node.name}
             </span>
             {node.artifact && (
@@ -210,13 +210,13 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] text-gray-900 dark:text-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="border-b border-gray-200 dark:border-white/8 px-8 py-5">
+      <div className="border-b border-gray-200 px-8 py-5">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <PackageCheck className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
+              <PackageCheck className="h-4 w-4 text-[#2563EB]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -227,19 +227,19 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
                   </span>
                 )}
                 {reviewerMode && (
-                  <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold">
+                  <span className="flex items-center gap-1 text-[10px] text-[#2563EB] font-semibold">
                     <Eye className="h-2.5 w-2.5" /> Reviewer View
                   </span>
                 )}
               </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Submission Trace Pack</h1>
+              <h1 className="text-xl font-bold text-gray-900">Submission Trace Pack</h1>
               <p className="text-gray-500 text-xs mt-0.5">
                 Lineage manifest &middot; artifact registry &middot; checksums &middot; eCTD-aligned export
               </p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs font-bold text-gray-900 dark:text-white">{selectedStudy.protocol}</p>
+            <p className="text-xs font-bold text-gray-900">{selectedStudy.protocol}</p>
             <p className="text-[10px] text-gray-500">{selectedStudy.indication}</p>
           </div>
         </div>
@@ -249,10 +249,10 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
 
         {/* ── Data source disclaimer ───────────────────────────────────── */}
         <div className="flex items-start gap-3 p-4 bg-amber-900/10 border border-amber-700/20 rounded-xl">
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-300 shrink-0 mt-0.5" />
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-amber-600 dark:text-amber-300">Reference Template — Not Generated from Current Analysis</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <p className="text-sm font-semibold text-amber-600">Reference Template — Not Generated from Current Analysis</p>
+            <p className="text-xs text-gray-500 mt-0.5">
               The artifact registry, lineage manifest, and eCTD directory structure shown below are reference templates.
               Generate a Trace Pack to produce an actual submission package with verified checksums from your analysis results.
             </p>
@@ -260,16 +260,16 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
         </div>
 
         {/* ── 1. Package Overview ──────────────────────────────────────── */}
-        <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+        <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Package Overview</h2>
+            <h2 className="text-sm font-bold text-gray-900">Package Overview</h2>
             <div className="flex items-center gap-2">
               {locked ? (
                 <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-900/20 border border-emerald-700/30 rounded-full px-2.5 py-0.5">
                   <Lock className="h-2.5 w-2.5" /> Package Locked
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-300 bg-amber-900/20 border border-amber-700/30 rounded-full px-2.5 py-0.5">
+                <span className="flex items-center gap-1 text-[10px] font-bold text-amber-600 bg-amber-900/20 border border-amber-700/30 rounded-full px-2.5 py-0.5">
                   <AlertTriangle className="h-2.5 w-2.5" /> Unlocked
                 </span>
               )}
@@ -288,7 +288,7 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
             ].map(({ label, value }) => (
               <div key={label}>
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">{label}</p>
-                <p className="text-sm font-bold text-gray-900 dark:text-white mt-0.5 font-mono">{value}</p>
+                <p className="text-sm font-bold text-gray-900 mt-0.5 font-mono">{value}</p>
               </div>
             ))}
           </div>
@@ -297,15 +297,15 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
         {/* ── 2. Artifact Registry Table ───────────────────────────────── */}
         <section>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Artifact Registry</h2>
-            <button className="flex items-center gap-1.5 text-xs text-[#2563EB] dark:text-[#60a5fa] font-semibold hover:text-blue-300 transition-colors">
+            <h2 className="text-sm font-bold text-gray-900">Artifact Registry</h2>
+            <button className="flex items-center gap-1.5 text-xs text-[#2563EB] font-semibold hover:text-blue-300 transition-colors">
               <Copy className="h-3.5 w-3.5" /> Copy all checksums
             </button>
           </div>
-          <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-gray-100/80 dark:bg-white/4 border-b border-gray-200 dark:border-white/8">
+                <thead className="bg-gray-100/80 border-b border-gray-200">
                   <tr>
                     <th className="text-left px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Type</th>
                     <th className="text-left px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Filename</th>
@@ -321,13 +321,13 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
                   {ARTIFACTS.map((a, i) => {
                     const style = TYPE_STYLES[a.type]
                     return (
-                      <tr key={i} className="border-b border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors">
+                      <tr key={i} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                         <td className="px-4 py-2.5">
                           <span className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${style.bg} ${style.border} ${style.color} border`}>
                             {TYPE_ICONS[a.type]}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 text-gray-900 dark:text-white font-medium font-mono text-xs">{a.filename}</td>
+                        <td className="px-4 py-2.5 text-gray-900 font-medium font-mono text-xs">{a.filename}</td>
                         <td className="px-4 py-2.5 text-gray-500 font-mono">{a.format}</td>
                         <td className="px-4 py-2.5 text-right text-gray-500 font-mono">{a.size}</td>
                         <td className="px-4 py-2.5 font-mono text-gray-500">
@@ -336,13 +336,13 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
                             {a.checksum}
                           </span>
                         </td>
-                        <td className="px-4 py-2.5 font-mono text-[#2563EB] dark:text-[#60a5fa]">{a.producedBy}</td>
+                        <td className="px-4 py-2.5 font-mono text-[#2563EB]">{a.producedBy}</td>
                         <td className="px-4 py-2.5 font-mono text-gray-500 text-[10px]">{a.ectdModule}</td>
                         <td className="px-4 py-2.5 text-center">
                           {a.verified ? (
                             <CheckCircle2 className="h-4 w-4 text-emerald-400 mx-auto" />
                           ) : (
-                            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-300 mx-auto" />
+                            <AlertTriangle className="h-4 w-4 text-amber-600 mx-auto" />
                           )}
                         </td>
                       </tr>
@@ -356,14 +356,14 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
 
         {/* ── 3. Lineage Manifest Preview ──────────────────────────────── */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Lineage Manifest</h2>
-          <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 overflow-x-auto">
+          <h2 className="text-sm font-bold text-gray-900 mb-3">Lineage Manifest</h2>
+          <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5 overflow-x-auto">
             <div className="flex items-center gap-0 min-w-[700px]">
               {LINEAGE_NODES.map((node, i) => (
                 <React.Fragment key={node.label}>
                   <div className="flex flex-col items-center min-w-[80px]">
                     <div className="w-16 h-16 rounded-lg bg-[#2563EB]/10 border border-[#2563EB]/25 flex flex-col items-center justify-center hover:bg-[#2563EB]/20 transition-colors">
-                      <span className="text-[10px] font-bold text-[#2563EB] dark:text-[#60a5fa]">{node.label}</span>
+                      <span className="text-[10px] font-bold text-[#2563EB]">{node.label}</span>
                       <span className="text-[8px] text-gray-500 font-mono mt-0.5">{node.version}</span>
                     </div>
                     <span className="text-[8px] text-gray-600 font-mono mt-1">{node.checksum}</span>
@@ -386,10 +386,10 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
 
         {/* ── 4. eCTD Directory Structure ──────────────────────────────── */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">eCTD Directory Structure</h2>
-          <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+          <h2 className="text-sm font-bold text-gray-900 mb-3">eCTD Directory Structure</h2>
+          <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5">
             <TreeView nodes={ECTD_TREE} />
-            <p className="text-[10px] text-gray-500 mt-4 border-t border-gray-200 dark:border-white/5 pt-3">
+            <p className="text-[10px] text-gray-500 mt-4 border-t border-gray-200 pt-3">
               Directory layout conforms to FDA eCTD v4.0 guidance for ADaM/SDTM submission packages.
             </p>
           </div>
@@ -397,8 +397,8 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
 
         {/* ── 5. Export Controls Panel ─────────────────────────────────── */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Export Controls</h2>
-          <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+          <h2 className="text-sm font-bold text-gray-900 mb-3">Export Controls</h2>
+          <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5">
             <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-5">
               {/* Format selector */}
               <div>
@@ -415,7 +415,7 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
                       className={`text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors ${
                         exportFormat === opt.key
                           ? 'bg-[#2563EB] border-[#2563EB] text-white'
-                          : 'bg-transparent border-gray-300 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:border-[#60a5fa] hover:text-[#2563EB] dark:text-[#60a5fa]'
+                          : 'bg-transparent border-gray-300 text-gray-600 hover:border-[#60a5fa] hover:text-[#2563EB]'
                       }`}
                     >
                       {opt.label}
@@ -445,7 +445,7 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-xs font-bold transition-colors ${
                   validated
                     ? 'border-emerald-700/30 text-emerald-400 bg-emerald-900/20'
-                    : 'border-gray-300 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:border-[#60a5fa] hover:text-[#2563EB] dark:text-[#60a5fa]'
+                    : 'border-gray-300 text-gray-600 hover:border-[#60a5fa] hover:text-[#2563EB]'
                 }`}
               >
                 {validated ? (
@@ -454,7 +454,7 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
                   <><Shield className="h-4 w-4" /> Validate Package</>
                 )}
               </button>
-              <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-white/10 text-gray-600 dark:text-gray-400 text-xs font-bold hover:border-[#60a5fa] hover:text-[#2563EB] dark:text-[#60a5fa] transition-colors">
+              <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-xs font-bold hover:border-[#60a5fa] hover:text-[#2563EB] transition-colors">
                 <Archive className="h-4 w-4" /> Export Audit Trail
               </button>
             </div>
@@ -468,9 +468,9 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
                     {check.pass ? (
                       <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                     ) : (
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-300 shrink-0" />
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                     )}
-                    <span className={check.pass ? 'text-gray-600 dark:text-gray-300' : 'text-amber-600 dark:text-amber-300'}>{check.label}</span>
+                    <span className={check.pass ? 'text-gray-600' : 'text-amber-600'}>{check.label}</span>
                   </div>
                 ))}
               </div>
@@ -480,7 +480,7 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
 
         {/* ── 6. FDA Conformance Status ──────────────────────────────── */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">FDA Conformance Status</h2>
+          <h2 className="text-sm font-bold text-gray-900 mb-3">FDA Conformance Status</h2>
           {generated ? (
             <div className="bg-emerald-900/10 border border-emerald-700/20 rounded-xl p-5">
               <div className="flex items-center gap-3">
@@ -494,11 +494,11 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
               </div>
             </div>
           ) : (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+            <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-6 w-6 text-gray-500 shrink-0" />
                 <div>
-                  <p className="text-sm font-bold text-gray-500 dark:text-gray-400">Not yet validated</p>
+                  <p className="text-sm font-bold text-gray-500">Not yet validated</p>
                   <p className="text-xs text-gray-500 mt-0.5">
                     Generate and validate a Trace Pack to run FDA eCTD conformance checks against actual artifacts.
                   </p>

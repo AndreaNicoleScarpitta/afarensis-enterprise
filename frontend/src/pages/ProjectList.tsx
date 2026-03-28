@@ -174,7 +174,7 @@ const ProjectList: React.FC = () => {
           {/* Search */}
           <div className="flex-1 max-w-md">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
               <input
                 type="text"
                 placeholder="Search projects by title or description..."
@@ -210,7 +210,7 @@ const ProjectList: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {projectsData?.items?.length === 0 ? (
           <div className="col-span-full text-center py-12">
-            <FileText className="h-12 w-12 text-gray-500 dark:text-gray-400 mx-auto mb-4" />
+            <FileText className="h-12 w-12 text-gray-500 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No projects found</h3>
             <p className="text-gray-600 mb-6">
               Get started by creating your first evidence review project.

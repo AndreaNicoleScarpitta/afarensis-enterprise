@@ -81,23 +81,23 @@ async def seed_database(session: AsyncSession):
     project4_id = str(uuid.uuid4())
 
     projects = [
-        (project1_id, "[Sample] XY-301: Rare CNS Disorder (Pediatric)", "REVIEW",
+        (project1_id, "[Sample] XY-301: Rare CNS Disorder (Pediatric)", "review",
          "Phase 3 single-arm study of XY-301 in pediatric patients with rare CNS disorder. "
          "External control arm constructed from registry data and natural history studies. "
          "Primary endpoint: change in neurological severity score at 48 weeks.",
          "Evaluate efficacy and safety of XY-301 vs external comparator using ATT estimand with propensity score methods.",
          admin_id, org_afarensis_id),
-        (project2_id, "[Sample] CLARITY-AD: Alzheimer's Disease Phase 3", "COMPLETED",
+        (project2_id, "[Sample] CLARITY-AD: Alzheimer's Disease Phase 3", "completed",
          "Phase 3 randomized controlled trial evaluating monoclonal antibody therapy in early Alzheimer's disease. "
          "Co-primary endpoints: CDR-SB and ADAS-Cog14 at 76 weeks.",
          "Assess treatment effect using ITT estimand in mild cognitive impairment and mild AD dementia populations.",
          reviewer1_id, org_afarensis_id),
-        (project3_id, "[Sample] GLP1-2026: Cardiovascular Outcomes", "DRAFT",
+        (project3_id, "[Sample] GLP1-2026: Cardiovascular Outcomes", "draft",
          "Cardiovascular outcomes trial for novel GLP-1 receptor agonist. "
          "Primary endpoint: time to first MACE (cardiovascular death, MI, or stroke).",
          "Evaluate cardiovascular safety and potential benefit using ATE estimand with time-to-event analysis.",
          analyst_id, org_afarensis_id),
-        (project4_id, "[Sample] MRD-100: Autoimmune Hepatitis Phase 2", "DRAFT",
+        (project4_id, "[Sample] MRD-100: Autoimmune Hepatitis Phase 2", "draft",
          "Phase 2 dose-ranging study of MRD-100, a selective JAK1 inhibitor, in moderate-to-severe autoimmune hepatitis. "
          "Primary endpoint: biochemical response (ALT normalization) at 24 weeks.",
          "Evaluate dose-response relationship using Bayesian adaptive design with external control from IAIHG registry data.",

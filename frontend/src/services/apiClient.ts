@@ -93,9 +93,9 @@ export const ApiErrorSchema = z.object({
 // TYPE INFERENCE FROM SCHEMAS  
 // ============================================================================
 
-export const ProjectStatusSchema = z.enum([
-  'draft', 'active', 'completed', 'archived', 'on_hold', 'review', 'processing'
-]);
+export const ProjectStatusSchema = z.string().transform(s => s.toLowerCase()).pipe(
+  z.enum(['draft', 'active', 'completed', 'archived', 'on_hold', 'review', 'processing'])
+);
 
 export const ProjectSchema = z.object({
   id: z.string().uuid(),
@@ -672,6 +672,54 @@ class ApiClient {
     return this.request(`/projects/${projectId}/study/causal-specification/validate`, z.any(), {
       method: 'POST',
       body: JSON.stringify(spec),
+    });
+  }
+
+  // ── Analysis Configuration ───────────────────────────────────────────
+
+  async getAnalysisConfig(projectId: string): Promise<any> {
+    return this.request(`/projects/${projectId}/study/analysis-config`, z.any());
+  }
+
+  async saveAnalysisConfig(projectId: string, config: Record<string, any>): Promise<any> {
+    return this.request(`/projects/${projectId}/study/analysis-config`, z.any(), {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  // ── Competing Risks ────────────────────────────────────────────────
+
+  async runCompetingRisks(projectId: string, params: Record<string, any> = {}): Promise<any> {
+    return this.request(`/projects/${projectId}/study/competing-risks`, z.any(), {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  // ── Execution Event Stream ─────────────────────────────────────────────
+  async getExecutionEvents(projectId: string, runId?: string): Promise<any> {
+    const url = runId
+      ? `/projects/${projectId}/execution-events?run_id=${runId}`
+      : `/projects/${projectId}/execution-events`;
+    return this.request(url, z.any());
+  }
+
+  async getExecutionRuns(projectId: string): Promise<any> {
+    return this.request(`/projects/${projectId}/execution-events/runs`, z.any());
+  }
+
+  async createExecutionEvent(projectId: string, event: Record<string, any>): Promise<any> {
+    return this.request(`/projects/${projectId}/execution-events`, z.any(), {
+      method: 'POST',
+      body: JSON.stringify(event),
+    });
+  }
+
+  async createExecutionEventsBatch(projectId: string, runId: string, events: Record<string, any>[]): Promise<any> {
+    return this.request(`/projects/${projectId}/execution-events/batch`, z.any(), {
+      method: 'POST',
+      body: JSON.stringify({ run_id: runId, events }),
     });
   }
 

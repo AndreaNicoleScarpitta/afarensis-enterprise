@@ -2,21 +2,18 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Shield,
-  Users,
-  Settings,
-  Brain,
   AlertTriangle,
   AlertCircle,
   Loader2,
-  Lock,
   CheckCircle2,
   Check,
   Circle,
   Mail,
+  Clock,
 } from 'lucide-react'
 
 // Auth & API
+import { useSessionTimeout } from './hooks/useSessionTimeout'
 import { useAuth } from './services/hooks'
 import { apiClient } from './services/apiClient'
 import { z } from 'zod'
@@ -25,8 +22,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+// Card, CardContent, Badge imports removed — unused
 
 // Theme & Context
 import { ThemeProvider } from './context/ThemeContext'
@@ -90,11 +86,11 @@ class ErrorBoundary extends React.Component<
   ) {
     // Reset error state when the route changes
     if (props.resetKey !== state.prevKey) {
-      return { hasError: false, error: undefined, errorInfo: undefined, prevKey: props.resetKey, errorCount: 0 }
+      return { hasError: false, prevKey: props.resetKey, errorCount: 0 }
     }
     return { prevKey: props.resetKey }
   }
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
+  override componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('[ErrorBoundary] Caught render error:', error, info)
     this.setState(prev => ({ errorInfo: info, errorCount: prev.errorCount + 1 }))
     // Notify the toast system so users see a transient alert even if they
@@ -105,38 +101,38 @@ class ErrorBoundary extends React.Component<
       }))
     } catch { /* ignore */ }
   }
-  render() {
+  override render() {
     if (this.state.hasError) {
       const { error, errorInfo, errorCount } = this.state
       return (
-        <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117] flex items-center justify-center p-6">
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
           <div className="max-w-lg w-full">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
                 <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Something went wrong</h1>
-              <p className="text-gray-600 dark:text-gray-400">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Something went wrong</h1>
+              <p className="text-gray-600">
                 This page encountered an unexpected error. Your data is safe.
               </p>
             </div>
 
             {/* Error details (collapsible) */}
-            <details className="mb-6 bg-gray-100 dark:bg-gray-800 rounded-lg p-4">
-              <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+            <details className="mb-6 bg-gray-100 rounded-lg p-4">
+              <summary className="text-sm font-medium text-gray-700 cursor-pointer">
                 Error details (for support)
               </summary>
               <div className="mt-3 space-y-2">
                 <p className="text-xs text-red-500 font-mono break-all">{error?.message}</p>
                 {error?.stack && (
-                  <pre className="text-[10px] text-gray-500 dark:text-gray-400 font-mono overflow-auto max-h-32 whitespace-pre-wrap">
+                  <pre className="text-[10px] text-gray-500 font-mono overflow-auto max-h-32 whitespace-pre-wrap">
                     {error.stack.split('\n').slice(0, 8).join('\n')}
                   </pre>
                 )}
                 {errorInfo?.componentStack && (
-                  <pre className="text-[10px] text-gray-500 dark:text-gray-400 font-mono overflow-auto max-h-24 whitespace-pre-wrap">
+                  <pre className="text-[10px] text-gray-500 font-mono overflow-auto max-h-24 whitespace-pre-wrap">
                     {errorInfo.componentStack.split('\n').slice(0, 6).join('\n')}
                   </pre>
                 )}
@@ -146,22 +142,22 @@ class ErrorBoundary extends React.Component<
             <div className="flex gap-3 justify-center">
               {errorCount < 3 && (
                 <button className="bg-[#2563EB] text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors"
-                  onClick={() => this.setState({ hasError: false, error: undefined, errorInfo: undefined })}>
+                  onClick={() => this.setState({ hasError: false, errorCount: 0 })}>
                   Try Again
                 </button>
               )}
-              <button className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors"
+              <button className="bg-gray-200 text-gray-700 px-5 py-2.5 rounded-lg hover:bg-gray-300 text-sm font-medium transition-colors"
                 onClick={() => window.location.href = '/dashboard'}>
                 Go to Dashboard
               </button>
-              <button className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-5 py-2.5 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium transition-colors"
+              <button className="bg-gray-200 text-gray-700 px-5 py-2.5 rounded-lg hover:bg-gray-300 text-sm font-medium transition-colors"
                 onClick={() => window.location.reload()}>
                 Reload Page
               </button>
             </div>
 
             {errorCount >= 3 && (
-              <p className="text-center text-xs text-amber-600 dark:text-amber-400 mt-4">
+              <p className="text-center text-xs text-amber-600 mt-4">
                 This error has occurred multiple times. Try reloading the page or navigating to a different section.
               </p>
             )}
@@ -256,8 +252,9 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
   const [resetCode, setResetCode] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [resetSuccess, setResetSuccess] = useState(false)
+  const [_resetSuccess, _setResetSuccess] = useState(false)
   const [resetToken, setResetToken] = useState('')
+  const [resendCooldown, setResendCooldown] = useState(0)
 
   // Registration state
   const [regName, setRegName] = useState('')
@@ -279,6 +276,18 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
     }
   }
 
+  // Cooldown timer effect
+  React.useEffect(() => {
+    if (resendCooldown <= 0) return
+    const timer = setInterval(() => {
+      setResendCooldown(prev => {
+        if (prev <= 1) { clearInterval(timer); return 0 }
+        return prev - 1
+      })
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [resendCooldown])
+
   const handleForgotSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -290,11 +299,21 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
         body: JSON.stringify({ email: resetEmail }),
       })
       const data = await resp.json()
+      if (resp.status === 429) {
+        // Cooldown — extract seconds from message
+        const match = (data.detail || '').match(/(\d+)\s*second/)
+        setResendCooldown(match ? parseInt(match[1], 10) : 120)
+        setError(data.detail || 'Please wait before requesting another code.')
+        setView('code')
+        return
+      }
       if (!resp.ok) throw new Error(data.detail || 'Request failed')
       setResetToken(data.reset_token || '')
+      setResendCooldown(120) // Start 2-minute cooldown
       setView('code')
     } catch (err) {
-      // Always show success message to prevent email enumeration
+      // Always show code view to prevent email enumeration
+      setResendCooldown(120)
       setView('code')
     } finally {
       setLoading(false)
@@ -428,19 +447,19 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
                     <span className="text-xs text-gray-500 font-medium w-12">{strength.label}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-1 text-[11px]">
-                    <span className={`flex items-center gap-1 ${newPassword.length >= 8 ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 ${newPassword.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}`}>
                       {newPassword.length >= 8 ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />} 8+ characters
                     </span>
-                    <span className={`flex items-center gap-1 ${/[A-Z]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 ${/[A-Z]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500'}`}>
                       {/[A-Z]/.test(newPassword) ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />} Uppercase letter
                     </span>
-                    <span className={`flex items-center gap-1 ${/[a-z]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 ${/[a-z]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500'}`}>
                       {/[a-z]/.test(newPassword) ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />} Lowercase letter
                     </span>
-                    <span className={`flex items-center gap-1 ${/[0-9]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 ${/[0-9]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500'}`}>
                       {/[0-9]/.test(newPassword) ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />} Number
                     </span>
-                    <span className={`flex items-center gap-1 ${/[^A-Za-z0-9]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}`}>
+                    <span className={`flex items-center gap-1 ${/[^A-Za-z0-9]/.test(newPassword) ? 'text-emerald-600' : 'text-gray-500'}`}>
                       {/[^A-Za-z0-9]/.test(newPassword) ? <Check className="h-3 w-3" /> : <Circle className="h-3 w-3" />} Special character
                     </span>
                   </div>
@@ -510,9 +529,23 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
           <div className="space-y-2">
             <p className="text-xs text-gray-500 text-center">
               Didn't receive the code?{' '}
-              <button onClick={() => { setView('forgot'); setError(null) }} className="text-[#2563EB] hover:text-blue-700 font-medium">
-                Resend
-              </button>
+              {resendCooldown > 0 ? (
+                <span className="text-gray-400 font-medium">
+                  Resend in {Math.floor(resendCooldown / 60)}:{String(resendCooldown % 60).padStart(2, '0')}
+                </span>
+              ) : (
+                <button
+                  onClick={() => {
+                    setError(null)
+                    setResetCode('')
+                    // Directly trigger resend — calls forgot-password again which invalidates old codes
+                    handleForgotSubmit({ preventDefault: () => {} } as React.FormEvent)
+                  }}
+                  className="text-[#2563EB] hover:text-blue-700 font-medium"
+                >
+                  Resend code
+                </button>
+              )}
             </p>
             <button onClick={handleBackToLogin} className="block mx-auto text-sm text-[#2563EB] hover:text-blue-700 font-medium">
               ← Back to sign in
@@ -640,16 +673,16 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
                     <span className="text-xs text-gray-500 font-medium w-12">{regStrength.label}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-1 text-[11px]">
-                    <span className={regPassword.length >= 8 ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}>
+                    <span className={regPassword.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}>
                       {regPassword.length >= 8 ? 'Yes' : 'No'} 8+ characters
                     </span>
-                    <span className={/[A-Z]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}>
+                    <span className={/[A-Z]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-500'}>
                       {/[A-Z]/.test(regPassword) ? 'Yes' : 'No'} Uppercase
                     </span>
-                    <span className={/[0-9]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}>
+                    <span className={/[0-9]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-500'}>
                       {/[0-9]/.test(regPassword) ? 'Yes' : 'No'} Number
                     </span>
-                    <span className={/[^A-Za-z0-9]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-500 dark:text-gray-400'}>
+                    <span className={/[^A-Za-z0-9]/.test(regPassword) ? 'text-emerald-600' : 'text-gray-500'}>
                       {/[^A-Za-z0-9]/.test(regPassword) ? 'Yes' : 'No'} Special char
                     </span>
                   </div>
@@ -760,9 +793,9 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
         </form>
         <div className="border-t border-gray-200 pt-6">
           <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] text-gray-500 font-medium uppercase tracking-widest">
-            <span>Role-based access</span><span className="text-gray-600 dark:text-gray-300">·</span>
-            <span>Audit logging</span><span className="text-gray-600 dark:text-gray-300">·</span>
-            <span>Validated environment</span><span className="text-gray-600 dark:text-gray-300">·</span>
+            <span>Role-based access</span><span className="text-gray-600">·</span>
+            <span>Audit logging</span><span className="text-gray-600">·</span>
+            <span>Validated environment</span><span className="text-gray-600">·</span>
             <span>Electronic record traceability</span>
           </div>
         </div>
@@ -793,10 +826,10 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
         <div className="space-y-8">
           <div className="space-y-4">
             <div>
-              <p className="text-gray-500 dark:text-gray-400 text-[13px] font-medium uppercase tracking-widest mb-2">Platform</p>
+              <p className="text-gray-500 text-[13px] font-medium uppercase tracking-widest mb-2">Platform</p>
               <h2 className="text-white text-xl font-semibold leading-tight">Regulatory evidence review platform</h2>
             </div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
+            <p className="text-gray-500 text-sm leading-relaxed">
               Version-controlled evidence evaluation, reproducible analysis artifacts, and attributed review workflows for teams operating under high scrutiny.
             </p>
           </div>
@@ -804,7 +837,7 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
             {trustBullets.map((bullet, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div className="w-1.5 h-1.5 rounded-full bg-[#2563EB] shrink-0 mt-1.5" />
-                <p className="text-gray-600 dark:text-gray-300 text-sm">{bullet}</p>
+                <p className="text-gray-600 text-sm">{bullet}</p>
               </div>
             ))}
           </div>
@@ -848,6 +881,7 @@ function App() {
   const location = useLocation()
 
   const { user, loading: authLoading, login, logout, isAuthenticated } = useAuth()
+  const { showWarning: sessionWarning, remainingSeconds: sessionSeconds, continueSession, logout: sessionLogout } = useSessionTimeout(logout, isAuthenticated)
   // WebSocket is lazy — only connects when entering a collaboration view.
   // No need to track connection state at the app level.
   const wsConnected = true  // Suppress the permanent "sync unavailable" banner
@@ -918,7 +952,9 @@ function App() {
                 : p.status === 'review' ? 'In Review'
                 : p.status === 'processing' ? 'In Analysis'
                 : 'Protocol Definition',
-              estimand: 'ATT',
+              estimand: p.estimand || '',
+              phase: p.phase || '',
+              agency: p.agency || '',
             }
           })
           setStudies(mapped)
@@ -987,7 +1023,7 @@ function App() {
     const navigate = useNavigate()
     const [syncError, setSyncError] = useState<string | null>(null)
     const retryCountRef = useRef(0)
-    useEffect(() => {
+    useEffect((): void | (() => void) => {
       if (projectId && selectedStudy?.id !== projectId) {
         setSyncError(null)
         retryCountRef.current = 0
@@ -1015,9 +1051,12 @@ function App() {
                   id: project.id,
                   name: project.title || 'Untitled Project',
                   status: project.status || 'draft',
-                  phase: '',
-                  sponsor: '',
-                  indication: '',
+                  protocol: project.protocol || '',
+                  activeStep: project.activeStep || 0,
+                  estimand: project.estimand || '',
+                  phase: project.phase || '',
+                  sponsor: project.sponsor || '',
+                  indication: project.indication || '',
                   locked: false,
                 }
                 setSelectedStudy(tempStudy)
@@ -1046,8 +1085,8 @@ function App() {
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center space-y-4 max-w-md">
             <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Failed to load project</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">{syncError}</p>
+            <h2 className="text-lg font-semibold text-gray-900">Failed to load project</h2>
+            <p className="text-sm text-gray-500">{syncError}</p>
             <button
               onClick={() => navigate('/dashboard')}
               className="px-4 py-2 bg-[#2563EB] text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
@@ -1103,7 +1142,41 @@ function App() {
     <ToastProvider>
     <LiteratureProvider projectId={selectedStudy?.id ?? '__none__'}>
     <LineageProvider>
-      <div className="min-h-screen bg-white dark:bg-[#0d0d0e]">
+      <div className="min-h-screen bg-white">
+        {/* Session timeout warning modal */}
+        {sessionWarning && (
+          <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4 border border-gray-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Session Expiring</h3>
+                  <p className="text-xs text-gray-500">Inactivity timeout — regulatory compliance requirement</p>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">
+                Your session will expire in <span className="font-bold text-amber-600">{Math.floor(sessionSeconds / 60)}:{String(sessionSeconds % 60).padStart(2, '0')}</span> due to inactivity.
+                Click "Continue Session" to stay signed in, or you will be automatically logged out.
+              </p>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={continueSession}
+                  className="flex-1 h-10 bg-[#2563EB] hover:bg-blue-700 text-white font-semibold text-sm rounded-lg transition-colors"
+                >
+                  Continue Session
+                </button>
+                <button
+                  onClick={sessionLogout}
+                  className="px-4 h-10 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium text-sm rounded-lg border border-gray-200 transition-colors"
+                >
+                  Log Out Now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         {!wsConnected && (
           <div className="bg-amber-50 border-l-4 border-amber-400 px-4 py-2 text-sm text-amber-700">
             Real-time sync temporarily unavailable. Reconnecting…
@@ -1138,14 +1211,14 @@ function App() {
         )}
 
         {/* Evidence Base Drawer */}
-        <div className={`fixed top-0 right-0 h-full w-[520px] max-w-[90vw] bg-white dark:bg-[#111112] border-l border-gray-200 dark:border-white/10 shadow-2xl z-40 transition-transform duration-300 ease-in-out ${evidenceDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/8">
+        <div className={`fixed top-0 right-0 h-full w-[520px] max-w-[90vw] bg-white border-l border-gray-200 shadow-2xl z-40 transition-transform duration-300 ease-in-out ${evidenceDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
             <div>
               <p className="text-[10px] font-bold text-[#2563EB] uppercase tracking-widest">Global Layer</p>
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Evidence Base</h2>
+              <h2 className="text-sm font-bold text-gray-900">Evidence Base</h2>
               <p className="text-[10px] text-gray-500 mt-0.5">Feeds the thinking — anticipates reviewer questions</p>
             </div>
-            <button onClick={() => setEvidenceDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors">
+            <button onClick={() => setEvidenceDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
@@ -1160,39 +1233,39 @@ function App() {
         </div>
 
         {/* Analysis Lineage Drawer */}
-        <div className={`fixed top-0 right-0 h-full w-[520px] max-w-[90vw] bg-white dark:bg-[#111112] border-l border-gray-200 dark:border-white/10 shadow-2xl z-40 transition-transform duration-300 ease-in-out ${lineageDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-white/8">
+        <div className={`fixed top-0 right-0 h-full w-[520px] max-w-[90vw] bg-white border-l border-gray-200 shadow-2xl z-40 transition-transform duration-300 ease-in-out ${lineageDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
             <div>
               <p className="text-[10px] font-bold text-[#2563EB] uppercase tracking-widest">Global Layer</p>
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Analysis Lineage</h2>
+              <h2 className="text-sm font-bold text-gray-900">Analysis Lineage</h2>
               <p className="text-[10px] text-gray-500 mt-0.5">Proves the thinking — answers reviewer questions instantly</p>
             </div>
-            <button onClick={() => setLineageDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500 hover:text-gray-700 dark:hover:text-white transition-colors">
+            <button onClick={() => setLineageDrawerOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
           </div>
           <div className="overflow-y-auto h-[calc(100%-72px)]">
             {lineageDrawerOpen && selectedStudy && (
-              <div className="divide-y divide-gray-200 dark:divide-white/8">
+              <div className="divide-y divide-gray-200">
                 <button
                   onClick={() => { setLineageDrawerOpen(false); window.location.href = `/projects/${selectedStudy.id}/input-explorer` }}
-                  className="w-full px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-white/3 transition-colors group"
+                  className="w-full px-5 py-4 text-left hover:bg-gray-50 transition-colors group"
                 >
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#2563EB]">Input Explorer</p>
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-[#2563EB]">Input Explorer</p>
                   <p className="text-xs text-gray-500 mt-0.5">Sources · schemas · data quality checks</p>
                 </button>
                 <button
                   onClick={() => { setLineageDrawerOpen(false); window.location.href = `/projects/${selectedStudy.id}/variable-notebook` }}
-                  className="w-full px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-white/3 transition-colors group"
+                  className="w-full px-5 py-4 text-left hover:bg-gray-50 transition-colors group"
                 >
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#2563EB]">Variable Notebook</p>
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-[#2563EB]">Variable Notebook</p>
                   <p className="text-xs text-gray-500 mt-0.5">Derivations · code lists · transformation rules</p>
                 </button>
                 <button
                   onClick={() => { setLineageDrawerOpen(false); window.location.href = `/projects/${selectedStudy.id}/trace-pack` }}
-                  className="w-full px-5 py-4 text-left hover:bg-gray-50 dark:hover:bg-white/3 transition-colors group"
+                  className="w-full px-5 py-4 text-left hover:bg-gray-50 transition-colors group"
                 >
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-[#2563EB]">Trace Pack</p>
+                  <p className="text-sm font-semibold text-gray-900 group-hover:text-[#2563EB]">Trace Pack</p>
                   <p className="text-xs text-gray-500 mt-0.5">Export · checksums · eCTD submission artifacts</p>
                 </button>
               </div>
@@ -1253,12 +1326,12 @@ function App() {
 
                     {/* 404 */}
                     <Route path="*" element={
-                      <div className="flex flex-col items-center justify-center min-h-screen text-center gap-4 bg-gray-50 dark:bg-[#0d0d0e]">
-                        <div className="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center">
-                          <AlertTriangle className="h-8 w-8 text-gray-500 dark:text-gray-400 dark:text-gray-500" />
+                      <div className="flex flex-col items-center justify-center min-h-screen text-center gap-4 bg-gray-50">
+                        <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center">
+                          <AlertTriangle className="h-8 w-8 text-gray-500" />
                         </div>
                         <div>
-                          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Page Not Found</h1>
+                          <h1 className="text-2xl font-bold text-gray-900 mb-2">Page Not Found</h1>
                           <p className="text-gray-500 text-sm max-w-sm">The requested page could not be found.</p>
                         </div>
                         <a

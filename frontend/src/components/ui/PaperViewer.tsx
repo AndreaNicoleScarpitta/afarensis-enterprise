@@ -103,10 +103,10 @@ function highlightAnchors(text: string, anchors: Anchor[]): React.ReactNode[] {
     const anchor = anchors.find(a => a.text.toLowerCase().startsWith(part.toLowerCase().slice(0, 30)) && part.length > 5)
     if (anchor) {
       const color = anchor.relevance === 'high'
-        ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-900 dark:text-yellow-200 border-yellow-300 dark:border-yellow-600/40'
+        ? 'bg-yellow-100 text-yellow-900 border-yellow-300'
         : anchor.relevance === 'medium'
-        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-600/30'
-        : 'bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-white/10'
+        ? 'bg-blue-50 text-blue-900 border-blue-200'
+        : 'bg-gray-100 text-gray-700 border-gray-200'
       return (
         <mark key={i} className={`px-0.5 rounded border ${color} cursor-help`}
           title={`${anchor.section} — ${anchor.relevance} relevance`}>
@@ -119,10 +119,10 @@ function highlightAnchors(text: string, anchors: Anchor[]): React.ReactNode[] {
 }
 
 const sourceColors: Record<string, string> = {
-  pubmed:          'text-blue-600 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/30',
-  clinicaltrials:  'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-700/30',
-  openalex:        'text-violet-600 bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700/30',
-  semanticscholar: 'text-orange-600 bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-700/30',
+  pubmed:          'text-blue-600 bg-blue-50 border-blue-200',
+  clinicaltrials:  'text-emerald-600 bg-emerald-50 border-emerald-200',
+  openalex:        'text-violet-600 bg-violet-50 border-violet-200',
+  semanticscholar: 'text-orange-600 bg-orange-50 border-orange-200',
 }
 
 export default function PaperViewer({ paper, onClose, anchors: propAnchors }: PaperViewerProps) {
@@ -183,23 +183,23 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
   return (
     <div className="fixed inset-0 z-50 flex items-stretch bg-black/60 backdrop-blur-sm" onClick={onClose}>
       <div
-        className={`ml-auto bg-white dark:bg-[#111113] shadow-2xl flex flex-col transition-all duration-300 ${expanded ? 'w-full' : 'w-[720px] max-w-full'}`}
+        className={`ml-auto bg-white shadow-2xl flex flex-col transition-all duration-300 ${expanded ? 'w-full' : 'w-[720px] max-w-full'}`}
         onClick={e => e.stopPropagation()}
       >
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-white/8 bg-gray-50 dark:bg-[#0d0d0e] shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-gray-50 shrink-0">
           <div className="flex items-center gap-2">
             <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${sourceColors[paper.source] ?? 'text-gray-500 bg-gray-100 border-gray-200'}`}>
               {paper.source}
             </span>
             {pdfUrl && (
-              <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700/30 px-2 py-0.5 rounded">
+              <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded">
                 Open Access
               </span>
             )}
           </div>
           <div className="flex items-center gap-1.5">
-            <button onClick={copyRef} className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700 dark:text-gray-200 px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-white/8 transition-colors">
+            <button onClick={copyRef} className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 px-2 py-1.5 rounded hover:bg-gray-100 transition-colors">
               {copied ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
               {copied ? 'Copied!' : 'Copy ref'}
             </button>
@@ -213,19 +213,19 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                 <ExternalLink className="h-3.5 w-3.5" /> Open in New Tab
               </a>
             )}
-            <button onClick={() => setExpanded(v => !v)} className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700 dark:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-white/8 transition-colors">
+            <button onClick={() => setExpanded(v => !v)} className="p-1.5 text-gray-500 hover:text-gray-700 rounded hover:bg-gray-100 transition-colors">
               {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </button>
-            <button onClick={onClose} className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-red-500 rounded hover:bg-gray-100 dark:hover:bg-gray-100 dark:bg-white/8 transition-colors">
+            <button onClick={onClose} className="p-1.5 text-gray-500 hover:text-red-500 rounded hover:bg-gray-100 transition-colors">
               <X className="h-4 w-4" />
             </button>
           </div>
         </div>
 
         {/* Title + authors */}
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-white/8 shrink-0">
-          <h2 className="text-base font-bold text-gray-900 dark:text-white leading-snug mb-3">{paper.title}</h2>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+        <div className="px-6 py-5 border-b border-gray-100 shrink-0">
+          <h2 className="text-base font-bold text-gray-900 leading-snug mb-3">{paper.title}</h2>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
             {paper.authors.length > 0 && (
               <span className="flex items-center gap-1.5">
                 <Users className="h-3.5 w-3.5" />
@@ -235,7 +235,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
             {(paper.publicationDate ?? paper.year) && (
               <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" />{paper.publicationDate ?? paper.year}</span>
             )}
-            {paper.journal && <span className="font-medium text-gray-600 dark:text-gray-300 italic">{paper.journal}</span>}
+            {paper.journal && <span className="font-medium text-gray-600 italic">{paper.journal}</span>}
             {paper.doi && <span className="font-mono text-[10px]">DOI: {paper.doi}</span>}
             {paper.citationCount !== undefined && paper.citationCount > 0 && (
               <span className="flex items-center gap-1.5"><Quote className="h-3.5 w-3.5" />{paper.citationCount.toLocaleString()} citations</span>
@@ -244,7 +244,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 dark:border-white/8 shrink-0">
+        <div className="flex border-b border-gray-200 shrink-0">
           {[
             { id: 'abstract',  label: 'Abstract',                        icon: BookOpen },
             { id: 'fulltext',  label: 'Full Text',                       icon: FileText },
@@ -257,7 +257,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
               className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
                 tab === t.id
                   ? 'border-[#2563EB] text-[#2563EB]'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-700 dark:text-gray-200'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
               <t.icon className="h-3.5 w-3.5" /> {t.label}
@@ -272,16 +272,16 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
           {tab === 'abstract' && (
             <div className="px-6 py-5 space-y-4">
               {paper.tldr && (
-                <div className="bg-blue-50 dark:bg-[#2563EB]/10 border border-blue-200 dark:border-[#2563EB]/30 rounded-xl p-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                   <p className="text-[10px] font-bold text-[#2563EB] uppercase tracking-widest mb-1">TL;DR (Structured Summary)</p>
-                  <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">{paper.tldr}</p>
+                  <p className="text-sm text-gray-700 leading-relaxed">{paper.tldr}</p>
                 </div>
               )}
 
               {paper.abstract ? (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Abstract</p>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Abstract</p>
                     <button
                       onClick={() => setTab('anchors')}
                       className="flex items-center gap-1 text-[10px] text-[#2563EB] font-semibold hover:underline"
@@ -289,13 +289,13 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                       <Hash className="h-3 w-3" /> {anchors.length} anchors detected →
                     </button>
                   </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-200 leading-relaxed">
+                  <p className="text-sm text-gray-700 leading-relaxed">
                     {anchors.length > 0 ? highlightAnchors(paper.abstract, anchors) : paper.abstract}
                   </p>
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">No abstract available.</p>
+                  <p className="text-sm text-gray-500">No abstract available.</p>
                   {sourceUrl && (
                     <a href={sourceUrl} target="_blank" rel="noopener noreferrer"
                        className="mt-3 inline-flex items-center gap-2 text-sm text-[#2563EB] font-semibold hover:underline">
@@ -307,10 +307,10 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
 
               {paper.meshTerms && paper.meshTerms.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">MeSH Terms</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">MeSH Terms</p>
                   <div className="flex flex-wrap gap-1.5">
                     {paper.meshTerms.map(t => (
-                      <span key={t} className="text-[10px] bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700/30 px-2 py-0.5 rounded">{t}</span>
+                      <span key={t} className="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 px-2 py-0.5 rounded">{t}</span>
                     ))}
                   </div>
                 </div>
@@ -318,21 +318,21 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
 
               {paper.eligibilityCriteria && (
                 <div>
-                  <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Eligibility Criteria</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-line bg-gray-50 dark:bg-white/3 rounded-lg p-4">{paper.eligibilityCriteria}</p>
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Eligibility Criteria</p>
+                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line bg-gray-50 rounded-lg p-4">{paper.eligibilityCriteria}</p>
                 </div>
               )}
 
               {/* Open in new tab CTA if no PDF */}
               {sourceUrl && (
-                <div className="pt-2 border-t border-gray-100 dark:border-white/8 flex items-center gap-3">
+                <div className="pt-2 border-t border-gray-100 flex items-center gap-3">
                   <a href={sourceUrl} target="_blank" rel="noopener noreferrer"
                      className="flex items-center gap-2 text-sm font-semibold text-[#2563EB] hover:underline">
                     <ExternalLink className="h-4 w-4" /> Read full paper at {paper.source}
                   </a>
                   {pdfUrl && (
                     <a href={pdfUrl} target="_blank" rel="noopener noreferrer"
-                       className="flex items-center gap-2 text-sm font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">
+                       className="flex items-center gap-2 text-sm font-semibold text-emerald-600 hover:underline">
                       <Download className="h-4 w-4" /> Download PDF
                     </a>
                   )}
@@ -347,7 +347,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
               {pdfUrl ? (
                 <div className="flex-1 relative min-h-[400px]">
                   {!iframeLoaded && !iframeError && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-[#0d0d0e] z-10">
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
                       <div className="text-center">
                         <div className="w-10 h-10 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
                         <p className="text-sm text-gray-500">Loading full text…</p>
@@ -357,7 +357,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                   {iframeError ? (
                     <div className="flex flex-col items-center justify-center h-full gap-4 p-8 text-center">
                       <AlertCircle className="h-10 w-10 text-amber-500" />
-                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Could not embed PDF</p>
+                      <p className="text-sm font-semibold text-gray-700">Could not embed PDF</p>
                       <p className="text-xs text-gray-500">The publisher may restrict embedding.</p>
                       <a href={pdfUrl} target="_blank" rel="noopener noreferrer"
                          className="flex items-center gap-2 bg-[#2563EB] text-white text-sm font-semibold px-5 py-2.5 rounded-lg hover:bg-blue-600 transition-colors">
@@ -376,9 +376,9 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center flex-1 gap-4 p-8 text-center min-h-[300px]">
-                  <FileText className="h-10 w-10 text-gray-600 dark:text-gray-300 dark:text-gray-600" />
-                  <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">Full text not available in-app</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
+                  <FileText className="h-10 w-10 text-gray-600" />
+                  <p className="text-sm font-semibold text-gray-600">Full text not available in-app</p>
+                  <p className="text-xs text-gray-500 max-w-sm">
                     This paper is not open-access or no PDF URL was returned. Open the paper at its source to read the full text.
                   </p>
                   {sourceUrl && (
@@ -395,16 +395,16 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
           {/* ── Anchors tab ───────────────────────────────────────────── */}
           {tab === 'anchors' && (
             <div className="px-6 py-5 space-y-3">
-              <div className="flex items-start gap-3 p-3 bg-[#2563EB]/8 dark:bg-[#2563EB]/10 border border-[#2563EB]/20 rounded-lg text-xs text-gray-600 dark:text-gray-400">
+              <div className="flex items-start gap-3 p-3 bg-[#2563EB]/8 border border-[#2563EB]/20 rounded-lg text-xs text-gray-600">
                 <Hash className="h-4 w-4 text-[#2563EB] shrink-0 mt-0.5" />
                 <p>
                   Anchors are key passages extracted from this paper. Tag each with a workflow category and click
-                  <strong className="text-gray-800 dark:text-gray-200"> Save to Study</strong> to propagate evidence upstream and downstream across your workflow.
+                  <strong className="text-gray-800"> Save to Study</strong> to propagate evidence upstream and downstream across your workflow.
                 </p>
               </div>
 
               {anchors.length === 0 ? (
-                <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">No anchors detected in this paper's abstract.</div>
+                <div className="text-center py-8 text-sm text-gray-500">No anchors detected in this paper's abstract.</div>
               ) : (
                 anchors.map(anchor => {
                   const saved = isAlreadySaved(anchor.text) || justSaved.has(anchor.id)
@@ -413,33 +413,33 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
 
                   return (
                     <div key={anchor.id} className={`rounded-xl border p-4 ${
-                      anchor.relevance === 'high'   ? 'bg-yellow-50 dark:bg-yellow-900/15 border-yellow-200 dark:border-yellow-700/30' :
-                      anchor.relevance === 'medium' ? 'bg-blue-50 dark:bg-blue-900/15 border-blue-200 dark:border-blue-700/30' :
-                                                     'bg-gray-50 dark:bg-white/4 border-gray-200 dark:border-white/8'
+                      anchor.relevance === 'high'   ? 'bg-yellow-50 border-yellow-200' :
+                      anchor.relevance === 'medium' ? 'bg-blue-50 border-blue-200' :
+                                                     'bg-gray-50 border-gray-200'
                     }`}>
                       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                           <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                            anchor.relevance === 'high'   ? 'text-yellow-700 dark:text-yellow-400 border-yellow-300 dark:border-yellow-600/40 bg-yellow-100 dark:bg-yellow-900/30' :
-                            anchor.relevance === 'medium' ? 'text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-600/30 bg-blue-100 dark:bg-blue-900/20' :
-                                                            'text-gray-500 border-gray-200 dark:border-white/10 bg-gray-100 dark:bg-white/8'
+                            anchor.relevance === 'high'   ? 'text-yellow-700 border-yellow-300 bg-yellow-100' :
+                            anchor.relevance === 'medium' ? 'text-blue-600 border-blue-200 bg-blue-100' :
+                                                            'text-gray-500 border-gray-200 bg-gray-100'
                           }`}>{anchor.relevance}</span>
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500">{anchor.section}</span>
+                          <span className="text-[10px] text-gray-500">{anchor.section}</span>
                         </div>
                       </div>
 
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 italic mb-3">"{anchor.text}"</p>
+                      <p className="text-sm font-medium text-gray-800 italic mb-3">"{anchor.text}"</p>
 
                       {/* Category + Save */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">Tag as:</span>
+                        <span className="text-[10px] text-gray-500 font-medium">Tag as:</span>
                         <div className="flex flex-wrap gap-1">
                           {ANCHOR_CATEGORIES.map(cat => (
                             <button
                               key={cat.id}
                               onClick={() => setAnchorCategories(prev => ({ ...prev, [anchor.id]: cat.id }))}
                               className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border transition-colors ${
-                                selectedCat === cat.id ? cat.color : 'text-gray-500 dark:text-gray-400 bg-transparent border-gray-200 dark:border-white/10 hover:border-gray-300 dark:hover:border-white/20'
+                                selectedCat === cat.id ? cat.color : 'text-gray-500 bg-transparent border-gray-200 hover:border-gray-300'
                               }`}
                             >
                               {cat.label}
@@ -451,7 +451,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                           disabled={saved}
                           className={`ml-auto flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition-all ${
                             saved
-                              ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-700/40 cursor-default'
+                              ? 'bg-emerald-100 text-emerald-600 border border-emerald-200 cursor-default'
                               : 'bg-[#2563EB] hover:bg-blue-700 text-white'
                           }`}
                         >
@@ -467,7 +467,7 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
               )}
 
               {anchors.length > 0 && (
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center pt-2">
+                <p className="text-[10px] text-gray-500 text-center pt-2">
                   Saved anchors appear in relevant workflow pages (Study Definition, Causal Framework, Effect Estimation, Bias & Sensitivity).
                 </p>
               )}
@@ -493,20 +493,20 @@ export default function PaperViewer({ paper, onClose, anchors: propAnchors }: Pa
                   { label: 'Conditions',     value: paper.conditions?.slice(0, 3).join(', ') ?? '—' },
                 ].map(({ label, value }) => (
                   <div key={label}>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 uppercase tracking-widest font-semibold mb-0.5">{label}</p>
-                    <p className="text-sm text-gray-800 dark:text-gray-200 font-medium break-words">{value}</p>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-0.5">{label}</p>
+                    <p className="text-sm text-gray-800 font-medium break-words">{value}</p>
                   </div>
                 ))}
               </div>
               {sourceUrl && (
-                <div className="pt-4 border-t border-gray-100 dark:border-white/8 space-y-2">
+                <div className="pt-4 border-t border-gray-100 space-y-2">
                   <a href={sourceUrl} target="_blank" rel="noopener noreferrer"
                      className="flex items-center gap-2 text-sm text-[#2563EB] font-semibold hover:underline">
                     <ExternalLink className="h-4 w-4" /> View at {paper.source}
                   </a>
                   {pdfUrl && (
                     <a href={pdfUrl} target="_blank" rel="noopener noreferrer"
-                       className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-semibold hover:underline">
+                       className="flex items-center gap-2 text-sm text-emerald-600 font-semibold hover:underline">
                       <Download className="h-4 w-4" /> Download Open Access PDF
                     </a>
                   )}

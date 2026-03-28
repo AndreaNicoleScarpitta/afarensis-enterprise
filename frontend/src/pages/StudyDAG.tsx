@@ -64,7 +64,7 @@ const CATEGORY_META: Record<string, { color: string; icon: React.ElementType }> 
 }
 
 const STATUS_STYLES: Record<string, { bg: string; border: string; text: string; dot: string; label: string }> = {
-  pending:     { bg: 'bg-gray-800/40',   border: 'border-gray-700/50',  text: 'text-gray-500 dark:text-gray-400',   dot: 'bg-gray-500',     label: 'Pending' },
+  pending:     { bg: 'bg-gray-800/40',   border: 'border-gray-700/50',  text: 'text-gray-500',   dot: 'bg-gray-500',     label: 'Pending' },
   in_progress: { bg: 'bg-blue-950/40',   border: 'border-blue-700/40',  text: 'text-blue-300',   dot: 'bg-blue-500',     label: 'In Progress' },
   completed:   { bg: 'bg-emerald-950/30', border: 'border-emerald-700/40', text: 'text-emerald-300', dot: 'bg-emerald-500', label: 'Completed' },
   blocked:     { bg: 'bg-red-950/30',     border: 'border-red-700/40',   text: 'text-red-300',    dot: 'bg-red-500',      label: 'Blocked' },
@@ -279,10 +279,10 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-[#2563EB] mx-auto mb-3" />
-          <p className="text-sm text-gray-500 dark:text-gray-400">Loading analysis workflow...</p>
+          <p className="text-sm text-gray-500">Loading analysis workflow...</p>
         </div>
       </div>
     )
@@ -292,7 +292,7 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
 
   if (error && !dagData) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center max-w-md">
           <AlertCircle className="h-10 w-10 text-red-400 mx-auto mb-3" />
           <p className="text-sm text-red-400 mb-4">{error}</p>
@@ -312,9 +312,9 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
   const progressPct = progress.total > 0 ? Math.round((progress.completed / progress.total) * 100) : 0
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] text-gray-900 dark:text-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div className="border-b border-gray-200 dark:border-white/8 px-8 py-5">
+      <div className="border-b border-gray-200 px-8 py-5">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
@@ -322,7 +322,7 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight">Analysis Workflow</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+              <p className="text-xs text-gray-500 mt-0.5">
                 {selectedStudy.protocol}
                 {protocolLocked && (
                   <span className="inline-flex items-center gap-1 ml-2 text-emerald-400">
@@ -335,14 +335,14 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
 
           <div className="flex items-center gap-3">
             {/* Progress indicator */}
-            <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/8 rounded-lg">
+            <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg">
               <div className="w-24 h-1.5 bg-gray-800 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
-              <span className="text-xs text-gray-500 dark:text-gray-400 tabular-nums font-medium">
+              <span className="text-xs text-gray-500 tabular-nums font-medium">
                 {progress.completed}/{progress.total} completed
               </span>
             </div>
@@ -351,7 +351,7 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
             <button
               onClick={handleRegenerate}
               disabled={regenerating || protocolLocked}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-100 dark:bg-white/8 border border-gray-200 dark:border-white/10 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-100 border border-gray-200 rounded-lg text-xs font-medium text-gray-600 hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${regenerating ? 'animate-spin' : ''}`} />
               Regenerate DAG
@@ -422,7 +422,7 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
                       PHASE {phase.phase}
                     </span>
                   </div>
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">{phase.label}</p>
+                  <p className="text-xs font-semibold text-gray-500">{phase.label}</p>
                 </div>
 
                 {/* Nodes */}
@@ -474,11 +474,11 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
                                 handleStatusToggle(node.key, node.status)
                               }}
                               disabled={protocolLocked || isUpdating}
-                              className="p-1 rounded-md hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="p-1 rounded-md hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                               title={`Status: ${status.label}. Click to change.`}
                             >
                               {isUpdating ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-500 dark:text-gray-400" />
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-500" />
                               ) : node.status === 'completed' ? (
                                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
                               ) : node.status === 'in_progress' ? (
@@ -511,7 +511,7 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
                                 {status.label}
                               </span>
                             </div>
-                            <ChevronRight className="h-3 w-3 text-gray-700 group-hover:text-gray-500 dark:text-gray-400 transition-colors" />
+                            <ChevronRight className="h-3 w-3 text-gray-700 group-hover:text-gray-500 transition-colors" />
                           </div>
                         </div>
                       </div>
@@ -526,22 +526,22 @@ export default function StudyDAG({ selectedStudy, protocolLocked, reviewerMode }
 
       {/* ── Legend ─────────────────────────────────────────────────────────── */}
       <div className="px-8 pb-6">
-        <div className="flex items-center gap-6 px-4 py-3 bg-gray-50 dark:bg-white/3 border border-white/6 rounded-lg">
+        <div className="flex items-center gap-6 px-4 py-3 bg-gray-50 border border-white/6 rounded-lg">
           <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Status</span>
           {Object.entries(STATUS_STYLES).map(([key, style]) => (
             <div key={key} className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full ${style.dot}`} />
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 capitalize">{style.label}</span>
+              <span className="text-[10px] text-gray-500 capitalize">{style.label}</span>
             </div>
           ))}
           <div className="ml-auto flex items-center gap-4">
             <div className="flex items-center gap-1.5">
               <svg width="24" height="8"><line x1="0" y1="4" x2="24" y2="4" stroke="#2563EB" strokeWidth="2" /></svg>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400">Active path</span>
+              <span className="text-[10px] text-gray-500">Active path</span>
             </div>
             <div className="flex items-center gap-1.5">
               <svg width="24" height="8"><line x1="0" y1="4" x2="24" y2="4" stroke="#374151" strokeWidth="1.5" strokeDasharray="4 3" /></svg>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400">Pending path</span>
+              <span className="text-[10px] text-gray-500">Pending path</span>
             </div>
           </div>
         </div>

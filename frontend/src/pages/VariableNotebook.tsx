@@ -267,32 +267,32 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
   }
 
   const typeIcon = (t: string) => {
-    if (t === 'numeric') return <Hash className="h-3 w-3 text-[#2563EB] dark:text-[#60a5fa]" />
-    if (t === 'categorical') return <Tag className="h-3 w-3 text-amber-600 dark:text-amber-300" />
+    if (t === 'numeric') return <Hash className="h-3 w-3 text-[#2563EB]" />
+    if (t === 'categorical') return <Tag className="h-3 w-3 text-amber-600" />
     return <Calendar className="h-3 w-3 text-emerald-400" />
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] text-gray-900 dark:text-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Header */}
-      <div className="border-b border-gray-200 dark:border-white/8 px-8 py-5">
+      <div className="border-b border-gray-200 px-8 py-5">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <BookOpen className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
+              <BookOpen className="h-4 w-4 text-[#2563EB]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Variable Notebook</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Variable Construction & Derivation</h1>
+              <h1 className="text-xl font-bold text-gray-900">Variable Construction & Derivation</h1>
               <p className="text-gray-500 text-xs mt-0.5">Derivation recipes &middot; code lists &middot; unit normalization &middot; row-level trace</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs font-bold text-gray-900 dark:text-white">{selectedStudy.protocol}</p>
+            <p className="text-xs font-bold text-gray-900">{selectedStudy.protocol}</p>
             <p className="text-[10px] text-gray-500">{selectedStudy.indication}</p>
           </div>
         </div>
@@ -303,8 +303,8 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
         {/* Reviewer Mode Banner */}
         {reviewerMode && (
           <div className="flex items-center gap-3 bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl px-5 py-3">
-            <Eye className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa] shrink-0" />
-            <p className="text-xs text-[#2563EB] dark:text-[#60a5fa] font-semibold">Reviewer mode: Displaying locked variable definitions. All derivation logic is pre-specified per SAP.</p>
+            <Eye className="h-4 w-4 text-[#2563EB] shrink-0" />
+            <p className="text-xs text-[#2563EB] font-semibold">Reviewer mode: Displaying locked variable definitions. All derivation logic is pre-specified per SAP.</p>
           </div>
         )}
 
@@ -316,19 +316,19 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
             { label: 'Draft', value: String(VARIABLES.filter(v => !v.locked).length) },
             { label: 'Code Lists', value: String(CODE_LISTS.length) },
           ].map(({ label, value }) => (
-            <div key={label} className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-4">
+            <div key={label} className="bg-gray-100/80 border border-gray-200 rounded-xl p-4">
               <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">{label}</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
             </div>
           ))}
         </div>
 
         {/* ─── Variable Registry Table ─────────────────────────────────── */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Variable Registry</h2>
-          <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
+          <h2 className="text-sm font-bold text-gray-900 mb-3">Variable Registry</h2>
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full text-xs">
-              <thead className="bg-gray-100/80 dark:bg-white/4 border-b border-gray-200 dark:border-white/8">
+              <thead className="bg-gray-100/80 border-b border-gray-200">
                 <tr>
                   <th className="text-left px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Variable ID</th>
                   <th className="text-left px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Label</th>
@@ -344,29 +344,29 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                 {VARIABLES.map((v) => (
                   <React.Fragment key={v.id}>
                     <tr
-                      className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors cursor-pointer"
+                      className="border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
                       onClick={() => toggleVar(v.id)}
                     >
-                      <td className="px-4 py-2.5 font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">{v.id}</td>
-                      <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300 font-medium">{v.label}</td>
+                      <td className="px-4 py-2.5 font-mono font-bold text-[#2563EB]">{v.id}</td>
+                      <td className="px-4 py-2.5 text-gray-700 font-medium">{v.label}</td>
                       <td className="px-4 py-2.5">
                         <span className="flex items-center gap-1.5">
                           {typeIcon(v.type)}
-                          <span className="text-gray-600 dark:text-gray-400 capitalize">{v.type}</span>
+                          <span className="text-gray-600 capitalize">{v.type}</span>
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">{v.source}</td>
-                      <td className="px-4 py-2.5 text-right font-mono text-gray-900 dark:text-white">{v.derivationSteps}</td>
-                      <td className="px-4 py-2.5 text-center font-mono text-gray-600 dark:text-gray-400">v{v.version}</td>
+                      <td className="px-4 py-2.5 text-gray-600">{v.source}</td>
+                      <td className="px-4 py-2.5 text-right font-mono text-gray-900">{v.derivationSteps}</td>
+                      <td className="px-4 py-2.5 text-center font-mono text-gray-600">v{v.version}</td>
                       <td className="px-4 py-2.5 text-center">
                         {v.locked ? (
                           <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Locked</span>
                         ) : (
-                          <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20">Draft</span>
+                          <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">Draft</span>
                         )}
                       </td>
                       <td className="px-4 py-2.5">
-                        {expandedVar === v.id ? <ChevronDown className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />}
+                        {expandedVar === v.id ? <ChevronDown className="h-3.5 w-3.5 text-gray-500" /> : <ChevronRight className="h-3.5 w-3.5 text-gray-500" />}
                       </td>
                     </tr>
 
@@ -374,22 +374,22 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                     {expandedVar === v.id && (
                       <tr>
                         <td colSpan={8} className="px-0 py-0">
-                          <div className="bg-gray-50 dark:bg-white/[0.02] border-t border-gray-200 dark:border-white/5 px-6 py-5 space-y-4">
+                          <div className="bg-gray-50 border-t border-gray-200 px-6 py-5 space-y-4">
                             {/* Conceptual vs Operational Definitions */}
                             <div className="grid grid-cols-2 gap-4">
-                              <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+                              <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <Info className="h-3.5 w-3.5 text-[#2563EB] dark:text-[#60a5fa]" />
+                                  <Info className="h-3.5 w-3.5 text-[#2563EB]" />
                                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Conceptual Definition</p>
                                 </div>
-                                <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{v.conceptualDef}</p>
+                                <p className="text-xs text-gray-700 leading-relaxed">{v.conceptualDef}</p>
                               </div>
-                              <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+                              <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5">
                                 <div className="flex items-center gap-2 mb-2">
                                   <ClipboardList className="h-3.5 w-3.5 text-emerald-400" />
                                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">Operational Definition</p>
                                 </div>
-                                <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed font-mono">{v.operationalDef}</p>
+                                <p className="text-xs text-gray-700 leading-relaxed font-mono">{v.operationalDef}</p>
                               </div>
                             </div>
 
@@ -402,7 +402,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                                     {/* Step number connector */}
                                     <div className="flex flex-col items-center shrink-0">
                                       <div className="w-6 h-6 rounded-full bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-                                        <span className="text-[10px] font-bold text-[#2563EB] dark:text-[#60a5fa]">{step.step}</span>
+                                        <span className="text-[10px] font-bold text-[#2563EB]">{step.step}</span>
                                       </div>
                                       {si < v.derivation.length - 1 && (
                                         <div className="w-px h-full min-h-[40px] bg-[#2563EB]/20 mt-1" />
@@ -410,17 +410,17 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                                     </div>
 
                                     {/* Step content */}
-                                    <div className="flex-1 bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-4 space-y-2">
-                                      <p className="text-xs font-bold text-gray-900 dark:text-white">{step.description}</p>
+                                    <div className="flex-1 bg-gray-100/80 border border-gray-200 rounded-xl p-4 space-y-2">
+                                      <p className="text-xs font-bold text-gray-900">{step.description}</p>
                                       <div className="flex flex-wrap gap-4 text-[10px]">
                                         <div>
                                           <span className="text-gray-500 uppercase tracking-widest font-semibold">Inputs: </span>
-                                          <span className="font-mono text-[#2563EB] dark:text-[#60a5fa]">{step.inputs.join(', ')}</span>
+                                          <span className="font-mono text-[#2563EB]">{step.inputs.join(', ')}</span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                           <ArrowRight className="h-2.5 w-2.5 text-gray-500" />
                                           <span className="text-gray-500 uppercase tracking-widest font-semibold">Operation: </span>
-                                          <span className="text-gray-700 dark:text-gray-300 font-medium">{step.operation}</span>
+                                          <span className="text-gray-700 font-medium">{step.operation}</span>
                                         </div>
                                         <div className="flex items-center gap-1">
                                           <ArrowRight className="h-2.5 w-2.5 text-gray-500" />
@@ -429,7 +429,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                                         </div>
                                       </div>
                                       <p className="text-[10px] text-gray-500"><span className="uppercase tracking-widest font-semibold">Parameters: </span>{step.parameters}</p>
-                                      <pre className="bg-gray-200/60 dark:bg-black/30 border border-gray-300 dark:border-white/8 rounded-lg p-3 text-[11px] font-mono text-gray-800 dark:text-gray-300 overflow-x-auto whitespace-pre leading-relaxed">{step.code}</pre>
+                                      <pre className="bg-gray-200/60 border border-gray-300 rounded-lg p-3 text-[11px] font-mono text-gray-800 overflow-x-auto whitespace-pre leading-relaxed">{step.code}</pre>
                                     </div>
                                   </div>
                                 ))}
@@ -448,8 +448,8 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
 
         {/* ─── Code List / Concept Set Manager ─────────────────────────── */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Code List / Concept Set Manager</h2>
-          <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+          <h2 className="text-sm font-bold text-gray-900 mb-3">Code List / Concept Set Manager</h2>
+          <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5">
             {/* Code list tabs */}
             <div className="flex gap-2 mb-4">
               {CODE_LISTS.map((cl, i) => (
@@ -459,7 +459,7 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                   className={`text-[10px] px-3 py-1.5 rounded-lg font-bold uppercase tracking-wider transition-colors ${
                     activeCodeList === i
                       ? 'bg-[#2563EB] text-white'
-                      : 'bg-gray-200/60 dark:bg-white/6 text-gray-500 hover:text-gray-700 dark:hover:text-gray-600 dark:text-gray-300'
+                      : 'bg-gray-200/60 text-gray-500 hover:text-gray-700'
                   }`}
                 >
                   {cl.name}
@@ -470,20 +470,20 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
             {/* Active code list metadata */}
             <div className="flex items-center gap-4 mb-3">
               <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
-                System: <span className="text-gray-900 dark:text-white font-bold normal-case">{CODE_LISTS[activeCodeList].system}</span>
+                System: <span className="text-gray-900 font-bold normal-case">{CODE_LISTS[activeCodeList].system}</span>
               </span>
               <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
-                Version: <span className="text-gray-900 dark:text-white font-bold normal-case">{CODE_LISTS[activeCodeList].version}</span>
+                Version: <span className="text-gray-900 font-bold normal-case">{CODE_LISTS[activeCodeList].version}</span>
               </span>
               <span className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
-                Codes: <span className="text-gray-900 dark:text-white font-bold normal-case">{CODE_LISTS[activeCodeList].codes.length}</span>
+                Codes: <span className="text-gray-900 font-bold normal-case">{CODE_LISTS[activeCodeList].codes.length}</span>
               </span>
             </div>
 
             {/* Code list table */}
-            <div className="border border-gray-200 dark:border-white/8 rounded-lg overflow-hidden">
+            <div className="border border-gray-200 rounded-lg overflow-hidden">
               <table className="w-full text-xs">
-                <thead className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/8">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="text-left px-4 py-2 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Code</th>
                     <th className="text-left px-4 py-2 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Display Name</th>
@@ -494,9 +494,9 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                 </thead>
                 <tbody>
                   {CODE_LISTS[activeCodeList].codes.map((c, i) => (
-                    <tr key={i} className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors">
-                      <td className="px-4 py-2 font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">{c.code}</td>
-                      <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{c.display}</td>
+                    <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-2 font-mono font-bold text-[#2563EB]">{c.code}</td>
+                      <td className="px-4 py-2 text-gray-700">{c.display}</td>
                       <td className="px-4 py-2 text-center text-gray-500">{CODE_LISTS[activeCodeList].system}</td>
                       <td className="px-4 py-2 text-center text-gray-500">{CODE_LISTS[activeCodeList].version}</td>
                       <td className="px-4 py-2 text-center">
@@ -516,10 +516,10 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
 
         {/* ─── Unit Normalization Rules ─────────────────────────────────── */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Unit Normalization Rules</h2>
-          <div className="border border-gray-200 dark:border-white/8 rounded-xl overflow-hidden">
+          <h2 className="text-sm font-bold text-gray-900 mb-3">Unit Normalization Rules</h2>
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
             <table className="w-full text-xs">
-              <thead className="bg-gray-100/80 dark:bg-white/4 border-b border-gray-200 dark:border-white/8">
+              <thead className="bg-gray-100/80 border-b border-gray-200">
                 <tr>
                   <th className="text-left px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Variable</th>
                   <th className="text-left px-4 py-2.5 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Source Unit</th>
@@ -531,17 +531,17 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
               </thead>
               <tbody>
                 {UNIT_RULES.map((r, i) => (
-                  <tr key={i} className="border-b border-gray-200 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-gray-50 dark:bg-white/3 transition-colors">
-                    <td className="px-4 py-2.5 font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">{r.variable}</td>
-                    <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{r.sourceUnit}</td>
-                    <td className="px-4 py-2.5 text-center"><ArrowRight className="h-3 w-3 text-gray-500 dark:text-gray-400 mx-auto" /></td>
-                    <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{r.targetUnit}</td>
-                    <td className="px-4 py-2.5 font-mono text-gray-600 dark:text-gray-400">{r.formula}</td>
+                  <tr key={i} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-2.5 font-mono font-bold text-[#2563EB]">{r.variable}</td>
+                    <td className="px-4 py-2.5 text-gray-700">{r.sourceUnit}</td>
+                    <td className="px-4 py-2.5 text-center"><ArrowRight className="h-3 w-3 text-gray-500 mx-auto" /></td>
+                    <td className="px-4 py-2.5 text-gray-700">{r.targetUnit}</td>
+                    <td className="px-4 py-2.5 font-mono text-gray-600">{r.formula}</td>
                     <td className="px-4 py-2.5 text-center">
                       {r.validated ? (
                         <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 mx-auto" />
                       ) : (
-                        <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-amber-500/10 text-amber-600 dark:text-amber-300 border border-amber-500/20">Pending</span>
+                        <span className="text-[10px] px-2.5 py-1 rounded-full font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">Pending</span>
                       )}
                     </td>
                   </tr>
@@ -553,16 +553,16 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
 
         {/* ─── Row-Level Derivation Trace Inspector ────────────────────── */}
         <section>
-          <h2 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Row-Level Derivation Trace Inspector</h2>
-          <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-4">
+          <h2 className="text-sm font-bold text-gray-900 mb-3">Row-Level Derivation Trace Inspector</h2>
+          <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5 space-y-4">
             {/* Query bar */}
             <div className="flex items-center gap-3">
-              <div className="flex-1 flex items-center gap-2 bg-gray-200/60 dark:bg-black/30 border border-gray-300 dark:border-white/8 rounded-lg px-3 py-2">
-                <Search className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0" />
+              <div className="flex-1 flex items-center gap-2 bg-gray-200/60 border border-gray-300 rounded-lg px-3 py-2">
+                <Search className="h-3.5 w-3.5 text-gray-500 shrink-0" />
                 <span className="text-xs text-gray-500">For record </span>
-                <span className="text-xs font-mono font-bold text-gray-900 dark:text-white">#4821</span>
+                <span className="text-xs font-mono font-bold text-gray-900">#4821</span>
                 <span className="text-xs text-gray-500">, show inputs for </span>
-                <span className="text-xs font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">BSID_III_MOTOR_CHG</span>
+                <span className="text-xs font-mono font-bold text-[#2563EB]">BSID_III_MOTOR_CHG</span>
               </div>
               <button
                 onClick={() => setShowTrace(!showTrace)}
@@ -576,15 +576,15 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
             {showTrace && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <FlaskConical className="h-3.5 w-3.5 text-[#2563EB] dark:text-[#60a5fa]" />
+                  <FlaskConical className="h-3.5 w-3.5 text-[#2563EB]" />
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
-                    Derivation trace for record <span className="text-gray-900 dark:text-white font-bold">#4821</span> &mdash; <span className="text-[#2563EB] dark:text-[#60a5fa]">BSID_III_MOTOR_CHG</span>
+                    Derivation trace for record <span className="text-gray-900 font-bold">#4821</span> &mdash; <span className="text-[#2563EB]">BSID_III_MOTOR_CHG</span>
                   </p>
                 </div>
 
-                <div className="border border-gray-200 dark:border-white/8 rounded-lg overflow-hidden">
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
                   <table className="w-full text-xs">
-                    <thead className="bg-gray-50 dark:bg-white/[0.02] border-b border-gray-200 dark:border-white/8">
+                    <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
                         <th className="text-left px-4 py-2 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Input Variable</th>
                         <th className="text-center px-4 py-2 text-gray-500 font-bold uppercase tracking-wider text-[10px]">Value</th>
@@ -595,11 +595,11 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                     </thead>
                     <tbody>
                       {TRACE_DATA.map((t, i) => (
-                        <tr key={i} className={`border-b border-gray-200 dark:border-white/5 ${i === TRACE_DATA.length - 1 ? 'bg-[#2563EB]/5' : ''}`}>
-                          <td className="px-4 py-2.5 font-mono font-bold text-[#2563EB] dark:text-[#60a5fa]">{t.input}</td>
-                          <td className="px-4 py-2.5 text-center font-mono text-gray-900 dark:text-white font-semibold">{t.value}</td>
-                          <td className="px-4 py-2.5 text-center"><ArrowRight className="h-3 w-3 text-gray-500 dark:text-gray-400 mx-auto" /></td>
-                          <td className="px-4 py-2.5 text-gray-700 dark:text-gray-300">{t.transformation}</td>
+                        <tr key={i} className={`border-b border-gray-200 ${i === TRACE_DATA.length - 1 ? 'bg-[#2563EB]/5' : ''}`}>
+                          <td className="px-4 py-2.5 font-mono font-bold text-[#2563EB]">{t.input}</td>
+                          <td className="px-4 py-2.5 text-center font-mono text-gray-900 font-semibold">{t.value}</td>
+                          <td className="px-4 py-2.5 text-center"><ArrowRight className="h-3 w-3 text-gray-500 mx-auto" /></td>
+                          <td className="px-4 py-2.5 text-gray-700">{t.transformation}</td>
                           <td className="px-4 py-2.5 text-center font-mono font-bold text-emerald-400">{t.output}</td>
                         </tr>
                       ))}
@@ -608,14 +608,14 @@ export default function VariableNotebook({ selectedStudy, protocolLocked, review
                 </div>
 
                 {/* Provenance pointer */}
-                <div className="flex items-center gap-2 bg-gray-200/40 dark:bg-white/[0.02] border border-gray-200 dark:border-white/8 rounded-lg px-4 py-2.5">
-                  <Info className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 shrink-0" />
+                <div className="flex items-center gap-2 bg-gray-200/40 border border-gray-200 rounded-lg px-4 py-2.5">
+                  <Info className="h-3.5 w-3.5 text-gray-500 shrink-0" />
                   <p className="text-[10px] text-gray-500">
                     <span className="uppercase tracking-widest font-semibold">Provenance: </span>
-                    Source record <span className="font-mono font-bold text-gray-900 dark:text-white">#4821</span> from
-                    <span className="font-mono text-[#2563EB] dark:text-[#60a5fa]"> assessments</span> table, rows
-                    <span className="font-mono text-gray-900 dark:text-white"> 12,408</span> (baseline) and
-                    <span className="font-mono text-gray-900 dark:text-white"> 15,223</span> (Month 12).
+                    Source record <span className="font-mono font-bold text-gray-900">#4821</span> from
+                    <span className="font-mono text-[#2563EB]"> assessments</span> table, rows
+                    <span className="font-mono text-gray-900"> 12,408</span> (baseline) and
+                    <span className="font-mono text-gray-900"> 15,223</span> (Month 12).
                     Traceable to source data extract v3.1, dated 2024-09-15.
                   </p>
                 </div>

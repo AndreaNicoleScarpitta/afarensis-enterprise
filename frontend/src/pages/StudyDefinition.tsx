@@ -8,247 +8,36 @@ import { useStalenessCheck } from '../hooks/useStalenessCheck'
 import StalenessBanner from '../components/ui/StalenessBanner'
 import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
+// ─── Centralized Regulatory Configuration ──────────────────────────────────────
+import {
+  ENDPOINT_LIBRARY,
+  ANALYSIS_METHODS,
+  WEIGHTING_METHODS,
+  VARIANCE_ESTIMATORS,
+  TRIMMING_OPTIONS,
+  COMPARATOR_TYPES,
+  ESTIMAND_OPTIONS,
+  ICE_STRATEGY_OPTIONS,
+  ICE_EVENT_PRESETS,
+  MISSING_DATA_PRIMARY,
+  MISSING_DATA_SENSITIVITY,
+  REGULATORY_AGENCIES,
+  STUDY_PHASES,
+  SCIENTIFIC_RATIONALE_MAX_CHARS,
+  classifyEndpoint,
+  getEstimandWarning,
+  getMethodWarning,
+} from '../types/regulatoryConfig'
+
 interface Props {
   selectedStudy: Study
   protocolLocked: boolean
   reviewerMode: boolean
 }
 
-// ─── Endpoint Options ──────────────────────────────────────────────────────────
-const ENDPOINT_OPTIONS = [
-  // Survival / Mortality
-  'All-cause mortality',
-  'Overall survival (OS)',
-  'Progression-free survival (PFS)',
-  'Disease-free survival (DFS)',
-  'Event-free survival (EFS)',
-  'Relapse-free survival (RFS)',
-  'Time to death',
-  // Cardiovascular
-  'Major adverse cardiovascular event (MACE)',
-  'All-cause hospitalization',
-  'Cardiovascular death',
-  'Heart failure hospitalization',
-  'Myocardial infarction',
-  'Stroke',
-  'Time to first cardiovascular event',
-  // Oncology
-  'Objective response rate (ORR)',
-  'Complete response rate (CR)',
-  'Partial response rate (PR)',
-  'Duration of response (DOR)',
-  'Time to progression (TTP)',
-  'Disease control rate (DCR)',
-  'Minimal residual disease (MRD) negativity',
-  'Pathologic complete response (pCR)',
-  // Neurological / Cognitive
-  'Cognitive decline composite',
-  'Change in MMSE score',
-  'Change in ADAS-Cog score',
-  'Disability progression (EDSS)',
-  'Annualized relapse rate',
-  // Respiratory
-  'Change in FEV1',
-  'Pulmonary exacerbation rate',
-  'Six-minute walk distance (6MWD)',
-  // Renal
-  'Change in eGFR',
-  'Time to kidney failure',
-  'Composite renal endpoint',
-  // Metabolic / Endocrine
-  'Change in HbA1c',
-  'Fasting plasma glucose',
-  'Body weight change',
-  // Functional / Quality of life
-  'Functional independence (ADL score)',
-  'Change in quality of life (QoL)',
-  'Patient-reported outcome (PRO)',
-  'Pain reduction (VAS/NRS)',
-  // Imaging / Biomarkers
-  'Disease progression (imaging)',
-  'Change in biomarker level',
-  'Radiographic response',
-  // Safety
-  'Incidence of treatment-emergent adverse events (TEAEs)',
-  'Serious adverse event rate',
-  'Dose-limiting toxicity (DLT)',
-  // Infectious disease
-  'Viral load reduction',
-  'Sustained virologic response (SVR)',
-  'Time to clinical improvement',
-  // Hematology
-  'Transfusion independence',
-  'Hemoglobin response',
-  // Other
-  'Composite primary endpoint',
-  'Time to treatment failure',
-  'Custom endpoint',
-]
-
-// ─── SAP Logic: Endpoint Classification ────────────────────────────────────────
-type EndpointType = 'time-to-event' | 'binary' | 'continuous' | 'rate' | 'composite'
-
-function classifyEndpoint(ep: string): EndpointType {
-  const lower = ep.toLowerCase()
-  // Time-to-event
-  if (/\b(survival|time to|duration of|event-free|relapse-free|disease-free|progression-free|time-to)\b/i.test(lower)) return 'time-to-event'
-  if (/\b(mortality|death|hospitalization|mace|kidney failure|treatment failure)\b/i.test(lower)) return 'time-to-event'
-  // Rate endpoints
-  if (/\b(rate|annualized|exacerbation rate|relapse rate)\b/i.test(lower)) return 'rate'
-  // Binary
-  if (/\b(response rate|ORR|CR\b|PR\b|DCR|SVR|pCR|MRD|negativity|independence|transfusion|DLT)\b/i.test(lower)) return 'binary'
-  // Continuous
-  if (/\b(change in|reduction|fev1|egfr|hba1c|mmse|adas|edss|walk distance|body weight|glucose|biomarker|quality of life|QoL|PRO|pain|VAS|NRS|ADL)\b/i.test(lower)) return 'continuous'
-  // Composite
-  if (/\b(composite)\b/i.test(lower)) return 'composite'
-  // Imaging
-  if (/\b(imaging|radiographic)\b/i.test(lower)) return 'binary'
-  // Safety
-  if (/\b(adverse event|TEAE|serious adverse)\b/i.test(lower)) return 'rate'
-  return 'time-to-event' // default
-}
-
-// ─── SAP Logic: Valid Analysis Methods by Endpoint Type ────────────────────────
-const ANALYSIS_METHODS: Record<EndpointType, { value: string; label: string }[]> = {
-  'time-to-event': [
-    { value: 'cox_ph', label: 'Cox Proportional Hazards' },
-    { value: 'km', label: 'Kaplan-Meier / Log-rank' },
-    { value: 'aft', label: 'Accelerated Failure Time (AFT)' },
-    { value: 'rmst', label: 'Restricted Mean Survival Time (RMST)' },
-    { value: 'fine_gray', label: 'Fine-Gray Competing Risks' },
-  ],
-  'binary': [
-    { value: 'logistic', label: 'Logistic Regression' },
-    { value: 'modified_poisson', label: 'Modified Poisson (Risk Ratio)' },
-    { value: 'cmh', label: 'Cochran-Mantel-Haenszel' },
-    { value: 'exact', label: "Fisher's Exact / Chi-square" },
-    { value: 'gee_binomial', label: 'GEE (Binomial)' },
-  ],
-  'continuous': [
-    { value: 'ancova', label: 'ANCOVA' },
-    { value: 'mmrm', label: 'Mixed Model for Repeated Measures (MMRM)' },
-    { value: 'lmm', label: 'Linear Mixed Effects Model' },
-    { value: 'rank', label: 'Wilcoxon Rank-Sum / Mann-Whitney' },
-    { value: 'gee_gaussian', label: 'GEE (Gaussian)' },
-  ],
-  'rate': [
-    { value: 'neg_binom', label: 'Negative Binomial Regression' },
-    { value: 'poisson', label: 'Poisson Regression' },
-    { value: 'quasi_poisson', label: 'Quasi-Poisson Regression' },
-    { value: 'zero_inflated', label: 'Zero-Inflated Model' },
-  ],
-  'composite': [
-    { value: 'cox_ph', label: 'Cox PH (Time to First Component)' },
-    { value: 'logistic', label: 'Logistic Regression (Any Component)' },
-    { value: 'win_ratio', label: 'Win Ratio / Finkelstein-Schoenfeld' },
-    { value: 'gee_binomial', label: 'GEE (Binomial)' },
-  ],
-}
-
-// ─── SAP Logic: Weighting Methods ──────────────────────────────────────────────
-const WEIGHTING_METHODS = [
-  { value: 'iptw', label: 'IPTW (Inverse Probability of Treatment Weighting)' },
-  { value: 'iptw_stabilized', label: 'IPTW — Stabilized Weights' },
-  { value: 'overlap', label: 'Overlap Weights (ATO)' },
-  { value: 'matching', label: 'Propensity Score Matching' },
-  { value: 'stratification', label: 'PS Stratification (Subclassification)' },
-  { value: 'entropy', label: 'Entropy Balancing' },
-  { value: 'none', label: 'No Weighting (Regression Adjustment Only)' },
-]
-
-// ─── SAP Logic: Variance Estimators ────────────────────────────────────────────
-const VARIANCE_ESTIMATORS = [
-  { value: 'robust', label: 'Robust (Sandwich) SE' },
-  { value: 'bootstrap', label: 'Bootstrap (Non-parametric)' },
-  { value: 'model_based', label: 'Model-Based SE' },
-  { value: 'jackknife', label: 'Jackknife' },
-]
-
-// ─── SAP Logic: PS Trimming Options ────────────────────────────────────────────
-const TRIMMING_OPTIONS = [
-  { value: 'none', label: 'No Trimming' },
-  { value: '1_99', label: '1st – 99th Percentile' },
-  { value: '2.5_97.5', label: '2.5th – 97.5th Percentile' },
-  { value: '5_95', label: '5th – 95th Percentile' },
-  { value: 'crump', label: 'Crump Optimal Trimming' },
-  { value: 'custom', label: 'Custom Range' },
-]
-
-// ─── SAP Logic: ICE Strategies (ICH E9(R1)) ───────────────────────────────────
-const ICE_STRATEGY_OPTIONS = [
-  { value: 'treatment_policy', label: 'Treatment Policy', desc: 'Analyze regardless of what happened after the ICE' },
-  { value: 'composite', label: 'Composite', desc: 'ICE is incorporated as part of the endpoint definition' },
-  { value: 'hypothetical', label: 'Hypothetical', desc: 'Estimate what would have happened if the ICE had not occurred' },
-  { value: 'principal_stratum', label: 'Principal Stratum', desc: 'Effect in subgroup defined by post-randomization behavior' },
-  { value: 'while_on_treatment', label: 'While on Treatment', desc: 'Outcome measured only while on assigned treatment' },
-]
-
-const ICE_EVENT_PRESETS = [
-  'Treatment discontinuation',
-  'Death (non-endpoint)',
-  'Switch to rescue therapy',
-  'Use of prohibited concomitant medication',
-  'Loss to follow-up',
-  'Protocol deviation',
-]
-
-// ─── SAP Logic: Missing Data Methods ───────────────────────────────────────────
-const MISSING_DATA_PRIMARY = [
-  { value: 'complete_case', label: 'Complete Case Analysis' },
-  { value: 'mice', label: 'Multiple Imputation (MICE)' },
-  { value: 'mmrm', label: 'MMRM (Implicit Imputation)' },
-  { value: 'locf', label: 'Last Observation Carried Forward (LOCF)' },
-  { value: 'mi_rubin', label: "Multiple Imputation (Rubin's Rules)" },
-]
-
-const MISSING_DATA_SENSITIVITY = [
-  { value: 'mice', label: 'Multiple Imputation (MICE)' },
-  { value: 'tipping_point', label: 'Tipping Point Analysis' },
-  { value: 'pattern_mixture', label: 'Pattern Mixture Model' },
-  { value: 'delta_adjustment', label: 'Delta-Adjustment' },
-  { value: 'worst_case', label: 'Worst-Case Imputation' },
-  { value: 'complete_case', label: 'Complete Case Analysis' },
-]
-
-// ─── SAP Logic: Estimand ↔ Comparator Recommendations ─────────────────────────
-const ESTIMAND_OPTIONS = [
-  { value: 'ATT', label: 'ATT — Average Treatment Effect on the Treated', desc: 'Effect among those who received treatment in the real-world setting' },
-  { value: 'ATE', label: 'ATE — Average Treatment Effect', desc: 'Effect averaged over the entire eligible population' },
-  { value: 'ITT', label: 'ITT — Intention to Treat', desc: 'Effect of treatment assignment regardless of adherence' },
-  { value: 'PP', label: 'PP — Per Protocol', desc: 'Effect among patients who adhered to assigned treatment' },
-]
-
-function getEstimandWarning(estimand: string, comparator: string): string | null {
-  if (estimand === 'ITT' && comparator.includes('External'))
-    return 'ITT is designed for randomized designs. With an external comparator, ATT or ATE is typically more appropriate.'
-  if (estimand === 'PP' && comparator.includes('External'))
-    return 'Per-Protocol with external comparator requires careful definition of adherence in both arms. Consider ATT.'
-  if (estimand === 'ATE' && comparator.includes('Synthetic'))
-    return 'ATE with synthetic control requires strong exchangeability assumptions across the full population.'
-  return null
-}
-
-function getMethodWarning(method: string, weighting: string, endpointType: EndpointType): string | null {
-  if (method === 'cox_ph' && weighting === 'none')
-    return 'Cox PH without PS weighting assumes no unmeasured confounding. Consider adding propensity score adjustment.'
-  if (method === 'mmrm' && weighting !== 'none')
-    return 'MMRM with PS weighting is complex. Ensure proper variance estimation accounts for both the PS and repeated measures.'
-  if (endpointType === 'binary' && weighting === 'matching')
-    return 'PS matching with binary outcomes may discard many observations. Weighting (IPTW/overlap) preserves the full sample.'
-  return null
-}
-
-const PHASE_OPTIONS = ['', 'Phase 1', 'Phase 1/2', 'Phase 2', 'Phase 2/3', 'Phase 3', 'Phase 4 / Post-Marketing', 'Pre-IND Supportive', 'NDA/BLA Support']
-const REGULATORY_OPTIONS = ['', 'FDA', 'EMA', 'PMDA', 'Health Canada', 'TGA', 'MHRA', 'ANVISA', 'NMPA']
-
-const COMPARATOR_OPTIONS = [
-  'External comparator (real-world control)',
-  'Active comparator (head-to-head)',
-  'Placebo / untreated',
-  'Synthetic control arm',
-  'Historical control',
-  'Best available therapy',
-]
+// ─── Derived: flat endpoint option list for dropdowns ──────────────────────────
+const ENDPOINT_OPTIONS = [...ENDPOINT_LIBRARY.map(e => e.label), 'Custom endpoint']
+const COMPARATOR_OPTIONS = COMPARATOR_TYPES.map(c => c.label)
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 export default function StudyDefinition({ selectedStudy, protocolLocked, reviewerMode }: Props) {
@@ -452,26 +241,26 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
   const getTrimmingLabel = (val: string) => TRIMMING_OPTIONS.find(t => t.value === val)?.label || val
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] text-gray-900 dark:text-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* ── Page header ── */}
-      <div className="border-b border-gray-200 dark:border-white/8 px-8 py-5">
+      <div className="border-b border-gray-200 px-8 py-5">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#2563EB]/20 border border-[#2563EB]/30 flex items-center justify-center">
-              <FlaskConical className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa]" />
+              <FlaskConical className="h-4 w-4 text-[#2563EB]" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-[10px] font-black text-[#2563EB] uppercase tracking-widest">Step 01</span>
                 {locked && <span className="flex items-center gap-1 text-[10px] text-emerald-400 font-semibold"><Lock className="h-2.5 w-2.5" /> Locked</span>}
-                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] dark:text-[#60a5fa] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
+                {reviewerMode && <span className="flex items-center gap-1 text-[10px] text-[#2563EB] font-semibold"><Eye className="h-2.5 w-2.5" /> Reviewer View</span>}
               </div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Study Definition</h1>
+              <h1 className="text-xl font-bold text-gray-900">Study Definition</h1>
               <p className="text-gray-500 text-xs mt-0.5">Protocol &middot; indication &middot; primary endpoint &middot; estimand &middot; SAP</p>
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs font-bold text-gray-900 dark:text-white">{selectedStudy.protocol}</p>
+            <p className="text-xs font-bold text-gray-900">{selectedStudy.protocol}</p>
             <p className="text-[10px] text-gray-500">{selectedStudy.indication}</p>
           </div>
         </div>
@@ -492,13 +281,13 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
       )}
 
       {error && (
-        <div className="mx-8 mt-4 flex items-start gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/30 rounded-xl">
-          <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
+        <div className="mx-8 mt-4 flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-red-600 dark:text-red-400">Failed to load study definition</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{error}</p>
+            <p className="text-sm font-semibold text-red-600">Failed to load study definition</p>
+            <p className="text-xs text-gray-500 mt-0.5">{error}</p>
           </div>
-          <button onClick={() => refetch()} className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700/50 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+          <button onClick={() => refetch()} className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 border border-red-300 rounded-lg hover:bg-red-100 transition-colors">
             Retry
           </button>
         </div>
@@ -508,13 +297,13 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
 
         {/* ── Document Upload → Prefill (top of page) ── */}
         {!locked && !reviewerMode && (
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/10 dark:to-blue-900/10 border border-purple-200 dark:border-purple-700/30 rounded-xl p-5">
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-5">
             <div className="flex items-center gap-2 mb-2">
-              <Upload className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Upload Document to Prefill Study Definition</h3>
-              <span className="text-[10px] bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 rounded-full font-medium">Optional</span>
+              <Upload className="h-4 w-4 text-purple-600" />
+              <h3 className="text-sm font-bold text-gray-900">Upload Document to Prefill Study Definition</h3>
+              <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">Optional</span>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            <p className="text-xs text-gray-500 mb-3">
               Upload a protocol, SAP, or publication (PDF, DOCX, TXT). The system will extract fields it can confidently identify. You choose which extracted values to accept.
             </p>
             <div className="flex items-center gap-3">
@@ -530,7 +319,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/8 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 <FileText className="h-3.5 w-3.5" />
                 {uploadFile ? uploadFile.name : 'Choose File...'}
@@ -554,8 +343,8 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
 
             {/* ── Prefill results (user picks which to accept) ── */}
             {prefillResult && Object.keys(prefillResult).length > 0 && (
-              <div className="mt-4 border-t border-purple-200 dark:border-purple-700/30 pt-4 space-y-2">
-                <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Extracted Fields — select which to apply:</p>
+              <div className="mt-4 border-t border-purple-200 pt-4 space-y-2">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Extracted Fields — select which to apply:</p>
                 {Object.entries(prefillResult).map(([key, value]) => {
                   if (!value || !FIELD_LABELS[key]) return null
                   const displayValue = Array.isArray(value) ? (value as string[]).join(', ') : String(value)
@@ -563,8 +352,8 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                   return (
                     <label key={key} className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
                       isAccepted
-                        ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-600/40'
-                        : 'bg-white dark:bg-white/3 border-gray-200 dark:border-white/8 hover:bg-gray-50 dark:hover:bg-white/5'
+                        ? 'bg-purple-50 border-purple-300'
+                        : 'bg-white border-gray-200 hover:bg-gray-50'
                     }`}>
                       <input
                         type="checkbox"
@@ -578,8 +367,8 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                         className="mt-0.5 accent-purple-600"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">{FIELD_LABELS[key]}</p>
-                        <p className="text-sm text-gray-900 dark:text-white truncate">{displayValue}</p>
+                        <p className="text-xs font-semibold text-gray-600">{FIELD_LABELS[key]}</p>
+                        <p className="text-sm text-gray-900 truncate">{displayValue}</p>
                       </div>
                     </label>
                   )
@@ -593,7 +382,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                       const all = new Set(Object.keys(prefillResult).filter(k => FIELD_LABELS[k] && prefillResult[k]))
                       setPrefillAccepted(all)
                     }}
-                    className="text-xs text-purple-600 dark:text-purple-400 hover:underline font-medium"
+                    className="text-xs text-purple-600 hover:underline font-medium"
                   >
                     Select All
                   </button>
@@ -615,7 +404,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
               </div>
             )}
             {prefillResult && Object.keys(prefillResult).length === 0 && (
-              <p className="mt-3 text-xs text-amber-600 dark:text-amber-400">No fields could be confidently extracted. You may fill in all fields manually below.</p>
+              <p className="mt-3 text-xs text-amber-600">No fields could be confidently extracted. You may fill in all fields manually below.</p>
             )}
           </div>
         )}
@@ -623,21 +412,21 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
         {/* Reviewer banner */}
         {reviewerMode && (
           <div className="flex items-start gap-3 p-4 bg-[#2563EB]/10 border border-[#2563EB]/30 rounded-xl">
-            <Eye className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa] shrink-0 mt-0.5" />
+            <Eye className="h-4 w-4 text-[#2563EB] shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-[#2563EB] dark:text-[#60a5fa]">FDA Reviewer Mode Active</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Displaying pre-specified protocol elements only. All editable fields are hidden. Rationale and justifications are foregrounded.</p>
+              <p className="text-sm font-semibold text-[#2563EB]">FDA Reviewer Mode Active</p>
+              <p className="text-xs text-gray-500 mt-0.5">Displaying pre-specified protocol elements only. All editable fields are hidden. Rationale and justifications are foregrounded.</p>
             </div>
           </div>
         )}
 
         {/* Protocol summary card */}
-        <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5">
+        <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold text-gray-900 dark:text-white">Protocol Summary</h2>
+            <h2 className="text-sm font-bold text-gray-900">Protocol Summary</h2>
             {locked
               ? <span className="flex items-center gap-1.5 text-[10px] text-emerald-400 bg-emerald-900/30 border border-emerald-700/40 px-2.5 py-1 rounded-full font-bold"><CheckCircle2 className="h-3 w-3" /> Pre-specified & Locked</span>
-              : <span className="flex items-center gap-1.5 text-[10px] text-amber-600 dark:text-amber-300 bg-amber-900/20 border border-amber-700/30 px-2.5 py-1 rounded-full font-bold"><AlertCircle className="h-3 w-3" /> Draft — Not Yet Locked</span>
+              : <span className="flex items-center gap-1.5 text-[10px] text-amber-600 bg-amber-900/20 border border-amber-700/30 px-2.5 py-1 rounded-full font-bold"><AlertCircle className="h-3 w-3" /> Draft — Not Yet Locked</span>
             }
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -649,20 +438,62 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
             ].map(({ label, value }) => (
               <div key={label}>
                 <p className="text-[10px] text-gray-600 uppercase tracking-widest font-semibold mb-1">{label}</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">{value}</p>
+                <p className="text-sm font-semibold text-gray-900">{value}</p>
               </div>
             ))}
           </div>
         </div>
 
+        {/* ── Regulatory Phase & Target Agency (top-level controls) ── */}
+        <div className="grid grid-cols-2 gap-4">
+          <section>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+              Regulatory Phase <span className="text-red-400">*</span>
+            </label>
+            {locked || reviewerMode ? (
+              <div className="bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 font-medium">{phase || <span className="text-gray-400 italic">Not specified</span>}</div>
+            ) : (
+              <select
+                className="w-full bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                value={phase} onChange={e => setPhase(e.target.value)}
+              >
+                <option value="" className="bg-white">Select phase...</option>
+                {STUDY_PHASES.map(p => <option key={p.value} value={p.value} className="bg-white">{p.label}</option>)}
+              </select>
+            )}
+            {phase && !locked && !reviewerMode && (
+              <p className="text-[10px] text-gray-400 mt-1">{STUDY_PHASES.find(p => p.value === phase)?.description}</p>
+            )}
+          </section>
+          <section>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+              Target Regulatory Agency <span className="text-red-400">*</span>
+            </label>
+            {locked || reviewerMode ? (
+              <div className="bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 font-medium">{regBody || <span className="text-gray-400 italic">Not specified</span>}</div>
+            ) : (
+              <select
+                className="w-full bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                value={regBody} onChange={e => setRegBody(e.target.value)}
+              >
+                <option value="" className="bg-white">Select agency...</option>
+                {REGULATORY_AGENCIES.map(a => <option key={a.value} value={a.value} className="bg-white">{a.label}</option>)}
+              </select>
+            )}
+            {regBody && !locked && !reviewerMode && (
+              <p className="text-[10px] text-gray-400 mt-1">Guidelines: {REGULATORY_AGENCIES.find(a => a.value === regBody)?.guidelines}</p>
+            )}
+          </section>
+        </div>
+
         {/* Indication */}
         <section>
-          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Indication</label>
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Indication</label>
           {locked || reviewerMode ? (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">{indication || <span className="text-gray-400 italic">Not specified</span>}</div>
+            <div className="bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 font-medium">{indication || <span className="text-gray-400 italic">Not specified</span>}</div>
           ) : (
             <input
-              className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+              className="w-full bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
               value={indication}
               onChange={e => setIndication(e.target.value)}
               placeholder="e.g. Type 2 Diabetes with cardiovascular risk"
@@ -673,31 +504,31 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
         {/* Primary endpoint */}
         <section>
           <div className="flex items-center gap-2 mb-2">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Primary Endpoint</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Primary Endpoint</label>
             {effectiveEndpoint && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full border font-medium bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700/30 text-blue-600 dark:text-blue-300">
+              <span className="text-[10px] px-2 py-0.5 rounded-full border font-medium bg-blue-50 border-blue-200 text-blue-600">
                 {endpointType}
               </span>
             )}
           </div>
           {locked || reviewerMode ? (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
+            <div className="bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 font-medium">
               {effectiveEndpoint || <span className="text-gray-400 italic">Not specified</span>}
             </div>
           ) : (
             <>
               <select
-                className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                className="w-full bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                 value={endpoint}
                 onChange={e => setEndpoint(e.target.value)}
               >
-                <option value="" className="bg-white dark:bg-[#1a1a1c]">Select primary endpoint...</option>
-                {ENDPOINT_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o}</option>)}
+                <option value="" className="bg-white">Select primary endpoint...</option>
+                {ENDPOINT_OPTIONS.map(o => <option key={o} value={o} className="bg-white">{o}</option>)}
               </select>
               {endpoint === 'Custom endpoint' && (
                 <input
                   type="text"
-                  className="w-full mt-2 bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                  className="w-full mt-2 bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                   value={customEndpoint}
                   onChange={e => setCustomEndpoint(e.target.value)}
                   placeholder="Enter your custom primary endpoint..."
@@ -709,11 +540,11 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
 
         {/* Secondary endpoints */}
         <section>
-          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Secondary Endpoints</label>
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Secondary Endpoints</label>
           {secondaryEndpoints.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2">
               {secondaryEndpoints.map((ep, i) => (
-                <span key={i} className="inline-flex items-center gap-1.5 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs font-medium px-3 py-1.5 rounded-lg">
+                <span key={i} className="inline-flex items-center gap-1.5 bg-blue-50 border border-blue-200 text-blue-700 text-xs font-medium px-3 py-1.5 rounded-lg">
                   {ep}
                   {!locked && !reviewerMode && (
                     <button
@@ -730,15 +561,15 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
           {!locked && !reviewerMode && (
             <div className="flex gap-2">
               <select
-                className="flex-1 bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2.5 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                className="flex-1 bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                 value={newSecondary}
                 onChange={e => setNewSecondary(e.target.value)}
               >
                 <option value="">Add a secondary endpoint...</option>
                 {ENDPOINT_OPTIONS.filter(o => o !== endpoint && o !== 'Custom endpoint' && !secondaryEndpoints.includes(o)).map(o => (
-                  <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o}</option>
+                  <option key={o} value={o} className="bg-white">{o}</option>
                 ))}
-                <option value="__custom__" className="bg-white dark:bg-[#1a1a1c]">Custom endpoint...</option>
+                <option value="__custom__" className="bg-white">Custom endpoint...</option>
               </select>
               <button
                 onClick={() => {
@@ -765,7 +596,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
         {/* Estimand */}
         <section>
           <div className="flex items-center gap-2 mb-2">
-            <label className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Estimand (ICH E9(R1))</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Estimand (ICH E9(R1))</label>
             <Info className="h-3 w-3 text-gray-600" />
           </div>
           <div className="space-y-2">
@@ -776,68 +607,77 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 onClick={() => !locked && !reviewerMode && setEstimand(opt.value)}
                 className={`w-full text-left px-4 py-3 rounded-lg border transition-all ${
                   estimand === opt.value
-                    ? 'bg-[#2563EB]/15 border-[#2563EB]/40 text-gray-900 dark:text-white'
-                    : 'bg-gray-50 dark:bg-white/3 border-gray-200 dark:border-white/8 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                    ? 'bg-[#2563EB]/15 border-[#2563EB]/40 text-gray-900'
+                    : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
                 } ${locked || reviewerMode ? 'cursor-default' : 'cursor-pointer'}`}
               >
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold">{opt.label}</span>
-                  {estimand === opt.value && <CheckCircle2 className="h-4 w-4 text-[#2563EB] dark:text-[#60a5fa] shrink-0" />}
+                  {estimand === opt.value && <CheckCircle2 className="h-4 w-4 text-[#2563EB] shrink-0" />}
                 </div>
                 <p className="text-[11px] text-gray-500 mt-0.5">{opt.desc}</p>
               </button>
             ))}
           </div>
           {estimandWarning && (
-            <div className="mt-2 flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-700/30 rounded-lg">
+            <div className="mt-2 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
               <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700 dark:text-amber-300">{estimandWarning}</p>
+              <p className="text-xs text-amber-700">{estimandWarning}</p>
             </div>
           )}
         </section>
 
         {/* Comparator arm */}
         <section>
-          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Comparator Arm</label>
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Comparator Arm</label>
           {locked || reviewerMode ? (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">{comparator || <span className="text-gray-400 italic">Not specified</span>}</div>
+            <div className="bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 font-medium">{comparator || <span className="text-gray-400 italic">Not specified</span>}</div>
           ) : (
             <select
-              className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+              className="w-full bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
               value={comparator}
               onChange={e => setComparator(e.target.value)}
             >
-              <option value="" className="bg-white dark:bg-[#1a1a1c]">Select comparator...</option>
-              {COMPARATOR_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o}</option>)}
+              <option value="" className="bg-white">Select comparator...</option>
+              {COMPARATOR_OPTIONS.map(o => <option key={o} value={o} className="bg-white">{o}</option>)}
             </select>
           )}
         </section>
 
         {/* Scientific rationale */}
         <section>
-          <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
             Scientific Rationale for RWE Design
           </label>
           {locked || reviewerMode ? (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-lg px-4 py-3 text-sm text-gray-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
+            <div className="bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
               {rationale || <span className="text-gray-400 italic">No rationale entered.</span>}
             </div>
           ) : (
-            <textarea
-              rows={5}
-              className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors resize-none"
-              value={rationale}
-              onChange={e => setRationale(e.target.value)}
-              placeholder="Explain why RWE is appropriate, why RCT is infeasible or unethical, and how this design aligns with ICH E9(R1)..."
-            />
+            <>
+              <textarea
+                rows={5}
+                maxLength={SCIENTIFIC_RATIONALE_MAX_CHARS}
+                className="w-full bg-gray-100/80 border border-gray-200 rounded-lg px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors resize-none"
+                value={rationale}
+                onChange={e => setRationale(e.target.value)}
+                placeholder="Explain why RWE is appropriate, why RCT is infeasible or unethical, and how this design aligns with ICH E9(R1)..."
+              />
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-[10px] text-gray-400">Concise justification required. Reviewers evaluate clarity and specificity.</p>
+                <span className={`text-[10px] font-medium ${rationale.length > SCIENTIFIC_RATIONALE_MAX_CHARS * 0.9 ? 'text-amber-500' : 'text-gray-400'}`}>
+                  {rationale.length}/{SCIENTIFIC_RATIONALE_MAX_CHARS}
+                </span>
+              </div>
+            </>
           )}
         </section>
 
         {/* ── Analysis Specification (SAP-style) ── */}
-        <section className="border-t border-gray-200 dark:border-white/8 pt-6">
+        <section className="border-t border-gray-200 pt-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-sm font-bold text-gray-900 dark:text-white">Analysis Specification</h2>
+              <h2 className="text-sm font-bold text-gray-900">Analysis Specification</h2>
               <p className="text-[10px] text-gray-500 mt-0.5">Pre-specified statistical analysis plan elements — versioned & locked</p>
             </div>
             {locked && (
@@ -859,8 +699,8 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 onClick={() => setActiveSpecTab(tab.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                   activeSpecTab === tab.key
-                    ? 'bg-[#2563EB]/15 text-[#2563EB] dark:text-[#60a5fa] border border-[#2563EB]/30'
-                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5'
+                    ? 'bg-[#2563EB]/15 text-[#2563EB] border border-[#2563EB]/30'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                 }`}
               >
                 {tab.icon} {tab.label}
@@ -870,16 +710,16 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
 
           {/* ── Specification tab (EDITABLE) ── */}
           {activeSpecTab === 'spec' && (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-5">
+            <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5 space-y-5">
               {/* Primary Model & Weighting */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">Primary Outcome Model</p>
                   {locked || reviewerMode ? (
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{getMethodLabel(primaryModel) || '—'}</p>
+                    <p className="text-sm font-semibold text-gray-900">{getMethodLabel(primaryModel) || '—'}</p>
                   ) : (
                     <select
-                      className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                       value={primaryModel}
                       onChange={e => setPrimaryModel(e.target.value)}
                     >
@@ -898,10 +738,10 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">Weighting Method</p>
                   {locked || reviewerMode ? (
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{getWeightingLabel(weightingMethod) || '—'}</p>
+                    <p className="text-sm font-semibold text-gray-900">{getWeightingLabel(weightingMethod) || '—'}</p>
                   ) : (
                     <select
-                      className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                       value={weightingMethod}
                       onChange={e => setWeightingMethod(e.target.value)}
                     >
@@ -919,10 +759,10 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">Variance Estimator</p>
                   {locked || reviewerMode ? (
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{getVarianceLabel(varianceEstimator) || '—'}</p>
+                    <p className="text-sm font-semibold text-gray-900">{getVarianceLabel(varianceEstimator) || '—'}</p>
                   ) : (
                     <select
-                      className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                       value={varianceEstimator}
                       onChange={e => setVarianceEstimator(e.target.value)}
                     >
@@ -936,10 +776,10 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 <div>
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">PS Trimming</p>
                   {locked || reviewerMode ? (
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{getTrimmingLabel(psTrimming) || '—'}</p>
+                    <p className="text-sm font-semibold text-gray-900">{getTrimmingLabel(psTrimming) || '—'}</p>
                   ) : (
                     <select
-                      className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                       value={psTrimming}
                       onChange={e => setPsTrimming(e.target.value)}
                     >
@@ -954,9 +794,9 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
 
               {/* Method warning */}
               {methodWarning && (
-                <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-700/30 rounded-lg">
+                <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-amber-700 dark:text-amber-300">{methodWarning}</p>
+                  <p className="text-xs text-amber-700">{methodWarning}</p>
                 </div>
               )}
 
@@ -968,7 +808,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                     <span className="text-xs text-gray-400 italic">No covariates specified</span>
                   )}
                   {covariates.map((c, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 text-[10px] bg-gray-200/80 dark:bg-white/8 border border-gray-300 dark:border-white/10 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">
+                    <span key={i} className="inline-flex items-center gap-1 text-[10px] bg-gray-200/80 border border-gray-300 px-2 py-0.5 rounded text-gray-700">
                       {c}
                       {!locked && !reviewerMode && (
                         <button onClick={() => setCovariates(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-400 ml-0.5">&times;</button>
@@ -979,7 +819,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 {!locked && !reviewerMode && (
                   <div className="flex gap-2">
                     <input
-                      className="flex-1 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                      className="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                       value={newCovariate}
                       onChange={e => setNewCovariate(e.target.value)}
                       onKeyDown={e => {
@@ -1014,9 +854,9 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                     <span className="text-xs text-gray-400 italic">No ICE strategies specified</span>
                   )}
                   {iceStrategies.map((ice, i) => (
-                    <div key={i} className="flex items-center gap-3 text-xs bg-gray-200/50 dark:bg-white/3 rounded-lg px-3 py-2">
-                      <span className="text-gray-900 dark:text-white font-medium w-40 shrink-0">{ice.event}</span>
-                      <span className="text-[#2563EB] dark:text-[#60a5fa] font-semibold w-28 shrink-0">{ice.strategy}</span>
+                    <div key={i} className="flex items-center gap-3 text-xs bg-gray-200/50 rounded-lg px-3 py-2">
+                      <span className="text-gray-900 font-medium w-40 shrink-0">{ice.event}</span>
+                      <span className="text-[#2563EB] font-semibold w-28 shrink-0">{ice.strategy}</span>
                       <span className="text-gray-500 flex-1">{ice.desc}</span>
                       {!locked && !reviewerMode && (
                         <button onClick={() => setIceStrategies(prev => prev.filter((_, idx) => idx !== i))} className="text-gray-400 hover:text-red-400 shrink-0">&times;</button>
@@ -1028,7 +868,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                   <div className="flex gap-2 items-end">
                     <div className="flex-1">
                       <select
-                        className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                         value={newIceEvent}
                         onChange={e => setNewIceEvent(e.target.value)}
                       >
@@ -1041,7 +881,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                     </div>
                     <div className="w-44">
                       <select
-                        className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                         value={newIceStrategy}
                         onChange={e => setNewIceStrategy(e.target.value)}
                       >
@@ -1082,16 +922,16 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
               <div>
                 <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Missing Data Handling</p>
                 {locked || reviewerMode ? (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                    <p><strong className="text-gray-900 dark:text-white">Primary:</strong> {MISSING_DATA_PRIMARY.find(m => m.value === missingDataPrimary)?.label || missingDataPrimary || '—'}{missingThreshold ? ` (threshold: <${missingThreshold}% per covariate)` : ''}</p>
-                    <p><strong className="text-gray-900 dark:text-white">Sensitivity:</strong> {MISSING_DATA_SENSITIVITY.find(m => m.value === missingDataSensitivity)?.label || missingDataSensitivity || '—'}</p>
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <p><strong className="text-gray-900">Primary:</strong> {MISSING_DATA_PRIMARY.find(m => m.value === missingDataPrimary)?.label || missingDataPrimary || '—'}{missingThreshold ? ` (threshold: <${missingThreshold}% per covariate)` : ''}</p>
+                    <p><strong className="text-gray-900">Sensitivity:</strong> {MISSING_DATA_SENSITIVITY.find(m => m.value === missingDataSensitivity)?.label || missingDataSensitivity || '—'}</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-[10px] text-gray-400 mb-1">Primary Method</p>
                       <select
-                        className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                         value={missingDataPrimary}
                         onChange={e => setMissingDataPrimary(e.target.value)}
                       >
@@ -1104,7 +944,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                     <div>
                       <p className="text-[10px] text-gray-400 mb-1">Sensitivity Analysis</p>
                       <select
-                        className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                         value={missingDataSensitivity}
                         onChange={e => setMissingDataSensitivity(e.target.value)}
                       >
@@ -1120,7 +960,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                         type="number"
                         min="0"
                         max="100"
-                        className="w-24 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        className="w-24 bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
                         value={missingThreshold}
                         onChange={e => setMissingThreshold(e.target.value)}
                       />
@@ -1133,23 +973,23 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
 
           {/* ── Model Card tab (derived from spec + study def) ── */}
           {activeSpecTab === 'model' && (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-4">
+            <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5 space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest">Model Card — Primary Analysis</h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border text-amber-600 dark:text-amber-300 bg-amber-900/10 border-amber-600/30">
+                  <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest">Model Card — Primary Analysis</h3>
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border text-amber-600 bg-amber-900/10 border-amber-600/30">
                     {primaryModel ? 'Configured' : 'Not Configured'}
                   </span>
                 </div>
                 <button
                   onClick={() => setShowWorkOpen(true)}
-                  className="flex items-center gap-1.5 text-[10px] text-[#2563EB] dark:text-[#60a5fa] hover:text-blue-300 font-semibold transition-colors"
+                  className="flex items-center gap-1.5 text-[10px] text-[#2563EB] hover:text-blue-300 font-semibold transition-colors"
                 >
                   <FlaskConical className="h-3 w-3" /> Full Lineage
                 </button>
               </div>
               {!primaryModel && (
-                <p className="text-xs text-amber-600 dark:text-amber-300">
+                <p className="text-xs text-amber-600">
                   Configure the Specification tab to populate this model card.
                 </p>
               )}
@@ -1159,7 +999,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                   ['Estimand', estimand ? `${estimand} — ${selectedEstimand?.desc || ''}` : '—'],
                   ['Outcome', effectiveEndpoint || '—'],
                   ['Endpoint Type', effectiveEndpoint ? endpointType : '—'],
-                  ['Population', indication ? `Adults, confirmed Dx, ${selectedStudy.protocol}` : '—'],
+                  ['Population', indication || '—'],
                   ['Weighting', getWeightingLabel(weightingMethod) || '—'],
                   ['Trimming', getTrimmingLabel(psTrimming) || '—'],
                   ['Variance', getVarianceLabel(varianceEstimator) || '—'],
@@ -1168,26 +1008,26 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                 ].map(([label, value]) => (
                   <div key={label}>
                     <p className="text-gray-500 font-semibold">{label}</p>
-                    <p className="text-gray-900 dark:text-gray-200 mt-0.5">{value}</p>
+                    <p className="text-gray-900 mt-0.5">{value}</p>
                   </div>
                 ))}
               </div>
 
               {covariates.length > 0 && (
-                <div className="border-t border-gray-300 dark:border-white/8 pt-3">
+                <div className="border-t border-gray-300 pt-3">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-2">Covariate Set</p>
                   <div className="flex flex-wrap gap-1.5">
                     {covariates.map(c => (
-                      <span key={c} className="text-[10px] bg-gray-200/80 dark:bg-white/8 border border-gray-300 dark:border-white/10 px-2 py-0.5 rounded text-gray-700 dark:text-gray-300">{c}</span>
+                      <span key={c} className="text-[10px] bg-gray-200/80 border border-gray-300 px-2 py-0.5 rounded text-gray-700">{c}</span>
                     ))}
                   </div>
                 </div>
               )}
 
               {primaryModel && covariates.length > 0 && (
-                <div className="border-t border-gray-300 dark:border-white/8 pt-3">
+                <div className="border-t border-gray-300 pt-3">
                   <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-1">Formula (Statistical Notation)</p>
-                  <div className="bg-gray-200/60 dark:bg-black/30 rounded-lg px-4 py-3 font-mono text-xs text-gray-700 dark:text-gray-300 overflow-x-auto">
+                  <div className="bg-gray-200/60 rounded-lg px-4 py-3 font-mono text-xs text-gray-700 overflow-x-auto">
                     {(() => {
                       const terms = covariates.map((c, i) => `\u03B2${String.fromCharCode(0x2081 + i)}\u00B7${c.replace(/\s+/g, '')}`)
                       const termsOffset = covariates.map((c, i) => `\u03B2${String.fromCharCode(0x2082 + i)}\u00B7${c.replace(/\s+/g, '')}`)
@@ -1209,12 +1049,23 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
 
           {/* ── Spec vs Execution diff tab ── */}
           {activeSpecTab === 'diff' && (
-            <div className="bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/8 rounded-xl p-5 space-y-3">
+            <div className="bg-gray-100/80 border border-gray-200 rounded-xl p-5 space-y-3">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-widest">Specification vs. Execution Comparison</h3>
+                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest">Specification vs. Execution Comparison</h3>
               </div>
               <p className="text-[10px] text-gray-500 mb-3">Automated comparison of pre-specified SAP parameters against actual execution metadata. Any deviation is flagged for review.</p>
-              {(() => {
+              {!studyDef?.executionResults ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                    <GitCompare className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-500">No Execution Data</p>
+                  <p className="text-[10px] text-gray-400 mt-1 max-w-xs">
+                    This comparison will populate automatically once the analysis pipeline runs against real uploaded data. Specification parameters are locked on the left; execution metadata appears on the right.
+                  </p>
+                </div>
+              ) : null}
+              {studyDef?.executionResults && (() => {
                 const specRows = [
                   { param: 'Primary Model', specified: getMethodLabel(primaryModel) || '—', executed: studyDef?.executionResults?.primaryModel || 'Not yet executed' },
                   { param: 'Weighting Method', specified: getWeightingLabel(weightingMethod) || '—', executed: studyDef?.executionResults?.weightingMethod || 'Not yet executed' },
@@ -1237,8 +1088,8 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                       const isExecuted = row.executed !== 'Not yet executed'
                       const isMatch = !isExecuted || row.specified === row.executed || row.specified === '—'
                       return (
-                        <div key={i} className="grid grid-cols-4 gap-3 items-center text-xs bg-gray-200/50 dark:bg-white/3 rounded-lg px-4 py-2.5">
-                          <span className="text-gray-900 dark:text-white font-medium">{row.param}</span>
+                        <div key={i} className="grid grid-cols-4 gap-3 items-center text-xs bg-gray-200/50 rounded-lg px-4 py-2.5">
+                          <span className="text-gray-900 font-medium">{row.param}</span>
                           <span className="text-gray-500">{row.specified}</span>
                           <span className={`${isExecuted ? 'text-gray-500' : 'text-gray-400 italic'}`}>{row.executed}</span>
                           <span className="flex items-center gap-1">
@@ -1253,7 +1104,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
                         </div>
                       )
                     })}
-                    <div className="flex items-center gap-3 mt-2 pt-3 border-t border-gray-300 dark:border-white/8">
+                    <div className="flex items-center gap-3 mt-2 pt-3 border-t border-gray-300">
                       <div className="text-[10px] text-gray-600 uppercase tracking-widest font-bold">Column Key:</div>
                       <div className="flex gap-4 text-[10px] text-gray-500">
                         <span>Parameter</span>
@@ -1268,30 +1119,6 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
             </div>
           )}
         </section>
-
-        {/* Regulatory phase & body (if not locked) */}
-        {!locked && !reviewerMode && (
-          <div className="grid grid-cols-2 gap-4">
-            <section>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Regulatory Phase</label>
-              <select
-                className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
-                value={phase} onChange={e => setPhase(e.target.value)}
-              >
-                {PHASE_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o || 'Select phase...'}</option>)}
-              </select>
-            </section>
-            <section>
-              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">Target Regulatory Agency</label>
-              <select
-                className="w-full bg-gray-100/80 dark:bg-white/4 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-3 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-[#2563EB]/60 transition-colors"
-                value={regBody} onChange={e => setRegBody(e.target.value)}
-              >
-                {REGULATORY_OPTIONS.map(o => <option key={o} value={o} className="bg-white dark:bg-[#1a1a1c]">{o || 'Select agency...'}</option>)}
-              </select>
-            </section>
-          </div>
-        )}
 
         {/* Save button */}
         {!locked && !reviewerMode && (
@@ -1308,7 +1135,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
         )}
 
         {/* Next step CTA */}
-        <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-white/8">
+        <div className="flex items-center justify-between pt-4 border-t border-gray-200">
           <div className="text-xs text-gray-600">
             {locked ? 'Protocol locked — proceed to causal framework definition.' : 'Complete all fields before locking the protocol.'}
           </div>
@@ -1344,8 +1171,8 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
       {saveToast && (
         <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
           saveToast.type === 'success'
-            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-700'
-            : 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-900/40 dark:text-red-300 dark:border-red-700'
+            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+            : 'bg-red-50 text-red-800 border border-red-200'
         }`}>
           {saveToast.type === 'success'
             ? <CheckCircle2 className="h-4 w-4 shrink-0" />

@@ -191,12 +191,12 @@ function PaperCard({ paper, onClick }: { paper: Paper; onClick: () => void }) {
   return (
     <div
       onClick={onClick}
-      className="relative bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/8 rounded-xl p-5 hover:border-[#2563EB]/40 hover:shadow-md dark:hover:bg-gray-100 dark:bg-white/[0.05] transition-all cursor-pointer group"
+      className="relative bg-white border border-gray-200 rounded-xl p-5 hover:border-[#2563EB]/40 hover:shadow-md transition-all cursor-pointer group"
     >
       {paper.url && (
         <button
           onClick={e => { e.stopPropagation(); window.open(paper.url, '_blank') }}
-          className="absolute top-3 right-3 p-1.5 text-gray-500 dark:text-gray-400 dark:text-gray-600 hover:text-[#2563EB] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+          className="absolute top-3 right-3 p-1.5 text-gray-500 hover:text-[#2563EB] hover:bg-blue-50 rounded transition-colors"
           title="Open in new tab"
         >
           <ExternalLink className="h-4 w-4" />
@@ -223,25 +223,25 @@ function PaperCard({ paper, onClick }: { paper: Paper; onClick: () => void }) {
           </span>
         )}
         {paper.journal && (
-          <span className="text-[10px] text-gray-500 dark:text-gray-500 truncate max-w-[200px] ml-auto">{paper.journal}</span>
+          <span className="text-[10px] text-gray-500 truncate max-w-[200px] ml-auto">{paper.journal}</span>
         )}
       </div>
 
       {/* Title */}
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2 leading-snug group-hover:text-[#2563EB] transition-colors">
+      <h3 className="text-sm font-semibold text-gray-900 mb-2 leading-snug group-hover:text-[#2563EB] transition-colors">
         {paper.title}
       </h3>
 
       {/* Abstract/TLDR */}
       {displayText && (
-        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
-          {paper.tldr && <span className="font-semibold text-gray-600 dark:text-gray-300">TL;DR: </span>}
+        <p className="text-xs text-gray-500 leading-relaxed mb-3">
+          {paper.tldr && <span className="font-semibold text-gray-600">TL;DR: </span>}
           {displayText}
         </p>
       )}
 
       {/* Metadata row */}
-      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-500 dark:text-gray-400 dark:text-gray-500">
+      <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[10px] text-gray-500">
         {paper.authors.length > 0 && (
           <span className="flex items-center gap-1">
             <Users className="h-3 w-3" />
@@ -412,14 +412,14 @@ export default function LiteratureSearch() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#0d0d0e] text-gray-900 dark:text-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
 
       {selectedPaper && (
         <PaperViewer paper={selectedPaper} onClose={() => setSelectedPaper(null)} />
       )}
 
       {/* Header */}
-      <div className="border-b border-gray-200 dark:border-white/8 bg-white dark:bg-transparent px-8 py-5">
+      <div className="border-b border-gray-200 bg-white px-8 py-5">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-[#2563EB]/15 border border-[#2563EB]/30 flex items-center justify-center">
             <BookOpen className="h-4 w-4 text-[#2563EB]" />
@@ -437,9 +437,9 @@ export default function LiteratureSearch() {
         <div className="mb-6">
           <div className="flex gap-3">
             <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 dark:text-gray-400" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
               <input
-                className="w-full pl-12 pr-4 py-4 bg-white dark:bg-white/[0.04] border border-gray-200 dark:border-white/10 rounded-2xl text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-[#2563EB]/60 focus:ring-2 focus:ring-[#2563EB]/20 shadow-sm transition-all"
+                className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-2xl text-base text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#2563EB]/60 focus:ring-2 focus:ring-[#2563EB]/20 shadow-sm transition-all"
                 placeholder='Search across all sources — e.g. "SGLT2 inhibitor heart failure outcomes"'
                 value={query}
                 onChange={e => setQuery(e.target.value)}
@@ -457,7 +457,7 @@ export default function LiteratureSearch() {
               }
             </button>
           </div>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 dark:text-gray-600 mt-2 ml-1">
+          <p className="text-[11px] text-gray-500 mt-2 ml-1">
             Searches PubMed, ClinicalTrials.gov, OpenAlex, and Semantic Scholar simultaneously
           </p>
         </div>
@@ -468,13 +468,13 @@ export default function LiteratureSearch() {
             {SOURCES.map(src => {
               const Icon = src.icon
               return (
-                <div key={src.id} className="flex items-center gap-4 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/8 rounded-xl px-5 py-4">
+                <div key={src.id} className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl px-5 py-4">
                   <div className={`w-10 h-10 rounded-lg border flex items-center justify-center ${src.bgColor} ${src.color}`}>
                     <Icon className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-gray-900 dark:text-white">{src.label}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">{src.desc}</p>
+                    <p className="text-sm font-bold text-gray-900">{src.label}</p>
+                    <p className="text-xs text-gray-500">{src.desc}</p>
                   </div>
                 </div>
               )
@@ -484,10 +484,10 @@ export default function LiteratureSearch() {
 
         {/* ── Loading indicator with per-source status ──────────────── */}
         {anyLoading && (
-          <div className="mb-4 p-4 bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/8 rounded-xl">
+          <div className="mb-4 p-4 bg-white border border-gray-200 rounded-xl">
             <div className="flex items-center gap-3 mb-3">
               <Loader2 className="h-5 w-5 animate-spin text-[#2563EB]" />
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Searching across sources...</span>
+              <span className="text-sm font-semibold text-gray-700">Searching across sources...</span>
             </div>
             <div className="flex gap-2 flex-wrap">
               {SOURCES.map(src => {
@@ -500,7 +500,7 @@ export default function LiteratureSearch() {
                     isLoading ? 'border-blue-500/20 bg-blue-500/10 text-blue-400' :
                     hasError ? 'border-red-500/20 bg-red-500/10 text-red-400' :
                     hasResults ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' :
-                    'border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400'
+                    'border-gray-200 text-gray-500'
                   }`}>
                     {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Icon className="h-3 w-3" />}
                     {src.label}
@@ -519,7 +519,7 @@ export default function LiteratureSearch() {
             <div className="flex items-center justify-between gap-4 flex-wrap">
               {/* Source filter checkboxes */}
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mr-1">
+                <span className="text-xs font-semibold text-gray-500 mr-1">
                   <Filter className="h-3 w-3 inline -mt-0.5 mr-1" />Sources:
                 </span>
                 {SOURCES.map(src => {
@@ -533,7 +533,7 @@ export default function LiteratureSearch() {
                       className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all ${
                         enabled
                           ? `${src.bgColor} ${src.color} font-semibold`
-                          : 'border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 dark:text-gray-600 opacity-60'
+                          : 'border-gray-200 text-gray-500 opacity-60'
                       }`}
                     >
                       <Icon className="h-3 w-3" />
@@ -553,7 +553,7 @@ export default function LiteratureSearch() {
                   </span>
                 )}
                 <div className="flex items-center gap-1.5">
-                  <ArrowUpDown className="h-3 w-3 text-gray-500 dark:text-gray-400" />
+                  <ArrowUpDown className="h-3 w-3 text-gray-500" />
                   {([['relevance', 'Relevance'], ['date', 'Newest'], ['citations', 'Impact']] as [SortMode, string][]).map(([mode, label]) => (
                     <button
                       key={mode}
@@ -561,7 +561,7 @@ export default function LiteratureSearch() {
                       className={`text-[11px] px-2 py-1 rounded-md transition-colors ${
                         sortMode === mode
                           ? 'bg-[#2563EB]/15 text-[#2563EB] font-semibold'
-                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:text-gray-300'
+                          : 'text-gray-500 hover:text-gray-600'
                       }`}
                     >
                       {label}
@@ -569,20 +569,20 @@ export default function LiteratureSearch() {
                   ))}
                 </div>
                 <select
-                  className="text-[11px] bg-transparent border border-gray-200 dark:border-white/10 rounded-md px-2 py-1 text-gray-500 dark:text-gray-400 focus:outline-none"
+                  className="text-[11px] bg-transparent border border-gray-200 rounded-md px-2 py-1 text-gray-500 focus:outline-none"
                   value={maxResults}
                   onChange={e => setMaxResults(Number(e.target.value))}
                 >
-                  {[10, 20, 50].map(n => <option key={n} value={n} className="bg-white dark:bg-[#1a1a1c]">{n} per source</option>)}
+                  {[10, 20, 50].map(n => <option key={n} value={n} className="bg-white">{n} per source</option>)}
                 </select>
               </div>
             </div>
 
             {/* Results summary */}
-            <div className="text-xs text-gray-500 dark:text-gray-500">
-              Showing <span className="font-bold text-gray-600 dark:text-gray-300">{mergedResults.length}</span> results
+            <div className="text-xs text-gray-500">
+              Showing <span className="font-bold text-gray-600">{mergedResults.length}</span> results
               {mergedResults.length !== totalBeforeFilter && (
-                <> from <span className="font-bold text-gray-600 dark:text-gray-300">{totalBeforeFilter}</span> total across all sources</>
+                <> from <span className="font-bold text-gray-600">{totalBeforeFilter}</span> total across all sources</>
               )}
             </div>
           </div>
@@ -592,11 +592,11 @@ export default function LiteratureSearch() {
         {activeErrors.length > 0 && !anyLoading && (
           <div className="mb-4 space-y-2">
             {activeErrors.map(([src, msg]) => (
-              <div key={src} className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-500/5 border border-red-200 dark:border-red-500/20 rounded-xl">
-                <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0 mt-0.5" />
+              <div key={src} className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+                <AlertCircle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="text-xs font-semibold text-red-500 dark:text-red-400">{SOURCE_MAP[src]?.label} error</p>
-                  <p className="text-[11px] text-red-500/80 dark:text-red-400/80 mt-0.5">{msg}</p>
+                  <p className="text-xs font-semibold text-red-500">{SOURCE_MAP[src]?.label} error</p>
+                  <p className="text-[11px] text-red-500/80 mt-0.5">{msg}</p>
                 </div>
                 <button
                   onClick={async () => {
@@ -611,7 +611,7 @@ export default function LiteratureSearch() {
                       setLoading(prev => ({ ...prev, [src]: false }))
                     }
                   }}
-                  className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700/50 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                  className="shrink-0 px-3 py-1.5 text-xs font-semibold text-red-600 border border-red-300 rounded-lg hover:bg-red-100 transition-colors"
                 >
                   Retry
                 </button>
@@ -636,11 +636,11 @@ export default function LiteratureSearch() {
         {/* ── Empty state ──────────────────────────────────────────── */}
         {!anyLoading && searched && mergedResults.length === 0 && activeErrors.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
-            <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center">
-              <BookOpen className="h-6 w-6 text-gray-500 dark:text-gray-400" />
+            <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center">
+              <BookOpen className="h-6 w-6 text-gray-500" />
             </div>
-            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No results found</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-600 max-w-sm">
+            <p className="text-sm font-semibold text-gray-600">No results found</p>
+            <p className="text-xs text-gray-500 max-w-sm">
               Try a different query or adjust your search terms.
             </p>
           </div>

@@ -363,7 +363,7 @@ const ProjectDetail: React.FC = () => {
                 {project.recent_activity.map((activity) => (
                   <div key={activity.id} className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg">
                     <div className="flex-shrink-0">
-                      <Clock className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                      <Clock className="w-5 h-5 text-gray-500" />
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900">
@@ -443,7 +443,7 @@ const ProjectDetail: React.FC = () => {
 
       {activeTab === 'analysis' && (
         <div className="p-8 text-center">
-          <BarChart3 className="mx-auto h-12 w-12 text-gray-500 dark:text-gray-400 mb-4" />
+          <BarChart3 className="mx-auto h-12 w-12 text-gray-500 mb-4" />
           <h3 className="heading-3 text-gray-900 mb-2">Advanced Analysis Tools</h3>
           <p className="body-large text-gray-600 mb-8">
             Access comprehensive bias analysis, comparability scoring, and regulatory assessment tools.

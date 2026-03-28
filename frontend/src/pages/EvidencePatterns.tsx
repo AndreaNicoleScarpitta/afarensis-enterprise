@@ -239,7 +239,7 @@ const EvidencePatterns: React.FC = () => {
       {/* Filters */}
       <div className="bg-white rounded-lg border shadow-sm p-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
             placeholder="Search patterns by name, indication, or description..."
@@ -286,7 +286,7 @@ const EvidencePatterns: React.FC = () => {
                       {trendIcon(pattern.trend)}
                       <span className="capitalize">{pattern.trend}</span>
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{pattern.evidence_count.toLocaleString()} studies</span>
+                    <span className="text-xs text-gray-500">{pattern.evidence_count.toLocaleString()} studies</span>
                   </div>
                   <h3 className="font-semibold text-gray-900 mb-1.5">{pattern.name}</h3>
                   <p className="text-sm text-gray-600 line-clamp-2">{pattern.description}</p>
@@ -317,7 +317,7 @@ const EvidencePatterns: React.FC = () => {
           ))}
           {filtered.length === 0 && (
             <div className="bg-white rounded-lg border shadow-sm p-12 text-center">
-              <Target className="w-12 h-12 text-gray-600 dark:text-gray-300 mx-auto mb-3" />
+              <Target className="w-12 h-12 text-gray-600 mx-auto mb-3" />
               <p className="text-gray-500">No patterns match your search.</p>
             </div>
           )}
@@ -332,7 +332,7 @@ const EvidencePatterns: React.FC = () => {
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${categoryColors[selectedPattern.category]}`}>
                     {selectedPattern.category.replace('_', ' ')}
                   </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Updated {new Date(selectedPattern.last_updated).toLocaleDateString()}</span>
+                  <span className="text-xs text-gray-500">Updated {new Date(selectedPattern.last_updated).toLocaleDateString()}</span>
                 </div>
                 <h3 className="font-semibold text-gray-900">{selectedPattern.name}</h3>
                 <p className="text-sm text-gray-600 mt-2">{selectedPattern.description}</p>
@@ -386,7 +386,7 @@ const EvidencePatterns: React.FC = () => {
             </div>
           ) : (
             <div className="bg-white rounded-lg border shadow-sm p-8 text-center">
-              <Brain className="w-10 h-10 text-gray-600 dark:text-gray-300 mx-auto mb-3" />
+              <Brain className="w-10 h-10 text-gray-600 mx-auto mb-3" />
               <p className="text-sm text-gray-500">Select a pattern to view details and requirements</p>
             </div>
           )}

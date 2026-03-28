@@ -14,6 +14,10 @@ import os
 import uuid
 from datetime import datetime, timedelta
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 from app.core.database import get_db
 from app.core.security import get_current_user, require_role
 from app.core.rate_limiter import rate_limit
@@ -286,7 +290,13 @@ async def revoke_all_sessions(current_user=Depends(get_current_user), db: AsyncS
 
 @api_router.post("/auth/forgot-password")
 async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depends(get_db), _=Depends(rate_limit(max_requests=3, window_seconds=300))):
-    """Request a password reset. Sends a 6-digit verification code."""
+    """Request a password reset. Sends a 6-digit verification code.
+
+    Security rules:
+      - New request invalidates ALL previous reset tokens for the user.
+      - 2-minute cooldown between requests (prevents spam/abuse).
+      - Email is always sent when user exists.
+    """
     import secrets as _secrets, hashlib as _hashlib
     from sqlalchemy import select as sa_select, delete as sa_delete
     from app.models import User as UserModel, SessionToken
@@ -298,19 +308,38 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
 
     reset_token = ""
     if user:
-        # Generate 6-digit code and a reset token
-        code = f"{_secrets.randbelow(900000) + 100000}"
-        token = _secrets.token_urlsafe(32)
-        token_hash = _hashlib.sha256(token.encode()).hexdigest()
-        expires = datetime.utcnow() + timedelta(minutes=15)
+        # ── 2-minute cooldown check ─────────────────────────────────────
+        # Find the most recent reset token for this user
+        recent_result = await db.execute(
+            sa_select(SessionToken).where(
+                SessionToken.user_id == str(user.id),
+                SessionToken.token_type == "reset",
+            ).order_by(SessionToken.created_at.desc()).limit(1)
+        )
+        recent_token = recent_result.scalar_one_or_none()
 
-        # Delete any existing reset tokens for this user
+        if recent_token and recent_token.created_at:
+            elapsed = (datetime.utcnow() - recent_token.created_at).total_seconds()
+            if elapsed < 120:  # 2 minutes = 120 seconds
+                remaining = int(120 - elapsed)
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Please wait {remaining} seconds before requesting another reset code."
+                )
+
+        # ── Invalidate ALL previous reset tokens (resend = old codes die) ─
         await db.execute(
             sa_delete(SessionToken).where(
                 SessionToken.user_id == str(user.id),
                 SessionToken.token_type == "reset",
             )
         )
+
+        # Generate 6-digit code and a reset token
+        code = f"{_secrets.randbelow(900000) + 100000}"
+        token = _secrets.token_urlsafe(32)
+        token_hash = _hashlib.sha256(token.encode()).hexdigest()
+        expires = datetime.utcnow() + timedelta(minutes=15)
 
         # Store in session_tokens table
         import uuid as _uuid
@@ -328,17 +357,24 @@ async def forgot_password(body: ForgotPasswordRequest, db: AsyncSession = Depend
         reset_token = token
 
         # Send email (SMTP in production, console in dev)
-        await email_service.send_password_reset_code(
-            to=email, code=code, full_name=user.full_name or "User"
-        )
+        try:
+            email_sent = await email_service.send_password_reset_code(
+                to=email, code=code, full_name=user.full_name or "User"
+            )
+            if not email_sent:
+                logger.warning(f"Password reset email delivery returned False for {email}")
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {email}: {e}")
+            # Still return success — don't leak info, and token is stored for dev mode
 
     # Always return success to prevent email enumeration.
     # In dev mode the reset_token is included for convenience; in production it
     # should ONLY arrive via email.
     from app.core.config import settings as _cfg
-    resp = {"message": "If an account with that email exists, a verification code has been sent."}
+    resp: dict = {"message": "If an account with that email exists, a verification code has been sent."}
     if _cfg.is_development and reset_token:
         resp["reset_token"] = reset_token
+        resp["dev_note"] = "In production this token is only sent via email."
     return resp
 
 
@@ -858,6 +894,15 @@ async def create_project(
     from sqlalchemy import select as sa_select
     import uuid as _uuid
 
+    # Merge phase and agency into processing_config
+    phase = getattr(request, 'phase', '') or ''
+    agency = getattr(request, 'agency', '') or ''
+    merged_config = dict(request.processing_config or {})
+    if phase:
+        merged_config['phase'] = phase
+    if agency:
+        merged_config['agency'] = agency
+
     project = Project(
         id=str(_uuid.uuid4()),
         title=getattr(request, 'name', None) or getattr(request, 'title', 'Untitled'),
@@ -866,7 +911,7 @@ async def create_project(
         status=ProjectStatus.DRAFT,
         created_by=str(current_user.id),
         organization_id=current_user.org_id,  # Multi-tenancy
-        processing_config=request.processing_config or {},
+        processing_config=merged_config,
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )
@@ -893,12 +938,16 @@ async def create_project(
     from app.core.cache import cache
     await cache.delete_pattern("projects:list:*")
 
+    _pc = project.processing_config or {}
     return {
         "id": project.id,
         "title": project.title,
         "description": project.description,
         "status": project.status.value if hasattr(project.status, 'value') else str(project.status),
         "research_intent": project.research_intent,
+        "phase": _pc.get("phase", ""),
+        "agency": _pc.get("agency", ""),
+        "processing_config": _pc,
         "created_by": project.created_by,
         "created_at": project.created_at.isoformat() if project.created_at else None,
         "updated_at": project.updated_at.isoformat() if project.updated_at else None,
@@ -1022,12 +1071,16 @@ async def get_project(
             "follow_up_period": latest.follow_up_period,
         }
 
+    _pc_detail = project.processing_config or {}
     result = {
         "id": project.id,
         "title": project.title,
         "description": project.description,
         "status": project.status.value if hasattr(project.status, 'value') else str(project.status),
         "research_intent": project.research_intent,
+        "phase": _pc_detail.get("phase", ""),
+        "agency": _pc_detail.get("agency", ""),
+        "processing_config": _pc_detail,
         "created_by": project.created_by,
         "created_at": project.created_at.isoformat() if project.created_at else None,
         "updated_at": project.updated_at.isoformat() if project.updated_at else None,
@@ -3925,6 +3978,439 @@ async def validate_causal_spec_endpoint(
     from app.services.causal_inference import validate_causal_specification
     await get_project_with_org_check(project_id, current_user, db)
     return validate_causal_specification(payload)
+
+
+# ── Analysis Configuration (biostatistician-tunable parameters) ──────────
+
+@api_router.get("/projects/{project_id}/study/analysis-config")
+async def get_analysis_config(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return the analysis configuration for this project.
+
+    Every parameter has a default that matches standard practice.
+    A biostatistician can override any value to tune the analysis pipeline:
+    bootstrap iterations, IPTW trim percentile, Cox convergence tolerance,
+    significance alpha, multiplicity method, competing risk settings, etc.
+    """
+    from app.services.statistical_models import AnalysisConfig
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config_data = (project.processing_config or {}).get("analysis_config", {})
+    config = AnalysisConfig.from_dict(config_data) if config_data else AnalysisConfig()
+    return {
+        "analysis_config": config.to_dict(),
+        "description": "All parameters have defaults matching standard biostatistical practice. "
+                       "Override any value to tune the analysis pipeline for your study.",
+    }
+
+@api_router.put("/projects/{project_id}/study/analysis-config")
+async def save_analysis_config(
+    project_id: str,
+    payload: dict = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Save analysis configuration (biostatistician-tunable parameters).
+
+    Accepts a partial dict — only provided keys are overridden,
+    all others keep their defaults.
+    """
+    from sqlalchemy.orm.attributes import flag_modified
+    from app.services.statistical_models import AnalysisConfig
+
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config_dict = dict(project.processing_config or {})
+
+    # Merge: existing config + new overrides
+    existing = config_dict.get("analysis_config", {})
+    existing.update(payload)
+
+    # Validate by constructing — will raise on invalid values
+    try:
+        validated = AnalysisConfig.from_dict(existing)
+    except (TypeError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid analysis config: {e}")
+
+    config_dict["analysis_config"] = validated.to_dict()
+    config_dict["analysis_config_meta"] = {
+        "updated_at": datetime.utcnow().isoformat() + "Z",
+        "updated_by": str(current_user.id),
+    }
+
+    project.processing_config = config_dict
+    flag_modified(project, "processing_config")
+    project.config_version = (project.config_version or 0) + 1
+    project.updated_at = datetime.utcnow()
+    await db.commit()
+
+    return {
+        "analysis_config": validated.to_dict(),
+        "message": "Analysis configuration saved.",
+    }
+
+
+# ── Competing Risks Analysis ─────────────────────────────────────────────
+
+@api_router.post("/projects/{project_id}/study/competing-risks")
+async def run_competing_risks_analysis(
+    project_id: str,
+    payload: dict = Body(default={}),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Run competing risks analysis (Fine-Gray subdistribution hazard model).
+
+    Requires uploaded patient data with an event_type column containing:
+      0 = censored, 1 = primary event, 2+ = competing events.
+
+    Optional payload keys:
+      target_event (int): which event type is the primary (default: 1)
+      event_type_column (str): column name for event type codes
+    """
+    from app.services.statistical_models import StatisticalAnalysisService, AnalysisConfig
+    from sqlalchemy import select as sa_select
+    from app.models import PatientDataset
+    import pandas as pd
+
+    project = await get_project_with_org_check(project_id, current_user, db)
+
+    # Load patient data
+    ds_result = await db.execute(
+        sa_select(PatientDataset).where(
+            PatientDataset.project_id == str(project_id),
+            PatientDataset.status == "active",
+        )
+    )
+    dataset = ds_result.scalar_one_or_none()
+    if not dataset or not dataset.data_content:
+        raise HTTPException(
+            status_code=400,
+            detail="No active patient dataset found. Upload patient data first."
+        )
+
+    df = pd.DataFrame(dataset.data_content)
+    target_event = payload.get("target_event", 1)
+    event_type_col = payload.get("event_type_column")
+
+    # Auto-detect event type column
+    if event_type_col is None:
+        candidates = ["EVENT_TYPE", "EVTYPE", "event_type", "CAUSE", "cause",
+                      "COMPETING", "competing", "EVENTTYPE"]
+        for c in candidates:
+            if c in df.columns:
+                event_type_col = c
+                break
+
+    if event_type_col is None or event_type_col not in df.columns:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot find event_type column. Provide 'event_type_column' in the request body. "
+                   "Column should contain: 0=censored, 1=primary event, 2+=competing events."
+        )
+
+    # Load config
+    config_data = (project.processing_config or {}).get("analysis_config", {})
+    config = AnalysisConfig.from_dict(config_data) if config_data else AnalysisConfig()
+
+    # Detect time and arm columns
+    svc = StatisticalAnalysisService()
+    col_lower = {c.lower(): c for c in df.columns}
+    time_candidates = ["AVAL", "TIME", "time_to_event", "OS_MONTHS", "time", "months", "duration"]
+    arm_candidates = ["ARM", "TRT01P", "ARMCD", "treatment", "arm", "group"]
+
+    time_col = None
+    for c in time_candidates:
+        if c.lower() in col_lower:
+            time_col = col_lower[c.lower()]
+            break
+
+    arm_col = None
+    for c in arm_candidates:
+        if c.lower() in col_lower:
+            arm_col = col_lower[c.lower()]
+            break
+
+    if time_col is None or arm_col is None:
+        raise HTTPException(status_code=400, detail="Cannot detect time or arm columns in patient data.")
+
+    time_arr = pd.to_numeric(df[time_col], errors="coerce").values
+    event_type_arr = pd.to_numeric(df[event_type_col], errors="coerce").values.astype(int)
+
+    # Treatment assignment
+    groups = df[arm_col].unique()
+    CONTROL_KW = {"untreated", "placebo", "control", "standard", "soc", "external", "comparator"}
+    control_label = None
+    for g in groups:
+        if any(kw in str(g).lower() for kw in CONTROL_KW):
+            control_label = str(g)
+            break
+    if control_label is None:
+        control_label = str(sorted(str(g) for g in groups)[0])
+
+    treatment = np.where(df[arm_col].astype(str) == control_label, 0.0, 1.0)
+
+    # Covariates
+    exclude = {time_col.lower(), arm_col.lower(), event_type_col.lower(),
+               "usubjid", "subjid", "studyid"}
+    cov_names = []
+    cov_arrays = []
+    for c in df.columns:
+        if c.lower() in exclude:
+            continue
+        num = pd.to_numeric(df[c], errors="coerce")
+        if num.notna().sum() > len(df) * 0.5:
+            cov_names.append(c)
+            cov_arrays.append(num.fillna(num.median()).values)
+
+    covariates = np.column_stack(cov_arrays) if cov_arrays else None
+
+    # Run Fine-Gray
+    fine_gray = svc.compute_fine_gray(
+        time_arr, event_type_arr, treatment,
+        covariates=covariates,
+        covariate_names=cov_names if cov_names else None,
+        target_event=target_event,
+        config=config,
+    )
+
+    # CIF
+    cif = svc.compute_cumulative_incidence(
+        time_arr, event_type_arr, target_event,
+        groups=treatment.astype(int),
+        group_labels=["Control", "Treatment"],
+        config=config,
+    )
+
+    return {
+        "fine_gray": fine_gray,
+        "cumulative_incidence": cif,
+        "data_source": "uploaded",
+        "event_types_found": sorted(set(event_type_arr.tolist())),
+        "target_event": target_event,
+    }
+
+
+# ── Execution Event Stream — unified analysis audit trail ─────────────────
+
+@api_router.post("/projects/{project_id}/execution-events")
+async def create_execution_event(
+    project_id: str,
+    payload: dict = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Log a single execution event (analysis step, transformation, diagnostic, etc.)."""
+    from app.models import ExecutionEvent, ExecutionEventType, ExecutionEventStatus
+
+    project = await get_project_with_org_check(project_id, current_user, db)
+
+    # Validate enums
+    try:
+        event_type = ExecutionEventType(payload.get("event_type", "model_fit"))
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Invalid event_type. Valid: {[e.value for e in ExecutionEventType]}")
+
+    try:
+        status = ExecutionEventStatus(payload.get("status", "completed"))
+    except ValueError:
+        raise HTTPException(status_code=422, detail=f"Invalid status. Valid: {[e.value for e in ExecutionEventStatus]}")
+
+    event = ExecutionEvent(
+        id=str(uuid.uuid4()),
+        project_id=str(project.id),
+        run_id=payload.get("run_id", str(uuid.uuid4())),
+        event_type=event_type,
+        step_name=payload.get("step_name", "Unknown step"),
+        step_index=payload.get("step_index"),
+        total_steps=payload.get("total_steps"),
+        status=status,
+        summary=payload.get("summary", ""),
+        details=payload.get("details", {}),
+        inputs=payload.get("inputs", []),
+        outputs=payload.get("outputs", []),
+        dag_node_ref=payload.get("dag_node_ref"),
+        duration_ms=payload.get("duration_ms"),
+    )
+
+    db.add(event)
+    await db.commit()
+
+    return {
+        "id": event.id,
+        "run_id": event.run_id,
+        "event_type": event.event_type.value,
+        "step_name": event.step_name,
+        "status": event.status.value,
+        "timestamp": event.timestamp.isoformat() + "Z" if event.timestamp else None,
+    }
+
+
+@api_router.get("/projects/{project_id}/execution-events")
+async def list_execution_events(
+    project_id: str,
+    run_id: str = None,
+    limit: int = 200,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List execution events for a project, optionally filtered by run_id."""
+    from app.models import ExecutionEvent
+    from sqlalchemy import select as sa_select
+
+    await get_project_with_org_check(project_id, current_user, db)
+
+    query = sa_select(ExecutionEvent).where(
+        ExecutionEvent.project_id == str(project_id)
+    ).order_by(ExecutionEvent.timestamp.desc()).limit(limit)
+
+    if run_id:
+        query = query.where(ExecutionEvent.run_id == run_id)
+
+    result = await db.execute(query)
+    events = result.scalars().all()
+
+    return {
+        "events": [
+            {
+                "id": e.id,
+                "run_id": e.run_id,
+                "timestamp": e.timestamp.isoformat() + "Z" if e.timestamp else None,
+                "event_type": e.event_type.value if e.event_type else None,
+                "step_name": e.step_name,
+                "step_index": e.step_index,
+                "total_steps": e.total_steps,
+                "status": e.status.value if e.status else None,
+                "summary": e.summary,
+                "details": e.details or {},
+                "inputs": e.inputs or [],
+                "outputs": e.outputs or [],
+                "dag_node_ref": e.dag_node_ref,
+                "duration_ms": e.duration_ms,
+            }
+            for e in events
+        ],
+        "count": len(events),
+    }
+
+
+@api_router.get("/projects/{project_id}/execution-events/runs")
+async def list_execution_runs(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List unique analysis runs for a project with summary stats."""
+    from app.models import ExecutionEvent
+    from sqlalchemy import select as sa_select, func as sa_func, distinct
+
+    await get_project_with_org_check(project_id, current_user, db)
+
+    # Get all events for the project grouped by run
+    query = sa_select(ExecutionEvent).where(
+        ExecutionEvent.project_id == str(project_id)
+    ).order_by(ExecutionEvent.timestamp.desc())
+
+    result = await db.execute(query)
+    events = result.scalars().all()
+
+    # Group by run_id
+    runs: dict = {}
+    for e in events:
+        rid = e.run_id
+        if rid not in runs:
+            runs[rid] = {
+                "run_id": rid,
+                "started_at": e.timestamp.isoformat() + "Z" if e.timestamp else None,
+                "event_count": 0,
+                "completed": 0,
+                "failed": 0,
+                "warnings": 0,
+                "total_duration_ms": 0,
+                "steps": [],
+            }
+        run = runs[rid]
+        run["event_count"] += 1
+        if e.status and e.status.value == "completed":
+            run["completed"] += 1
+        elif e.status and e.status.value == "failed":
+            run["failed"] += 1
+        elif e.status and e.status.value == "warning":
+            run["warnings"] += 1
+        if e.duration_ms:
+            run["total_duration_ms"] += e.duration_ms
+        run["steps"].append(e.step_name)
+        # Track earliest timestamp as start
+        if e.timestamp and (not run["started_at"] or e.timestamp.isoformat() + "Z" < run["started_at"]):
+            run["started_at"] = e.timestamp.isoformat() + "Z"
+
+    return {
+        "runs": list(runs.values()),
+        "count": len(runs),
+    }
+
+
+@api_router.post("/projects/{project_id}/execution-events/batch")
+async def create_execution_events_batch(
+    project_id: str,
+    payload: dict = Body(...),
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Log multiple execution events in a single request (for pipeline completion)."""
+    from app.models import ExecutionEvent, ExecutionEventType, ExecutionEventStatus
+
+    project = await get_project_with_org_check(project_id, current_user, db)
+
+    events_data = payload.get("events", [])
+    if not events_data:
+        raise HTTPException(status_code=422, detail="No events provided")
+
+    run_id = payload.get("run_id", str(uuid.uuid4()))
+    created = []
+
+    for i, ev in enumerate(events_data):
+        try:
+            event_type = ExecutionEventType(ev.get("event_type", "model_fit"))
+        except ValueError:
+            event_type = ExecutionEventType.MODEL_FIT
+
+        try:
+            status = ExecutionEventStatus(ev.get("status", "completed"))
+        except ValueError:
+            status = ExecutionEventStatus.COMPLETED
+
+        event = ExecutionEvent(
+            id=str(uuid.uuid4()),
+            project_id=str(project.id),
+            run_id=run_id,
+            event_type=event_type,
+            step_name=ev.get("step_name", f"Step {i + 1}"),
+            step_index=ev.get("step_index", i),
+            total_steps=ev.get("total_steps", len(events_data)),
+            status=status,
+            summary=ev.get("summary", ""),
+            details=ev.get("details", {}),
+            inputs=ev.get("inputs", []),
+            outputs=ev.get("outputs", []),
+            dag_node_ref=ev.get("dag_node_ref"),
+            duration_ms=ev.get("duration_ms"),
+        )
+        db.add(event)
+        created.append({
+            "id": event.id,
+            "step_name": event.step_name,
+            "status": status.value,
+        })
+
+    await db.commit()
+
+    return {
+        "run_id": run_id,
+        "events_created": len(created),
+        "events": created,
+    }
 
 
 # ── 4. GET covariates ────────────────────────────────────────────────────────

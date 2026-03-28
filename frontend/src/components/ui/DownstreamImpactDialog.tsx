@@ -183,9 +183,9 @@ export default function DownstreamImpactDialog({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Dialog */}
-      <div className="relative bg-[#111112] border border-white/10 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div className="relative bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-amber-900/40 flex items-center justify-center">
               <Zap className="h-4 w-4 text-amber-400" />
@@ -221,7 +221,7 @@ export default function DownstreamImpactDialog({
                 Direct dependencies ({directImpacts.length})
               </p>
               {directImpacts.map((d) => (
-                <div key={d.step} className="rounded-md border border-white/8 bg-white/3 p-3">
+                <div key={d.step} className="rounded-md border border-gray-200 bg-gray-50 p-3">
                   <div className="flex items-center gap-2 mb-1.5">
                     <span className="text-[9px] font-black text-amber-500 tabular-nums w-4 text-center">
                       {String(STEP_NUMBERS[d.step] || '?').padStart(2, '0')}
@@ -272,7 +272,7 @@ export default function DownstreamImpactDialog({
         </div>
 
         {/* Actions */}
-        <div className="px-5 py-4 border-t border-white/8 flex items-center justify-between">
+        <div className="px-5 py-4 border-t border-gray-200 flex items-center justify-between">
           <p className="text-[10px] text-gray-600 max-w-[200px]">
             Affected steps will show a staleness warning until reviewed.
           </p>
@@ -280,7 +280,7 @@ export default function DownstreamImpactDialog({
             <button
               onClick={onClose}
               className="px-3 py-2 rounded-md text-xs font-medium text-gray-400 hover:text-white
-                         border border-white/10 hover:border-white/20 transition-colors"
+                         border border-gray-200 hover:border-white/20 transition-colors"
             >
               Cancel
             </button>

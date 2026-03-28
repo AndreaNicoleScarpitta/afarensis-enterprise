@@ -9,12 +9,12 @@ export type AnchorCategory =
   | 'general'       // any step
 
 export const ANCHOR_CATEGORIES: { id: AnchorCategory; label: string; color: string }[] = [
-  { id: 'estimand',    label: 'Estimand / Endpoint',  color: 'text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-700/30' },
-  { id: 'covariate',   label: 'Covariate / DAG',      color: 'text-violet-600 bg-violet-50 border-violet-200 dark:bg-violet-900/20 dark:text-violet-400 dark:border-violet-700/30' },
-  { id: 'effect',      label: 'Effect Estimate',       color: 'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-700/30' },
-  { id: 'bias',        label: 'Bias / Sensitivity',    color: 'text-red-600 bg-red-50 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-700/30' },
-  { id: 'methodology', label: 'Methodology',           color: 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-700/30' },
-  { id: 'general',     label: 'General',               color: 'text-gray-600 bg-gray-50 border-gray-200 dark:bg-white/5 dark:text-gray-400 dark:border-white/10' },
+  { id: 'estimand',    label: 'Estimand / Endpoint',  color: 'text-blue-600 bg-blue-50 border-blue-200' },
+  { id: 'covariate',   label: 'Covariate / DAG',      color: 'text-violet-600 bg-violet-50 border-violet-200' },
+  { id: 'effect',      label: 'Effect Estimate',       color: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+  { id: 'bias',        label: 'Bias / Sensitivity',    color: 'text-red-600 bg-red-50 border-red-200' },
+  { id: 'methodology', label: 'Methodology',           color: 'text-amber-600 bg-amber-50 border-amber-200' },
+  { id: 'general',     label: 'General',               color: 'text-gray-600 bg-gray-50 border-gray-200' },
 ]
 
 export interface SavedAnchor {
