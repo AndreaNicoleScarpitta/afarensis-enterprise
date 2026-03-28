@@ -813,50 +813,52 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left trust panel */}
-      <div className="hidden lg:flex lg:w-[520px] xl:w-[580px] shrink-0 flex-col justify-between p-12 bg-gray-900 border-r border-gray-800">
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Left brand panel */}
+      <div className="hidden lg:flex lg:w-[520px] xl:w-[580px] shrink-0 flex-col justify-between p-12 bg-white border-r border-gray-200">
         <div className="flex items-center gap-3">
-          <AfarensisLogo size={40} color="white" />
+          <AfarensisLogo size={40} color="#1A1A1B" />
           <div>
-            <h1 className="text-white font-semibold text-base tracking-tight leading-tight">Afarensis</h1>
+            <h1 className="text-gray-900 font-semibold text-base tracking-tight leading-tight">Afarensis</h1>
             <p className="text-gray-500 text-xs font-medium">by Synthetic Ascension</p>
           </div>
         </div>
         <div className="space-y-8">
           <div className="space-y-4">
             <div>
-              <p className="text-gray-500 text-[13px] font-medium uppercase tracking-widest mb-2">Platform</p>
-              <h2 className="text-white text-xl font-semibold leading-tight">Regulatory evidence review platform</h2>
+              <p className="text-[#2563EB] text-[13px] font-semibold uppercase tracking-widest mb-2">Platform</p>
+              <h2 className="text-gray-900 text-2xl font-bold leading-tight">Regulatory evidence<br />review platform</h2>
             </div>
-            <p className="text-gray-500 text-sm leading-relaxed">
+            <p className="text-gray-500 text-sm leading-relaxed max-w-sm">
               Version-controlled evidence evaluation, reproducible analysis artifacts, and attributed review workflows for teams operating under high scrutiny.
             </p>
           </div>
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             {trustBullets.map((bullet, i) => (
               <div key={i} className="flex items-start gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#2563EB] shrink-0 mt-1.5" />
-                <p className="text-gray-600 text-sm">{bullet}</p>
+                <div className="w-5 h-5 rounded-md bg-blue-50 flex items-center justify-center shrink-0 mt-0.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-[#2563EB]" />
+                </div>
+                <p className="text-gray-700 text-sm">{bullet}</p>
               </div>
             ))}
           </div>
         </div>
-        <div className="border-t border-gray-800 pt-6">
-          <p className="text-gray-600 text-[11px] font-medium">
+        <div className="border-t border-gray-200 pt-6">
+          <p className="text-gray-400 text-[11px] font-medium">
             Authenticated users only. Validation documents and audit trail available upon request.
           </p>
         </div>
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center bg-white px-6 py-12">
-        <div className="w-full max-w-[420px]">
-          <div className="flex lg:hidden items-center gap-3 mb-10">
-            <AfarensisLogo size={36} color="#1f2937" />
+      <div className="flex-1 flex items-center justify-center bg-gray-50 px-6 py-12">
+        <div className="w-full max-w-[420px] bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          <div className="flex items-center gap-3 mb-8">
+            <AfarensisLogo size={36} color="#1A1A1B" />
             <div>
               <h1 className="text-gray-900 font-semibold text-base leading-tight">Afarensis</h1>
-              <p className="text-gray-500 text-xs font-medium">by Synthetic Ascension</p>
+              <p className="text-gray-500 text-xs font-medium lg:hidden">by Synthetic Ascension</p>
             </div>
           </div>
           {renderForm()}

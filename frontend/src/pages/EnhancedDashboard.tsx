@@ -20,11 +20,6 @@ import {
   Loader2,
   AlertCircle,
   X,
-  BookOpen,
-  FlaskConical,
-  Globe,
-  GraduationCap,
-  Brain,
 } from 'lucide-react'
 import { apiClient } from '../services/apiClient'
 import { z } from 'zod'
@@ -57,8 +52,8 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
 
 const STATUS_COLORS: Record<string, string> = {
   draft: 'bg-blue-100 text-blue-800',
-  in_review: 'bg-amber-100 text-amber-800',
-  review: 'bg-amber-100 text-amber-800',
+  in_review: 'bg-orange-100 text-orange-700',
+  review: 'bg-orange-100 text-orange-700',
   completed: 'bg-green-100 text-green-800',
   archived: 'bg-gray-100 text-gray-600',
   processing: 'bg-purple-100 text-purple-800',
@@ -73,13 +68,6 @@ function formatDate(iso: string): string {
 }
 
 
-const EVIDENCE_SOURCES = [
-  { label: 'PubMed', icon: BookOpen, color: 'text-blue-500' },
-  { label: 'ClinicalTrials', icon: FlaskConical, color: 'text-green-500' },
-  { label: 'OpenAlex', icon: Globe, color: 'text-orange-500' },
-  { label: 'Semantic Scholar', icon: GraduationCap, color: 'text-purple-500' },
-  { label: 'BioGPT', icon: Brain, color: 'text-pink-500' },
-];
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
@@ -278,16 +266,6 @@ export default function EnhancedDashboard() {
                   <Calendar className="h-3.5 w-3.5" />
                   {formatDate(project.created_at)}
                 </span>
-              </div>
-
-              {/* Evidence source indicators */}
-              <div className="flex items-center gap-1.5 mb-4">
-                {EVIDENCE_SOURCES.map(src => (
-                  <span key={src.label} className={`inline-flex items-center ${src.color}`} title={src.label}>
-                    <src.icon className="h-3 w-3" />
-                  </span>
-                ))}
-                <span className="text-[10px] text-gray-500 ml-1">{(project as any).source_count ?? 0} sources</span>
               </div>
 
               {/* Actions */}

@@ -90,7 +90,7 @@ interface SidebarProps {
   onLogout?: () => void
   studies?: Study[]
   selectedStudy: Study | null
-  onStudyChange: (s: Study) => void
+  onStudyChange: (s: Study | null) => void
   protocolLocked: boolean
   onLockProtocol: () => void
   reviewerMode: boolean
@@ -215,7 +215,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <span className="text-gray-700">·</span>
                 {protocolLocked
                   ? <span className="text-[10px] text-emerald-400 flex items-center gap-1"><Lock className="h-2.5 w-2.5" /> Locked</span>
-                  : <span className="text-[10px] text-amber-400 flex items-center gap-1"><Unlock className="h-2.5 w-2.5" /> Unlocked</span>
+                  : <span className="text-[10px] text-gray-500 flex items-center gap-1"><Unlock className="h-2.5 w-2.5" /> Unlocked</span>
                 }
               </div>
             </>
@@ -232,7 +232,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Dashboard link */}
           <Link
             to="/dashboard"
-            onClick={() => { if (window.innerWidth < 1024) onToggle() }}
+            onClick={() => { onStudyChange(null); if (window.innerWidth < 1024) onToggle() }}
             className={cn(
               'flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2 text-left transition-all duration-150 mb-3',
               location.pathname === '/dashboard'
@@ -350,7 +350,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             ) : (
               <button
                 onClick={onLockProtocol}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-amber-900/20 hover:bg-amber-900/30 border border-amber-700/40 hover:border-amber-600/60 rounded-lg transition-all text-amber-400 hover:text-amber-300"
+                className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-blue-50 hover:bg-blue-100 border border-blue-200 hover:border-blue-300 rounded-lg transition-all text-blue-700 hover:text-blue-800"
               >
                 <Lock className="h-3.5 w-3.5" />
                 <span className="text-xs font-bold">Lock Protocol</span>
