@@ -149,13 +149,13 @@ export default function EnhancedDashboard() {
 
   /* ---------- Delete project ---------- */
 
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   const handleDelete = async (id: string) => {
     await apiClient.request(`/projects/${id}`, z.any(), {
       method: 'DELETE',
     })
-    setDeleteConfirmId(null)
+    setDeleteTarget(null)
     void fetchProjects()
   }
 
@@ -313,29 +313,12 @@ export default function EnhancedDashboard() {
                     >
                       <ArchiveRestore className="h-4 w-4" /> Unarchive
                     </button>
-                    {deleteConfirmId === project.id ? (
-                      <div className="inline-flex items-center gap-1">
-                        <button
-                          onClick={() => void handleDelete(project.id)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-red-600 text-white px-3 py-1.5 text-sm font-medium hover:bg-red-700 transition"
-                        >
-                          Confirm
-                        </button>
-                        <button
-                          onClick={() => setDeleteConfirmId(null)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-gray-100 text-gray-600 px-2 py-1.5 text-sm font-medium hover:bg-gray-200 transition"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setDeleteConfirmId(project.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-red-50 text-red-600 px-3 py-1.5 text-sm font-medium hover:bg-red-100 transition"
-                      >
-                        <Trash2 className="h-4 w-4" /> Delete
-                      </button>
-                    )}
+                    <button
+                      onClick={() => setDeleteTarget({ id: project.id, name: project.title })}
+                      className="inline-flex items-center gap-1 rounded-lg bg-red-50 text-red-600 px-3 py-1.5 text-sm font-medium hover:bg-red-100 transition"
+                    >
+                      <Trash2 className="h-4 w-4" /> Delete
+                    </button>
                   </>
                 )}
               </div>
@@ -350,6 +333,43 @@ export default function EnhancedDashboard() {
           onClose={() => setModalOpen(false)}
           onCreate={handleCreate}
         />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-red-100">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete Project</h3>
+            </div>
+            <p className="text-sm text-gray-600 mb-2">
+              Are you sure you want to permanently delete this project?
+            </p>
+            <p className="text-sm font-medium text-gray-900 bg-gray-50 rounded-lg px-3 py-2 mb-4">
+              {deleteTarget.name}
+            </p>
+            <p className="text-xs text-red-600 mb-6">
+              This action cannot be undone. All study data, evidence records, and audit logs associated with this project will be permanently removed.
+            </p>
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleDelete(deleteTarget.id)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition"
+              >
+                Delete Project
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
