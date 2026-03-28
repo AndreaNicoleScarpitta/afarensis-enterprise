@@ -155,7 +155,7 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
     if (result?.funnel) setFunnel(result.funnel)
   }
 
-  const formatN = (n: number) => n.toLocaleString()
+  const formatN = (n: number | undefined | null) => n != null ? n.toLocaleString() : '—'
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
