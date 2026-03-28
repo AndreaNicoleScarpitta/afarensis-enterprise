@@ -40,16 +40,17 @@ const EXPORT_FORMATS = [
 ]
 
 // SCHEMA REFERENCE — not shown to users
-// const READINESS_CHECKS = [
-//   { check: 'Protocol pre-specified and locked',        pass: true },
-//   { check: 'Estimand formally defined (ICH E9(R1))',   pass: true },
-//   { check: 'All 10 workflow steps completed',          pass: false, note: 'Steps 10-11 pending' },
-//   { check: 'Sensitivity analyses complete',            pass: false, note: '1 pending (EHR subpopulation)' },
-//   { check: 'Bias quantification documented (E-value)', pass: true },
-//   { check: 'Reproducibility manifest signed',          pass: false, note: 'EHR validation pending' },
-//   { check: 'Audit trail complete and locked',          pass: true },
-//   { check: 'No open critical data quality flags',      pass: false, note: 'Flatiron lab completeness 69%' },
-// ]
+const DEFAULT_READINESS_CHECKS = [
+  { check: 'Protocol pre-specified and locked',        pass: false },
+  { check: 'Estimand formally defined (ICH E9(R1))',   pass: false },
+  { check: 'All 10 workflow steps completed',          pass: false, note: 'Pending' },
+  { check: 'Sensitivity analyses complete',            pass: false, note: 'Pending' },
+  { check: 'Bias quantification documented (E-value)', pass: false },
+  { check: 'Reproducibility manifest signed',          pass: false, note: 'Pending' },
+  { check: 'Audit trail complete and locked',          pass: false },
+  { check: 'No open critical data quality flags',      pass: false },
+  { check: 'Protocol lock confirmed',                  pass: false },
+]
 
 const statusColor: Record<string, string> = {
   complete: 'text-emerald-400 bg-emerald-900/20 border-emerald-700/30',
@@ -63,7 +64,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
   const staleness = useStalenessCheck(selectedStudy?.id, 'regulatory')
 
   const [sarSections, setSarSections] = useState<any[]>([])
-  const [readinessChecks, setReadinessChecks] = useState<any[]>([])
+  const [readinessChecks, setReadinessChecks] = useState<any[]>(DEFAULT_READINESS_CHECKS)
 
   // Downstream impacts — empty for terminal step, but wired for future-proofing
   const { direct: directImpacts, transitive: transitiveImpacts } = computeDownstreamImpacts('regulatory')
@@ -349,7 +350,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
                           }}
                           className="rounded border-gray-300 text-[#2563EB] focus:ring-[#2563EB] h-4 w-4"
                         />
-                        <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{item.check}</span>
+                        <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors">{item.check || item.label || item.name || `Check ${i + 1}`}</span>
                       </label>
                     )
                   })}
@@ -388,7 +389,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
 
         {/* Readiness checklist */}
         <section>
-          <h2 className="text-sm font-bold text-white mb-3">Submission Readiness Checklist</h2>
+          <h2 className="text-sm font-bold text-gray-900 mb-3">Submission Readiness Checklist</h2>
           {safeReadinessChecks.length === 0 && !loading && (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
               <Shield className="h-10 w-10 text-gray-600 mb-3" />
@@ -404,7 +405,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
                   : <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
                 }
                 <div>
-                  <p className={`text-sm font-medium ${item.pass ? 'text-white' : 'text-gray-600'}`}>{item.check}</p>
+                  <p className={`text-sm font-medium ${item.pass ? 'text-gray-900' : 'text-gray-600'}`}>{item.check || item.label || item.name || `Check ${i + 1}`}</p>
                   {!item.pass && item.note && (
                     <p className="text-xs text-amber-500/80 mt-0.5">{item.note}</p>
                   )}
