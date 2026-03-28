@@ -8623,3 +8623,22 @@ async def get_assumption_traceability(
     project = await get_project_with_org_check(project_id, current_user, db)
     config = dict(project.processing_config or {})
     return config.get("assumption_traceability", {})
+
+
+# ── 26. GET regulatory-confidence ──────────────────────────────────────────
+
+@api_router.get("/projects/{project_id}/study/regulatory-confidence")
+async def get_regulatory_confidence(
+    project_id: str,
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Run the Regulatory Confidence Engine — returns per-step attack signals and overall score."""
+    project = await get_project_with_org_check(project_id, current_user, db)
+    config = dict(project.processing_config or {})
+
+    from app.services.regulatory_confidence import RegulatoryConfidenceEngine
+    engine = RegulatoryConfidenceEngine(config)
+    report = engine.run()
+
+    return report

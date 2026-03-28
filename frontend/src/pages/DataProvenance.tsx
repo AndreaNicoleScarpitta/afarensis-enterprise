@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import AttackSignalBanner from '../components/AttackSignalBanner'
 import {
   Database, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Clock,
   Loader2, Upload, FileUp, XCircle, AlertTriangle, Activity, Shield, FileText, Trash2,
@@ -619,6 +620,8 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
           </div>
         </div>
       </div>
+
+      <AttackSignalBanner step="data_provenance" />
 
       {/* ── Loading / Error states ─────────────────────────────────────────── */}
       {loading && (

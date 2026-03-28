@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import AttackSignalBanner from '../components/AttackSignalBanner'
 import { Users2, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, X, Loader2, AlertCircle, Users } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
@@ -182,6 +183,8 @@ export default function CohortConstruction({ selectedStudy, protocolLocked, revi
           </div>
         </div>
       </div>
+
+      <AttackSignalBanner step="cohort" />
 
       {/* Staleness detection banner */}
       <div className="px-8 pt-4">

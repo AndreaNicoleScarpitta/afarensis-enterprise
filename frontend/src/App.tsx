@@ -29,6 +29,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { LiteratureProvider } from './context/LiteratureContext'
 import { LineageProvider } from './context/LineageContext'
 import { ToastProvider } from './context/ToastContext'
+import { RegulatoryPressureProvider } from './context/RegulatoryPressureContext'
 
 // Layout
 import AfarensisLogo from '@/components/ui/AfarensisLogo'
@@ -1145,6 +1146,7 @@ function App() {
     <ThemeProvider>
     <ToastProvider>
     <LiteratureProvider projectId={selectedStudy?.id ?? '__none__'}>
+    <RegulatoryPressureProvider projectId={selectedStudy?.id}>
     <LineageProvider>
       <div className="min-h-screen bg-white">
         {/* Session timeout warning modal */}
@@ -1356,6 +1358,7 @@ function App() {
         </div>
       </div>
     </LineageProvider>
+    </RegulatoryPressureProvider>
     </LiteratureProvider>
     </ToastProvider>
     </ThemeProvider>

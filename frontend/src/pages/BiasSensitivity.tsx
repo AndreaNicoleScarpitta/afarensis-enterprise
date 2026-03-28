@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import AttackSignalBanner from '../components/AttackSignalBanner'
 import { ShieldAlert, Lock, Eye, ChevronRight, ChevronLeft, AlertCircle, CheckCircle2, Info, BarChart3, Layers, Activity, Target, Loader2, FileText, Shield } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
@@ -238,6 +239,8 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
           </div>
         </div>
       </div>
+
+      <AttackSignalBanner step="bias_sensitivity" />
 
       <StalenessBanner
         staleUpstreams={staleness.staleUpstreams}

@@ -5,8 +5,9 @@ import {
   CheckCircle2, Circle, FlaskConical, GitBranch, Database,
   Users2, BarChart2, TrendingUp, ShieldAlert, Archive,
   ClipboardList, FileOutput, Eye, Unlock, BookOpen,
-  LayoutDashboard, Swords, Link2,
+  LayoutDashboard, Swords, Link2, Zap,
 } from 'lucide-react'
+import { useRegulatoryPressure } from '@/context/RegulatoryPressureContext'
 import AfarensisLogo from '@/components/ui/AfarensisLogo'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { cn } from '@/lib/utils'
@@ -122,10 +123,27 @@ const Sidebar: React.FC<SidebarProps> = ({
   const displayName = currentUser?.fullName || currentUser?.full_name || currentUser?.name || 'User'
   const initials = displayName.split(' ').filter(Boolean).map((n: string) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'
 
+  const { pressureMode, togglePressureMode, stepRisk, confidenceScore, verdict } = useRegulatoryPressure()
+
+  // Map step numbers to the keys used by the confidence engine
+  const STEP_RISK_MAP: Record<number, string> = {
+    3: 'data_provenance', 4: 'cohort', 5: 'comparability',
+    6: 'effect_estimation', 7: 'bias_sensitivity',
+  }
+
   const StatusDot = ({ num }: { num: number }) => {
     const sectionKey = STEP_SECTION_MAP[num]
     const isStale = sectionKey && staleSteps?.has(sectionKey)
     if (isStale) return <div className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-amber-500/30 animate-pulse shrink-0" title="Upstream data changed" />
+
+    // Pressure mode risk overlay for steps 3-7
+    if (pressureMode) {
+      const riskKey = STEP_RISK_MAP[num]
+      const risk = riskKey ? stepRisk[riskKey] : undefined
+      if (risk === 'critical') return <div className="w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-red-500/30 animate-pulse shrink-0" title="Critical attack signals" />
+      if (risk === 'warning') return <div className="w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-amber-500/30 shrink-0" title="Warning signals" />
+    }
+
     const s = stepStatus(num, selectedStudy?.activeStep ?? 1, protocolLocked)
     if (s === 'locked' || s === 'complete') return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
     if (s === 'active') return <div className="w-2.5 h-2.5 rounded-full bg-[#2563EB] ring-2 ring-[#2563EB]/30 shrink-0" />
@@ -359,19 +377,48 @@ const Sidebar: React.FC<SidebarProps> = ({
               </button>
             )}
 
-            {/* FDA Reviewer mode */}
-            <button
-              onClick={onToggleReviewer}
-              className={cn(
-                'w-full mt-2 flex items-center justify-center gap-2 px-3 py-2 rounded-lg transition-all text-xs font-medium border',
-                reviewerMode
-                  ? 'bg-[#2563EB]/20 border-[#2563EB]/40 text-[#2563EB]'
-                  : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-600 hover:bg-gray-100',
-              )}
-            >
-              <Eye className="h-3.5 w-3.5" />
-              {reviewerMode ? 'FDA Reviewer Mode: ON' : 'View as FDA Reviewer'}
-            </button>
+            {/* Mode toggles — side by side */}
+            <div className="flex gap-1.5 mt-2">
+              <button
+                onClick={onToggleReviewer}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg transition-all text-[10px] font-medium border',
+                  reviewerMode
+                    ? 'bg-[#2563EB]/20 border-[#2563EB]/40 text-[#2563EB]'
+                    : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-600 hover:bg-gray-100',
+                )}
+                title={reviewerMode ? 'FDA Reviewer Mode: ON' : 'View as FDA Reviewer'}
+              >
+                <Eye className="h-3 w-3" />
+                {reviewerMode ? 'Reviewer ON' : 'FDA Reviewer'}
+              </button>
+
+              <button
+                onClick={togglePressureMode}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg transition-all text-[10px] font-medium border',
+                  pressureMode
+                    ? 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100'
+                    : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-600 hover:bg-gray-100',
+                )}
+                title="Toggle Regulatory Pressure Mode"
+              >
+                <Zap className={cn('h-3 w-3', pressureMode && 'text-red-500')} />
+                {pressureMode ? (
+                  <span className="flex items-center gap-1">
+                    Pressure
+                    <span className={cn(
+                      'text-[8px] font-black px-1 py-0.5 rounded-full',
+                      verdict === 'HIGH_CONFIDENCE' ? 'bg-emerald-100 text-emerald-700' :
+                      verdict === 'MODERATE_CONFIDENCE' ? 'bg-amber-100 text-amber-700' :
+                      'bg-red-100 text-red-700',
+                    )}>
+                      {confidenceScore}
+                    </span>
+                  </span>
+                ) : 'Pressure'}
+              </button>
+            </div>
           </div>
         )}
 

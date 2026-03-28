@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import AttackSignalBanner from '../components/AttackSignalBanner'
 import { TrendingUp, Lock, Eye, ChevronRight, ChevronLeft, CheckCircle2, AlertCircle, Layers, ChevronDown, ChevronUp, BarChart3 } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
@@ -265,6 +266,8 @@ export default function EffectEstimation({ selectedStudy, protocolLocked, review
           </div>
         </div>
       </div>
+
+      <AttackSignalBanner step="effect_estimation" />
 
       <StalenessBanner
         staleUpstreams={staleness.staleUpstreams}
