@@ -102,6 +102,17 @@ export default function LandingPage() {
     keywords: 'external control arm, externally controlled trial, rare disease clinical trials, regulatory validation, FDA submission, PICO validation, clinical evidence infrastructure, synthetic control arm, natural history comparator, quantitative bias analysis, ECA validation, comparability assessment, orphan drug development, accelerated approval, single-arm trial design, real-world evidence, biostatistics infrastructure',
   });
 
+  // GA4 page view tracking
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', 'page_view', {
+        page_title: 'Landing Page',
+        page_location: window.location.href,
+        page_path: '/',
+      });
+    }
+  }, []);
+
   // Auto-open waitlist modal when navigating to /waitlist
   useEffect(() => {
     if (location.pathname === '/waitlist') {
@@ -171,7 +182,16 @@ export default function LandingPage() {
             </nav>
           </div>
           <button
-            onClick={() => setShowWaitlist(true)}
+            onClick={() => {
+              if ((window as any).gtag) {
+                (window as any).gtag('event', 'cta_click', {
+                  event_category: 'engagement',
+                  event_label: 'waitlist_header',
+                  page: '/',
+                });
+              }
+              setShowWaitlist(true);
+            }}
             style={{
               padding: '10px 24px', background: designSystem.colors.primary,
               color: '#fff', border: 'none', borderRadius: '8px',
@@ -224,7 +244,16 @@ export default function LandingPage() {
             </p>
             <div className="landing-hero-buttons" style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
               <button
-                onClick={() => setShowSampleOutput(true)}
+                onClick={() => {
+                  if ((window as any).gtag) {
+                    (window as any).gtag('event', 'cta_click', {
+                      event_category: 'engagement',
+                      event_label: 'sample_report_hero',
+                      page: '/',
+                    });
+                  }
+                  setShowSampleOutput(true);
+                }}
                 style={{
                   padding: '14px 32px', background: designSystem.colors.primary,
                   color: '#fff', border: 'none', borderRadius: '8px',
@@ -576,7 +605,16 @@ export default function LandingPage() {
               We&apos;ll show you exactly where the validation gaps are.
             </p>
             <button
-              onClick={() => setShowContact(true)}
+              onClick={() => {
+                if ((window as any).gtag) {
+                  (window as any).gtag('event', 'cta_click', {
+                    event_category: 'engagement',
+                    event_label: 'contact_us_main',
+                    page: '/',
+                  });
+                }
+                setShowContact(true);
+              }}
               style={{
                 padding: '14px 32px', background: designSystem.colors.primary,
                 color: '#fff', border: 'none', borderRadius: '8px',

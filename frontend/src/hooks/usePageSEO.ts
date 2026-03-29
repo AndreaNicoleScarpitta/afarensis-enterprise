@@ -67,6 +67,15 @@ export function usePageSEO(config: PageSEOConfig) {
     // Canonical
     setCanonical(`${BASE_URL}${config.canonicalPath}`);
 
+    // GA4 SPA page view tracking — fires on every route change
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('config', 'G-0B57GDPDDK', {
+        page_title: `${config.title} | ${SITE_NAME}`,
+        page_path: config.canonicalPath,
+        page_location: `${BASE_URL}${config.canonicalPath}`,
+      });
+    }
+
     return () => {
       document.title = prevTitle || 'SA Validate \u2014 Claim Validation Workspace';
     };

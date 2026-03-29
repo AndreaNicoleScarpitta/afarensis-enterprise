@@ -1,7 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ContactModal } from '../../components/public/ContactModal';
 import { usePageSEO } from '../../hooks/usePageSEO';
+
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+  }
+}
 
 const designSystem = {
   colors: {
@@ -621,7 +627,29 @@ export function HowItWorksPage({ onOpenWaitlist }: HowItWorksPageProps) {
     ogDescription: 'From raw comparator data to regulatory-ready evidence package — see the 7-step validation pipeline.',
   });
 
+  // GA4 page view + engagement tracking
+  useEffect(() => {
+    if (window.gtag) {
+      window.gtag('event', 'page_view', {
+        page_title: 'How It Works',
+        page_location: window.location.href,
+        page_path: '/how-it-works',
+      });
+      window.gtag('event', 'view_how_it_works', {
+        event_category: 'engagement',
+        event_label: 'how_it_works_page',
+      });
+    }
+  }, []);
+
   const handleOpenWaitlist = () => {
+    if (window.gtag) {
+      window.gtag('event', 'cta_click', {
+        event_category: 'engagement',
+        event_label: 'waitlist_from_how_it_works',
+        page: '/how-it-works',
+      });
+    }
     if (onOpenWaitlist) {
       onOpenWaitlist();
     } else {
