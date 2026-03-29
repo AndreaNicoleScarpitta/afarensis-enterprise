@@ -78,6 +78,10 @@ class LLMServiceIntegration:
             except Exception as e:
                 logger.warning(f"Gemini client setup failed: {e}")
 
+    def _has_any_provider(self) -> bool:
+        """Return True if at least one LLM provider is configured."""
+        return bool(self.claude_client or self.openai_client or self.gemini_client)
+
     async def call_claude(
         self,
         prompt: str,

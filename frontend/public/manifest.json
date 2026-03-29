@@ -1,0 +1,37 @@
+{
+  "name": "Synthetic Ascension — Claim Validation",
+  "short_name": "SA Validate",
+  "description": "Evidence-based clinical claim validation workspace powered by independent literature sources.",
+  "start_url": "/demo-experience",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#080d18",
+  "theme_color": "#080d18",
+  "icons": [
+    {
+      "src": "/brand/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["medical", "productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "New Validation",
+      "short_name": "Validate",
+      "description": "Start a new claim validation session",
+      "url": "/demo-experience",
+      "icons": [{ "src": "/brand/favicon.svg", "sizes": "any" }]
+    }
+  ]
+}

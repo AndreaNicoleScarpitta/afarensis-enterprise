@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /memo
+Allow: /privacy
+Allow: /terms
+
+Disallow: /demo-experience
+Disallow: /api/
+Disallow: /waitlist
+
+Sitemap: https://syntheticascendancy.tech/sitemap.xml

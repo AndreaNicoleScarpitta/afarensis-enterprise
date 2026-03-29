@@ -62,6 +62,10 @@ import TermsOfUse from './pages/TermsOfUse'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import AIUsePolicy from './pages/AIUsePolicy'
 
+// Public-facing pages (pre-auth)
+import LandingPage from './pages/public/LandingPage'
+import PublicMemoPage from './pages/public/MemoPage'
+
 // Dashboard
 import EnhancedDashboard from './pages/EnhancedDashboard'
 
@@ -1126,6 +1130,46 @@ function App() {
     return <>{children}</>
   }
 
+  // ── HOSTNAME-BASED ROUTING ───────────────────────────────────────────
+  // Root domain (syntheticascendancy.tech) → public marketing site only.
+  // App subdomain (app.syntheticascendancy.tech) → full authenticated app.
+  // Localhost always gets full app access for development.
+  const hostname = window.location.hostname
+  const isAppSubdomain = hostname.startsWith('app.') || hostname === 'localhost' || hostname === '127.0.0.1'
+  const isMarketingSite = !isAppSubdomain
+
+  // ── PUBLIC ROUTES (pre-auth, no login required) ──────────────────────
+  // On the marketing domain: ALL routes show public pages (landing/memo/waitlist).
+  // On the app domain: only specific public paths get public pages.
+  const PUBLIC_PATHS = ['/', '/memo', '/waitlist']
+  const isPublicRoute = PUBLIC_PATHS.includes(location.pathname)
+
+  if (isMarketingSite) {
+    // Marketing domain: ONLY public pages, no app access at all.
+    // /privacy and /terms still serve their legal pages (handled by Routes below if needed).
+    if (location.pathname === '/memo') {
+      return <PublicMemoPage />
+    }
+    if (location.pathname === '/privacy') {
+      // Fall through to the authenticated app's Routes for /privacy (it exists there)
+      // But since auth will block it, render landing page with a redirect note.
+      // Actually, privacy/terms are legal pages that should be public. Let them through.
+    } else if (location.pathname === '/terms') {
+      // Same — let it through to the existing TermsOfUse page below.
+    } else {
+      // Everything else on the marketing domain → landing page
+      return <LandingPage />
+    }
+  }
+
+  if (isPublicRoute && isAppSubdomain) {
+    // On the app subdomain, specific public paths still show public pages
+    if (location.pathname === '/memo') {
+      return <PublicMemoPage />
+    }
+    return <LandingPage />
+  }
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -1149,7 +1193,12 @@ function App() {
     return <VerifyEmailPage token={token} email={verifyEmail} />
   }
 
+  // On the marketing domain, unauthenticated users hitting /privacy or /terms
+  // should still see those pages. For all other routes, show landing page.
   if (!isAuthenticated) {
+    if (isMarketingSite && location.pathname !== '/privacy' && location.pathname !== '/terms') {
+      return <LandingPage />
+    }
     return <LoginPage onLogin={handleLogin} />
   }
 

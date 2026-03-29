@@ -21,6 +21,7 @@ from app.core.database import async_engine as engine, AsyncSessionLocal, check_d
 from app.core.logging import setup_logging
 from app.core.security import SecurityHeaders
 from app.api.routes import api_router
+from app.api.public_routes import router as public_router
 from app.core.exceptions import setup_exception_handlers
 
 
@@ -185,6 +186,9 @@ def create_application() -> FastAPI:
     # Include API routes
     app.include_router(api_router, prefix="/api/v1")
 
+    # Public-facing website routes (no auth required)
+    app.include_router(public_router)
+
     # Health check endpoints
     @app.get("/health")
     async def health_check():
@@ -227,6 +231,10 @@ def create_application() -> FastAPI:
         js_dir = os.path.join(static_dir, 'js')
         if os.path.isdir(js_dir):
             app.mount("/js", StaticFiles(directory=js_dir), name="js")
+
+        images_dir = os.path.join(static_dir, 'images')
+        if os.path.isdir(images_dir):
+            app.mount("/images", StaticFiles(directory=images_dir), name="images")
 
         # SPA fallback: serve index.html for all non-API, non-static routes
         index_html = os.path.join(static_dir, 'index.html')

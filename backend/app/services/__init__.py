@@ -472,41 +472,232 @@ class EvidenceService(BaseService):
         reviewer_persona: str = "fda_statistical_reviewer",
         generated_by=None,
     ) -> EvidenceCritique:
-        """Generate AI-powered regulatory critique (called by routes.py)."""
+        """Generate data-driven regulatory critique from real project state.
+
+        Analyzes the project's actual evidence records, comparability scores,
+        bias analyses, and statistical results to produce a meaningful critique
+        rather than hardcoded boilerplate.
+        """
         project_id_str = _str_uuid(project_id)
 
-        # Get project evidence for critique
-        await self.get_project_evidence(project_id_str)
+        # ── Gather real project data ──────────────────────────────────────
+        evidence_records = await self.get_project_evidence(project_id_str)
+        ev_count = len(evidence_records) if evidence_records else 0
 
-        # Generate critique (in production: would call LLM)
+        # Get project for processing_config
+        proj_result = await self.db.execute(
+            select(Project).where(Project.id == project_id_str)
+        )
+        project = proj_result.scalar_one_or_none()
+        config = (project.processing_config or {}) if project else {}
+        study_def = config.get("study_definition", {})
+        results = config.get("results", {})
+        balance = config.get("balance", {})
+
+        # Get comparability scores
+        from app.models import ComparabilityScore, BiasAnalysis
+        comp_scores = []
+        bias_analyses = []
+        if evidence_records:
+            ev_ids = [str(e.id) for e in evidence_records]
+            comp_result = await self.db.execute(
+                select(ComparabilityScore).where(
+                    ComparabilityScore.evidence_record_id.in_(ev_ids)
+                )
+            )
+            comp_scores = list(comp_result.scalars().all())
+
+            if comp_scores:
+                comp_ids = [str(c.id) for c in comp_scores]
+                bias_result = await self.db.execute(
+                    select(BiasAnalysis).where(
+                        BiasAnalysis.comparability_score_id.in_(comp_ids)
+                    )
+                )
+                bias_analyses = list(bias_result.scalars().all())
+
+        # ── Build data-driven strengths ───────────────────────────────────
+        strengths = []
+        if ev_count >= 5:
+            strengths.append(f"Comprehensive evidence base with {ev_count} sources identified")
+        elif ev_count > 0:
+            strengths.append(f"{ev_count} evidence source(s) identified for review")
+
+        if study_def.get("primary_endpoint"):
+            strengths.append(f"Primary endpoint clearly defined: {study_def['primary_endpoint']}")
+
+        if comp_scores:
+            avg_score = sum(c.overall_score or 0 for c in comp_scores) / len(comp_scores)
+            if avg_score >= 0.7:
+                strengths.append(f"Strong average comparability score ({avg_score:.2f}) across {len(comp_scores)} evidence sources")
+            elif avg_score >= 0.5:
+                strengths.append(f"Moderate comparability ({avg_score:.2f}) — evidence sources show reasonable alignment")
+
+        if results.get("primary_hr"):
+            hr = results["primary_hr"]
+            p = results.get("p_value")
+            if p and p < 0.05:
+                strengths.append(f"Statistically significant primary result (HR={hr:.2f}, p={p:.4f})")
+
+        ps_summary = balance.get("propensity_summary", {})
+        if ps_summary.get("c_statistic") and ps_summary["c_statistic"] >= 0.7:
+            strengths.append(f"Good propensity score model discrimination (C-statistic={ps_summary['c_statistic']:.2f})")
+
+        if not strengths:
+            strengths.append("Project created — awaiting evidence discovery and analysis")
+
+        # ── Build data-driven weaknesses ──────────────────────────────────
+        weaknesses = []
+        if ev_count == 0:
+            weaknesses.append("No evidence sources discovered yet — evidence base is empty")
+        elif ev_count < 3:
+            weaknesses.append(f"Limited evidence base ({ev_count} source{'s' if ev_count > 1 else ''}) — may not support robust conclusions")
+
+        if comp_scores:
+            avg_score = sum(c.overall_score or 0 for c in comp_scores) / len(comp_scores)
+            low_pop = [c for c in comp_scores if (c.population_similarity or 0) < 0.6]
+            if low_pop:
+                weaknesses.append(f"{len(low_pop)} of {len(comp_scores)} evidence source(s) show low population similarity (<0.60)")
+            low_cov = [c for c in comp_scores if (c.covariate_coverage or 0) < 0.6]
+            if low_cov:
+                weaknesses.append(f"Covariate coverage gaps in {len(low_cov)} source(s) — potential for residual confounding")
+            if avg_score < 0.5:
+                weaknesses.append(f"Low overall comparability ({avg_score:.2f}) raises concerns about external validity")
+
+        if results.get("p_value") and results["p_value"] >= 0.05:
+            weaknesses.append(f"Primary result not statistically significant (p={results['p_value']:.4f})")
+
+        smd_data = balance.get("smd_data", [])
+        failing_smd = [s for s in smd_data if not s.get("pass", True)]
+        if failing_smd:
+            weaknesses.append(f"{len(failing_smd)} covariate(s) exceed SMD threshold (>0.10) after weighting")
+
+        if not weaknesses:
+            weaknesses.append("Insufficient analysis data to identify specific weaknesses — run statistical analyses first")
+
+        # ── Build data-driven regulatory concerns ─────────────────────────
+        regulatory_concerns = []
+        if bias_analyses:
+            high_bias = [b for b in bias_analyses if (b.bias_severity or 0) > 0.4]
+            if high_bias:
+                bias_types = set(str(b.bias_type).replace("_", " ").title() for b in high_bias)
+                regulatory_concerns.append(
+                    f"High-severity bias detected in {len(high_bias)} assessment(s): {', '.join(bias_types)}"
+                )
+            high_risk = [b for b in bias_analyses if (b.regulatory_risk or 0) > 0.6]
+            if high_risk:
+                regulatory_concerns.append(
+                    f"{len(high_risk)} evidence source(s) flagged with elevated regulatory risk (>0.60)"
+                )
+        elif ev_count > 0:
+            regulatory_concerns.append("Bias analysis not yet performed — regulatory risk assessment incomplete")
+
+        if not study_def.get("primary_endpoint"):
+            regulatory_concerns.append("Primary endpoint not defined — FDA requires clear endpoint specification")
+
+        if not study_def.get("comparator"):
+            regulatory_concerns.append("Comparator arm not specified — essential for regulatory review")
+
+        sensitivity = results.get("sensitivity", {})
+        if isinstance(sensitivity, dict):
+            e_val = sensitivity.get("e_value", {})
+            if isinstance(e_val, dict) and e_val.get("e_value_point") and e_val["e_value_point"] < 1.5:
+                regulatory_concerns.append(
+                    f"Low E-value ({e_val['e_value_point']:.2f}) — results sensitive to unmeasured confounding"
+                )
+
+        if not regulatory_concerns:
+            regulatory_concerns.append("Complete analysis pipeline before regulatory assessment can be finalized")
+
+        # ── Build data-driven recommendations ─────────────────────────────
+        recommendations = []
+        if ev_count == 0:
+            recommendations.append("Run evidence discovery (POST /projects/{id}/discover-evidence) to build evidence base")
+        if not comp_scores and ev_count > 0:
+            recommendations.append("Generate comparability scores (POST /projects/{id}/generate-anchors) to assess evidence alignment")
+        if not bias_analyses and comp_scores:
+            recommendations.append("Run bias analysis (POST /projects/{id}/analyze-bias) to quantify regulatory risk")
+        if not results.get("primary_hr"):
+            recommendations.append("Run effect estimation to compute primary hazard ratio and confidence intervals")
+        if not sensitivity:
+            recommendations.append("Conduct E-value sensitivity analysis to assess robustness to unmeasured confounding")
+        if failing_smd:
+            recommendations.append("Review propensity score model — consider additional covariates or trimming to improve balance")
+        if not recommendations:
+            recommendations.append("Evidence package appears ready for internal review prior to regulatory submission")
+
+        # ── Compute acceptance likelihood from real metrics ────────────────
+        likelihood = 0.3  # base
+        if ev_count >= 3:
+            likelihood += 0.1
+        if comp_scores:
+            avg_cs = sum(c.overall_score or 0 for c in comp_scores) / len(comp_scores)
+            likelihood += min(avg_cs * 0.2, 0.2)
+        if results.get("p_value") and results["p_value"] < 0.05:
+            likelihood += 0.15
+        if ps_summary.get("c_statistic") and ps_summary["c_statistic"] >= 0.7:
+            likelihood += 0.05
+        if bias_analyses:
+            avg_risk = sum(b.regulatory_risk or 0 for b in bias_analyses) / len(bias_analyses)
+            if avg_risk < 0.3:
+                likelihood += 0.1
+        if failing_smd:
+            likelihood -= 0.05 * min(len(failing_smd), 3)
+        likelihood = round(max(0.05, min(0.95, likelihood)), 2)
+
+        # ── Build overall assessment ──────────────────────────────────────
+        assessment_parts = []
+        if ev_count > 0:
+            assessment_parts.append(
+                f"Review of {ev_count} evidence source(s) for project \"{project.title if project else 'Unknown'}\"."
+            )
+        else:
+            assessment_parts.append(
+                f"Project \"{project.title if project else 'Unknown'}\" has no evidence sources discovered yet."
+            )
+
+        if comp_scores:
+            avg_cs = sum(c.overall_score or 0 for c in comp_scores) / len(comp_scores)
+            assessment_parts.append(
+                f"Average comparability score: {avg_cs:.2f} across {len(comp_scores)} scored source(s)."
+            )
+
+        if results.get("primary_hr"):
+            hr = results["primary_hr"]
+            ci_lo = results.get("ci_lower", "?")
+            ci_hi = results.get("ci_upper", "?")
+            assessment_parts.append(
+                f"Primary analysis: HR={hr:.3f} (95% CI: {ci_lo:.3f}-{ci_hi:.3f}), p={results.get('p_value', '?')}."
+            )
+
+        assessment_parts.append(
+            f"Estimated FDA acceptance likelihood: {likelihood:.0%}. "
+            f"{'Additional analyses recommended.' if likelihood < 0.6 else 'Evidence package shows promise for regulatory review.'}"
+        )
+
+        overall_assessment = " ".join(assessment_parts)
+
+        # ── Additional evidence needed ────────────────────────────────────
+        additional_evidence = []
+        if ev_count < 3:
+            additional_evidence.append("Expand evidence base — minimum 3 independent sources recommended for regulatory submissions")
+        if comp_scores:
+            low_temp = [c for c in comp_scores if (c.temporal_alignment or 0) < 0.6]
+            if low_temp:
+                additional_evidence.append("Seek more temporally aligned evidence — some sources may be outdated")
+
         critique = EvidenceCritique(
             id=str(uuid.uuid4()),
             project_id=project_id_str,
-            overall_assessment=(
-                "Based on preliminary review of the submitted evidence package, "
-                "additional statistical analyses are recommended to strengthen "
-                "the regulatory submission."
-            ),
-            strengths=[
-                "Well-defined primary endpoint",
-                "Adequate sample size for primary analysis",
-            ],
-            weaknesses=[
-                "Potential for residual confounding",
-                "Limited long-term follow-up data",
-            ],
-            regulatory_concerns=[
-                "Population comparability requires additional justification",
-                "Sensitivity analyses should address unmeasured confounding",
-            ],
-            recommendations=[
-                "Conduct E-value sensitivity analysis",
-                "Provide propensity score diagnostics",
-                "Include fragility index assessment",
-            ],
-            fda_acceptance_likelihood=0.65,
+            overall_assessment=overall_assessment,
+            strengths=strengths,
+            weaknesses=weaknesses,
+            regulatory_concerns=regulatory_concerns,
+            recommendations=recommendations,
+            additional_evidence_needed=additional_evidence if additional_evidence else None,
+            fda_acceptance_likelihood=likelihood,
             generated_at=datetime.utcnow(),
-            critique_model="afarensis_critique_v2.1",
+            critique_model="afarensis_critique_v2.1_data_driven",
             reviewer_persona=reviewer_persona,
         )
 

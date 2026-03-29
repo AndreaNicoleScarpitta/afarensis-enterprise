@@ -78,12 +78,24 @@ class AdamService:
         if project and project.processing_config:
             processing_config = project.processing_config
 
-        # Determine study parameters from config or defaults
+        # Use study definition from processing_config for project-specific parameters
+        study_def = processing_config.get("study_definition", {})
+        sar_pipeline = processing_config.get("sar_pipeline", {})
+
+        # Determine study parameters: study_definition → sar_pipeline → hardcoded defaults
         study_id = processing_config.get("study_id", AdamService.STUDY_ID)
-        treatment_name = processing_config.get("treatment_name", "Drug-X 150mg")
-        control_name = processing_config.get("control_name", "Standard of Care")
-        n_treatment = processing_config.get("n_treatment", 22)
-        n_control = processing_config.get("n_control", 875)
+        treatment_name = (
+            study_def.get("treatment")
+            or sar_pipeline.get("treatment_source")
+            or processing_config.get("treatment_name", "Drug-X 150mg")
+        )
+        control_name = (
+            study_def.get("comparator")
+            or sar_pipeline.get("control_source")
+            or processing_config.get("control_name", "Standard of Care")
+        )
+        n_treatment = processing_config.get("n_treatment", 112)
+        n_control = processing_config.get("n_control", 489)
         n_total = n_treatment + n_control
 
         rng = np.random.default_rng(seed=42)
@@ -181,6 +193,7 @@ class AdamService:
             "variables": variables,
             "records_count": n_total,
             "data": data,
+            "data_source": "simulated",
             "created_at": datetime.utcnow().isoformat(),
         }
 
@@ -416,6 +429,7 @@ class AdamService:
             "variables": variables,
             "records_count": len(data),
             "data": data,
+            "data_source": "uploaded" if patient_data is not None else "simulated",
             "created_at": datetime.utcnow().isoformat(),
         }
 
@@ -516,6 +530,7 @@ class AdamService:
             "variables": variables,
             "records_count": len(data),
             "data": data,
+            "data_source": "uploaded" if patient_data is not None else "simulated",
             "created_at": datetime.utcnow().isoformat(),
         }
 
