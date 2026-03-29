@@ -70,6 +70,21 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
   const [missingDataSensitivity, setMissingDataSensitivity] = useState('')
   const [missingThreshold, setMissingThreshold] = useState('5')
 
+  // ── Ingestion threshold state (positive & negative controls) ──
+  const [ingestionThresholds, setIngestionThresholds] = useState({
+    max_overall_missingness: 20,
+    max_differential_missingness: 10,
+    max_smd: 0.30,
+    max_nonstandard_vars: 5,
+    pii_sensitivity: 'standard' as 'standard' | 'strict',
+    min_sdtm_vars: 2,
+    max_future_years: 0,
+    min_rows: 10,
+  })
+  const [thresholdsOpen, setThresholdsOpen] = useState(false)
+  const [thresholdsSaved, setThresholdsSaved] = useState(false)
+  const thresholdSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // ── UI state ──
   const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
   const [showImpactDialog, setShowImpactDialog] = useState(false)
@@ -131,6 +146,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
       setMissingDataPrimary(studyDef.missingDataPrimary || '')
       setMissingDataSensitivity(studyDef.missingDataSensitivity || '')
       setMissingThreshold(studyDef.missingThreshold || '5')
+      if (studyDef.ingestionThresholds) setIngestionThresholds(prev => ({ ...prev, ...studyDef.ingestionThresholds }))
     }
   }, [studyDef])
 
@@ -145,6 +161,7 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
         primaryModel, weightingMethod, varianceEstimator, psTrimming,
         covariates, iceStrategies,
         missingDataPrimary, missingDataSensitivity, missingThreshold,
+        ingestionThresholds,
       })
       setShowImpactDialog(false)
       setSaveToast({ message: 'Definition saved successfully', type: 'success' })
@@ -153,6 +170,24 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
       setSaveToast({ message: 'Failed to save — please try again', type: 'error' })
       setTimeout(() => setSaveToast(null), 5000)
     }
+  }
+
+  const handleThresholdChange = <K extends keyof typeof ingestionThresholds>(key: K, value: typeof ingestionThresholds[K]) => {
+    const updated = { ...ingestionThresholds, [key]: value }
+    setIngestionThresholds(updated)
+    if (thresholdSaveTimer.current) clearTimeout(thresholdSaveTimer.current)
+    thresholdSaveTimer.current = setTimeout(() => {
+      save({
+        endpoint: effectiveEndpoint, secondaryEndpoints,
+        estimand, phase, regBody, comparator, indication, rationale,
+        primaryModel, weightingMethod, varianceEstimator, psTrimming,
+        covariates, iceStrategies,
+        missingDataPrimary, missingDataSensitivity, missingThreshold,
+        ingestionThresholds: updated,
+      })
+      setThresholdsSaved(true)
+      setTimeout(() => setThresholdsSaved(false), 2000)
+    }, 800)
   }
 
   const handleSave = () => {
@@ -999,6 +1034,127 @@ export default function StudyDefinition({ selectedStudy, protocolLocked, reviewe
               </div>
             </div>
           )}
+
+          {/* ── Ingestion Regulatory Check Thresholds (collapsible, always visible) ── */}
+          <div className="bg-white border border-gray-200 rounded-xl mb-5 overflow-hidden">
+            <button
+              onClick={() => setThresholdsOpen(!thresholdsOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-gray-400 shrink-0" />
+                <span className="text-xs font-bold text-gray-700">Ingestion Regulatory Check Thresholds</span>
+                {thresholdsSaved && (
+                  <span className="flex items-center gap-1 text-[10px] text-emerald-600 ml-1 transition-opacity">
+                    <CheckCircle2 className="h-3 w-3" /> Saved
+                  </span>
+                )}
+                <span className="text-[10px] text-gray-400 ml-1">Configure positive &amp; negative control limits</span>
+              </div>
+              <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${thresholdsOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {thresholdsOpen && (
+              <div className="border-t border-gray-200 px-4 py-4 space-y-5">
+                {/* Positive Controls */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span className="text-xs font-bold text-emerald-700">Positive Controls</span>
+                    <span className="text-[10px] text-gray-400">— thresholds that define &ldquo;acceptable&rdquo;</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] text-gray-500 mb-1">Max Overall Missingness (%)</p>
+                      <input type="number" min="0" max="100"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={ingestionThresholds.max_overall_missingness}
+                        onChange={e => handleThresholdChange('max_overall_missingness', Number(e.target.value))}
+                        disabled={locked || reviewerMode}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500 mb-1">Max Differential Missingness (%)</p>
+                      <input type="number" min="0" max="100"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={ingestionThresholds.max_differential_missingness}
+                        onChange={e => handleThresholdChange('max_differential_missingness', Number(e.target.value))}
+                        disabled={locked || reviewerMode}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500 mb-1">Max Standardized Mean Difference</p>
+                      <input type="number" min="0" max="2" step="0.01"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={ingestionThresholds.max_smd}
+                        onChange={e => handleThresholdChange('max_smd', Number(e.target.value))}
+                        disabled={locked || reviewerMode}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500 mb-1">Max Non-Standard Variables</p>
+                      <input type="number" min="0" max="100"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={ingestionThresholds.max_nonstandard_vars}
+                        onChange={e => handleThresholdChange('max_nonstandard_vars', Number(e.target.value))}
+                        disabled={locked || reviewerMode}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Negative Controls */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <ShieldAlert className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                    <span className="text-xs font-bold text-red-700">Negative Controls</span>
+                    <span className="text-[10px] text-gray-400">— thresholds that define &ldquo;unacceptable / blocked&rdquo;</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] text-gray-500 mb-1">PII Sensitivity</p>
+                      <select
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={ingestionThresholds.pii_sensitivity}
+                        onChange={e => handleThresholdChange('pii_sensitivity', e.target.value as 'standard' | 'strict')}
+                        disabled={locked || reviewerMode}
+                      >
+                        <option value="standard">Standard (sample 1,000 rows)</option>
+                        <option value="strict">Strict (scan all rows)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500 mb-1">Min Required SDTM Variables</p>
+                      <input type="number" min="0" max="50"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={ingestionThresholds.min_sdtm_vars}
+                        onChange={e => handleThresholdChange('min_sdtm_vars', Number(e.target.value))}
+                        disabled={locked || reviewerMode}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500 mb-1">Max Future Years Allowed</p>
+                      <input type="number" min="0" max="10"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={ingestionThresholds.max_future_years}
+                        onChange={e => handleThresholdChange('max_future_years', Number(e.target.value))}
+                        disabled={locked || reviewerMode}
+                      />
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-500 mb-1">Minimum Row Count</p>
+                      <input type="number" min="0" max="10000"
+                        className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-900 focus:outline-none focus:border-[#2563EB]/60 transition-colors"
+                        value={ingestionThresholds.min_rows}
+                        onChange={e => handleThresholdChange('min_rows', Number(e.target.value))}
+                        disabled={locked || reviewerMode}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* ── Model Card tab (derived from spec + study def) ── */}
           {activeSpecTab === 'model' && (
