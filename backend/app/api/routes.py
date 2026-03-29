@@ -321,7 +321,7 @@ async def revoke_all_sessions(current_user=Depends(get_current_user), db: AsyncS
     result = await db.execute(
         sa_update(SessionToken).where(
             SessionToken.user_id == current_user.user_id,
-            not SessionToken.is_revoked,
+            SessionToken.is_revoked == False,
         ).values(is_revoked=True)
     )
     await db.commit()
@@ -446,7 +446,7 @@ async def verify_reset_code(body: VerifyResetCodeRequest, db: AsyncSession = Dep
         sa_select(SessionToken).where(
             SessionToken.user_id == str(user.id),
             SessionToken.token_type == "reset",
-            not SessionToken.is_revoked,
+            SessionToken.is_revoked == False,
         )
     )
     entry = tok_result.scalar_one_or_none()
@@ -497,7 +497,7 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
             SessionToken.user_id == str(user.id),
             SessionToken.token_type == "reset",
             SessionToken.token_hash == token_hash,
-            not SessionToken.is_revoked,
+            SessionToken.is_revoked == False,
         )
     )
     entry = tok_result.scalar_one_or_none()
@@ -784,7 +784,7 @@ async def verify_email(body: VerifyEmailRequest, db: AsyncSession = Depends(get_
         sa_select(EmailVerificationToken).where(
             EmailVerificationToken.user_id == str(user.id),
             EmailVerificationToken.token_hash == token_hash,
-            not EmailVerificationToken.used,
+            EmailVerificationToken.used == False,
         )
     )
     entry = tok_result.scalar_one_or_none()
@@ -1833,7 +1833,7 @@ async def generate_anchor_candidates(
     db: AsyncSession = Depends(get_db)
 ):
     """Generate and score anchor candidates"""
-    return {"task_id": str(uuid.uuid4()), "status": "started", "message": "Anchor generation initiated"}
+    raise HTTPException(status_code=501, detail="Anchor candidate generation is not yet implemented. Use the evidence discovery endpoint to find comparable studies.")
 
 @api_router.get("/projects/{project_id}/comparability-scores")
 async def get_comparability_scores(
@@ -1894,7 +1894,7 @@ async def analyze_bias_and_fragility(
     db: AsyncSession = Depends(get_db)
 ):
     """Perform bias detection and fragility analysis"""
-    return {"task_id": str(uuid.uuid4()), "status": "started", "message": "Bias analysis initiated"}
+    raise HTTPException(status_code=501, detail="Automated bias analysis trigger is not yet implemented. Bias assessments from uploaded data are available via GET /projects/{project_id}/bias-analysis.")
 
 @api_router.get("/projects/{project_id}/bias-analysis")
 async def get_bias_analysis(
@@ -1974,7 +1974,7 @@ async def generate_evidence_critique(
     db: AsyncSession = Depends(get_db)
 ):
     """Generate AI-powered regulatory critique"""
-    return {"critique_id": str(uuid.uuid4()), "status": "generated", "persona": reviewer_persona}
+    raise HTTPException(status_code=501, detail="AI critique generation is not yet implemented.")
 
 @api_router.post("/projects/{project_id}/evidence/{evidence_id}/decision")
 async def submit_evidence_decision(
@@ -2346,7 +2346,7 @@ async def list_federated_nodes(
     db: AsyncSession = Depends(get_db)
 ):
     """List federated network nodes"""
-    return {"nodes": [], "status": "beta"}
+    return {"nodes": [], "status": "not_implemented", "detail": "Federated evidence network is planned for a future release."}
 
 @api_router.get("/evidence-patterns")
 async def get_evidence_patterns(
@@ -2357,7 +2357,7 @@ async def get_evidence_patterns(
     db: AsyncSession = Depends(get_db)
 ):
     """Get successful evidence patterns from the pattern library"""
-    return {"patterns": [], "status": "beta"}
+    return {"patterns": [], "status": "not_implemented", "detail": "Evidence pattern mining is planned for a future release."}
 
 # ENHANCED AI SERVICES
 @api_router.post("/projects/{project_id}/ai/comprehensive-analysis")
@@ -3409,30 +3409,7 @@ async def init_sar_pipeline(
     current_user: User = Depends(get_current_user),
 ):
     """Initialize a new SAR pipeline for a project"""
-    import uuid as _uuid2
-    from datetime import datetime as _dt
-    pipeline_id = str(_uuid2.uuid4())
-    return {
-        "pipeline_id": pipeline_id,
-        "project_id": request.project_id,
-        "status": "initialized",
-        "treatment_source": request.treatment_source,
-        "control_source": request.control_source,
-        "primary_endpoint": request.primary_endpoint,
-        "analysis_type": request.analysis_type,
-        "stages": {
-            "data_ingestion": {"status": "pending", "progress": 0},
-            "endpoint_harmonization": {"status": "pending", "progress": 0},
-            "propensity_model": {"status": "pending", "progress": 0},
-            "effect_estimation": {"status": "pending", "progress": 0},
-            "sensitivity_analyses": {"status": "pending", "progress": 0},
-            "bias_analysis": {"status": "pending", "progress": 0},
-            "reproducibility_packaging": {"status": "pending", "progress": 0},
-            "report_assembly": {"status": "pending", "progress": 0},
-        },
-        "created_at": _dt.utcnow().isoformat(),
-        "created_by": str(current_user.id),
-    }
+    raise HTTPException(status_code=501, detail="SAR pipeline initialization is handled automatically. Use POST /projects/{project_id}/discover-evidence to start.")
 
 
 @api_router.get("/sar-pipeline/{project_id}/status")
@@ -3527,24 +3504,7 @@ async def run_sar_stage(
     current_user: User = Depends(get_current_user),
 ):
     """Trigger execution of a specific SAR pipeline stage"""
-    from datetime import datetime as _dt
-    valid_stages = [
-        "data_ingestion", "endpoint_harmonization", "propensity_model",
-        "effect_estimation", "sensitivity_analyses", "bias_analysis",
-        "reproducibility_packaging", "report_assembly",
-    ]
-    if request.stage not in valid_stages:
-        raise HTTPException(status_code=400, detail=f"Invalid stage: {request.stage}. Valid: {valid_stages}")
-
-    return {
-        "project_id": project_id,
-        "stage": request.stage,
-        "status": "queued",
-        "job_id": f"job-{project_id[:8]}-{request.stage}",
-        "queued_at": _dt.utcnow().isoformat(),
-        "estimated_duration_seconds": 45,
-        "message": f"Stage '{request.stage}' has been queued for execution.",
-    }
+    raise HTTPException(status_code=501, detail="Individual stage execution is not yet implemented. Use the full analysis pipeline via POST /projects/{project_id}/study/analyze-dataset.")
 
 
 @api_router.get("/sar-pipeline/{project_id}/results")

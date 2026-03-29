@@ -5,6 +5,7 @@ Advanced AI capabilities including domain-specific models, comprehensive bias de
 and regulatory context analysis for enterprise-grade evidence review.
 """
 
+import re
 import uuid
 import asyncio
 import logging
@@ -804,21 +805,11 @@ class RegulatoryContextEngine:
         evidence_profile: Dict[str, Any],
         approval_outcomes: List[str]
     ) -> List[Dict[str, Any]]:
-        """Find similar regulatory precedents"""
-        # Would query regulatory database for similar submissions
-        precedents = [
-            {
-                "submission_id": "BLA-125123",
-                "therapeutic_area": evidence_profile.get("therapeutic_area", "oncology"),
-                "evidence_type": "external_control",
-                "outcome": "approved",
-                "approval_date": "2023-06-15",
-                "key_evidence_features": ["single_arm_study", "historical_controls"],
-                "regulatory_considerations": ["accelerated_approval", "confirmatory_trial_required"]
-            }
-        ]
-
-        return precedents
+        """Find similar regulatory precedents - requires FDA/EMA API integration"""
+        return {
+            "precedents": [],
+            "note": "Regulatory precedent search requires FDA/EMA API integration"
+        }
 
     async def calculate_success_probability(
         self,
@@ -896,10 +887,12 @@ class RegulatoryContextEngine:
         evidence_maturity: Optional[Dict[str, Any]],
         regulatory_landscape: Dict[str, Any],
         competitive_intelligence: Dict[str, Any]
-    ) -> Optional[str]:
-        """Suggest optimal submission timing"""
-        # Would analyze regulatory calendar, competitive filings, etc.
-        return "Consider submission in Q2 2025 after additional safety follow-up"
+    ) -> Dict[str, Any]:
+        """Suggest optimal submission timing - requires regulatory strategy assessment"""
+        return {
+            "suggestion": None,
+            "note": "Submission timing requires regulatory strategy assessment"
+        }
 
     async def _call_llm(
         self,
@@ -954,30 +947,129 @@ class DomainSpecificExtractor:
         abstract: str,
         full_text: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Extract population characteristics using specialized model"""
-        # Placeholder for ML model implementation
+        """Extract population characteristics using regex and LLM fallback"""
+        text = (full_text or "") + " " + (abstract or "")
+        text_combined = text.strip()
+        if not text_combined:
+            return {"sample_size": None, "age_range": None, "note": "Could not extract from provided text", "confidence": 0.0}
+
+        sample_size = None
+        age_range = None
+
+        # Try to extract sample_size
+        sample_patterns = [
+            r'[nN]\s*=\s*(\d[\d,]*)',
+            r'(\d[\d,]*)\s+patients',
+            r'(\d[\d,]*)\s+subjects',
+            r'(\d[\d,]*)\s+participants',
+        ]
+        for pattern in sample_patterns:
+            match = re.search(pattern, text_combined)
+            if match:
+                sample_size = int(match.group(1).replace(',', ''))
+                break
+
+        # Try to extract age_range
+        age_patterns = [
+            r'(?:aged?|ages?)\s+(\d+)\s*[-–to]+\s*(\d+)',
+            r'(\d+)\s*[-–]\s*(\d+)\s*years',
+        ]
+        for pattern in age_patterns:
+            match = re.search(pattern, text_combined, re.IGNORECASE)
+            if match:
+                age_range = f"{match.group(1)}-{match.group(2)}"
+                break
+
+        # If regex found nothing, try LLM
+        if sample_size is None and age_range is None:
+            try:
+                llm_prompt = (
+                    "Extract the sample size (number of participants) and age range from this clinical text. "
+                    "Return ONLY a JSON object with keys 'sample_size' (integer or null) and 'age_range' (string or null).\n\n"
+                    f"Text: {text_combined[:3000]}"
+                )
+                llm_response = await self._call_llm(llm_prompt)
+                import json
+                parsed = json.loads(llm_response)
+                sample_size = parsed.get("sample_size")
+                age_range = parsed.get("age_range")
+            except Exception:
+                pass
+
+        if sample_size is None and age_range is None:
+            return {"sample_size": None, "age_range": None, "note": "Could not extract from provided text", "confidence": 0.0}
+
+        confidence = 0.0
+        if sample_size is not None:
+            confidence += 0.4
+        if age_range is not None:
+            confidence += 0.4
+
         return {
-            "sample_size": 245,
-            "age_range": "18-75",
-            "demographics": {"female": 0.52, "male": 0.48},
-            "inclusion_criteria": ["confirmed diagnosis", "adequate organ function"],
-            "exclusion_criteria": ["prior therapy", "significant comorbidities"],
-            "confidence": 0.85
+            "sample_size": sample_size,
+            "age_range": age_range,
+            "confidence": confidence
         }
+
+    async def _call_llm(self, prompt: str) -> str:
+        """Delegate to RegulatoryContextEngine._call_llm"""
+        engine = RegulatoryContextEngine()
+        return await engine._call_llm(prompt)
 
     async def extract_primary_endpoints(
         self,
         abstract: str,
         full_text: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Extract primary endpoints using specialized model"""
+        """Extract primary endpoints by searching text for common endpoint terms"""
+        text = (full_text or "") + " " + (abstract or "")
+        text_combined = text.strip()
+        if not text_combined:
+            return {"primary_endpoint": None, "note": "Could not extract from provided text", "confidence": 0.0}
+
+        text_lower = text_combined.lower()
+
+        # Known endpoint terms ordered by specificity
+        endpoint_terms = [
+            "overall survival", "progression-free survival", "progression free survival",
+            "disease-free survival", "disease free survival",
+            "objective response rate", "overall response rate",
+            "complete response rate", "partial response rate",
+            "event-free survival", "event free survival",
+            "recurrence-free survival", "recurrence free survival",
+            "response rate", "duration of response",
+            "time to progression", "time to event",
+            "hazard ratio", "median survival",
+            "quality of life", "patient-reported outcome",
+        ]
+
+        found_endpoints = [term for term in endpoint_terms if term in text_lower]
+
+        # Also try to find explicit "primary endpoint" or "primary outcome" mentions
+        primary_match = re.search(
+            r'primary\s+(?:endpoint|outcome|end\s*point)[s]?\s*(?:was|were|is|are|:)?\s*([^.;\n]{3,80})',
+            text_combined, re.IGNORECASE
+        )
+        primary_from_context = primary_match.group(1).strip() if primary_match else None
+
+        # Determine best primary endpoint
+        primary_endpoint = primary_from_context or (found_endpoints[0] if found_endpoints else None)
+
+        if primary_endpoint is None:
+            return {"primary_endpoint": None, "note": "Could not extract from provided text", "confidence": 0.0}
+
+        # Classify endpoint type
+        endpoint_type = "unknown"
+        if primary_endpoint and any(t in primary_endpoint.lower() for t in ["survival", "time to", "event-free", "event free"]):
+            endpoint_type = "time_to_event"
+        elif primary_endpoint and "response rate" in primary_endpoint.lower():
+            endpoint_type = "binary"
+
         return {
-            "primary_endpoint": "overall survival",
-            "measurement_timepoint": "24 months",
-            "endpoint_type": "time_to_event",
-            "clinical_meaningfulness": True,
-            "regulatory_acceptance": "high",
-            "confidence": 0.82
+            "primary_endpoint": primary_endpoint,
+            "all_endpoints_found": found_endpoints,
+            "endpoint_type": endpoint_type,
+            "confidence": 0.7 if primary_from_context else 0.5
         }
 
     async def extract_study_methodology(
@@ -985,14 +1077,51 @@ class DomainSpecificExtractor:
         abstract: str,
         full_text: Optional[str] = None
     ) -> Dict[str, Any]:
-        """Extract study methodology using specialized model"""
+        """Extract study methodology by searching text for study design terms"""
+        text = (full_text or "") + " " + (abstract or "")
+        text_combined = text.strip()
+        if not text_combined:
+            return {"study_design": None, "note": "Could not extract from provided text", "confidence": 0.0}
+
+        text_lower = text_combined.lower()
+
+        # Study design terms ordered by specificity
+        design_terms = {
+            "randomized controlled trial": ["randomized controlled trial", "randomised controlled trial", "rct"],
+            "double-blind": ["double-blind", "double blind", "double-blinded"],
+            "single-blind": ["single-blind", "single blind", "single-blinded"],
+            "open-label": ["open-label", "open label"],
+            "placebo-controlled": ["placebo-controlled", "placebo controlled"],
+            "single-arm": ["single-arm", "single arm"],
+            "observational": ["observational study", "observational"],
+            "cohort": ["cohort study", "prospective cohort", "retrospective cohort", "cohort"],
+            "case-control": ["case-control", "case control"],
+            "cross-sectional": ["cross-sectional", "cross sectional"],
+            "meta-analysis": ["meta-analysis", "meta analysis"],
+            "systematic review": ["systematic review"],
+            "real-world evidence": ["real-world evidence", "real world evidence", "rwe"],
+            "retrospective": ["retrospective"],
+            "prospective": ["prospective"],
+            "phase 1": ["phase 1", "phase i"],
+            "phase 2": ["phase 2", "phase ii"],
+            "phase 3": ["phase 3", "phase iii"],
+            "phase 4": ["phase 4", "phase iv"],
+        }
+
+        found_designs = []
+        for design_name, keywords in design_terms.items():
+            for keyword in keywords:
+                if keyword in text_lower:
+                    found_designs.append(design_name)
+                    break
+
+        if not found_designs:
+            return {"study_design": None, "note": "Could not extract from provided text", "confidence": 0.0}
+
         return {
-            "study_design": "randomized controlled trial",
-            "randomization": {"method": "stratified", "allocation_ratio": "1:1"},
-            "blinding": {"double_blind": True, "placebo_controlled": True},
-            "control_type": "active_control",
-            "statistical_plan": {"primary_analysis": "intention_to_treat"},
-            "confidence": 0.78
+            "study_design": found_designs[0],
+            "all_designs_found": found_designs,
+            "confidence": 0.7
         }
 
     async def extract_statistical_plan(

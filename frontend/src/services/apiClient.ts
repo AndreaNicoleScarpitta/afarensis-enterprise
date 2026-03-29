@@ -509,7 +509,7 @@ class ApiClient {
 
   async updateProject(id: string, project: Partial<Project>): Promise<Project> {
     return this.request(`/projects/${id}`, ProjectSchema, {
-      method: 'PUT',
+      method: 'PATCH',
       body: JSON.stringify(project),
     }) as Promise<Project>;
   }

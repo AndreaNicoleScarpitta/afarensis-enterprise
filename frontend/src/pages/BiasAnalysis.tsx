@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { apiClient } from '../services/apiClient'
 import { logger } from '../services/logger'
 import {
@@ -31,6 +32,7 @@ interface BiasAssessment {
 }
 
 const BiasAnalysis: React.FC = () => {
+  const { projectId } = useParams<{ projectId: string }>()
   const [assessments, setAssessments] = useState<BiasAssessment[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedAssessment, setSelectedAssessment] = useState<string | null>(null)
@@ -39,7 +41,7 @@ const BiasAnalysis: React.FC = () => {
     const fetchAssessments = async () => {
       try {
         const token = (apiClient as any).accessToken || ''
-        const response = await fetch('/api/v1/bias-assessments', {
+        const response = await fetch(`/api/v1/projects/${projectId}/bias-analysis`, {
           headers: { 'Authorization': `Bearer ${token}` },
         })
         if (response.ok) {

@@ -97,19 +97,19 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
   const { data: assignmentsData, refetch: refetchAssignments } = useApiRequest<{
     assignments: ReviewAssignment[];
   }>(
-    () => apiClient.request(`/api/v1/review/assignments?evidence_id=${evidenceId}`, z.object({ assignments: z.array(z.any()) }))
+    () => apiClient.request(`/review/assignments?evidence_id=${evidenceId}`, z.object({ assignments: z.array(z.any()) }))
   );
 
   const { data: commentsData, refetch: refetchComments } = useApiRequest<{
     comment_threads: Comment[];
   }>(
-    () => apiClient.request(`/api/v1/review/comments/${evidenceId}`, z.object({ comment_threads: z.array(z.any()) }))
+    () => apiClient.request(`/review/comments/${evidenceId}`, z.object({ comment_threads: z.array(z.any()) }))
   );
 
   const { data: presenceData } = useApiRequest<{
     active_users: UserPresence[];
   }>(
-    () => apiClient.request(`/api/v1/review/presence/${evidenceId}`, z.object({ active_users: z.array(z.any()) })),
+    () => apiClient.request(`/review/presence/${evidenceId}`, z.object({ active_users: z.array(z.any()) })),
     [evidenceId]
   );
 
@@ -135,7 +135,7 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
   useEffect(() => {
     const updatePresence = () => {
       apiClient.request(
-        `/api/v1/review/presence/${evidenceId}`,
+        `/review/presence/${evidenceId}`,
         z.object({}),
         { method: 'POST', body: JSON.stringify({ activity: 'reviewing', cursor_position: null }) }
       ).catch(logger.error);
@@ -152,7 +152,7 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
 
     try {
       await apiClient.request(
-        '/api/v1/review/comments',
+        '/review/comments',
         z.object({}),
         {
           method: 'POST',
@@ -177,7 +177,7 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
 
     try {
       await apiClient.request(
-        '/api/v1/review/decisions',
+        '/review/decisions',
         z.object({}),
         {
           method: 'POST',
@@ -202,7 +202,7 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
   const handleResolveConflicts = async () => {
     try {
       await apiClient.request(
-        '/api/v1/review/conflicts/resolve',
+        '/review/conflicts/resolve',
         z.object({}),
         {
           method: 'POST',

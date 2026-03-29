@@ -1,5 +1,6 @@
 import type React from 'react'
 import { useState, useEffect } from 'react'
+import { useParams } from 'react-router-dom'
 import { apiClient } from '../services/apiClient'
 import { logger } from '../services/logger'
 import {
@@ -38,6 +39,7 @@ interface ComparisonResult {
 }
 
 const ComparabilityAnalysis: React.FC = () => {
+  const { projectId } = useParams<{ projectId: string }>()
   const [results, setResults] = useState<ComparisonResult[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedComparison, setSelectedComparison] = useState<string | null>(null)
@@ -47,7 +49,7 @@ const ComparabilityAnalysis: React.FC = () => {
     const fetchResults = async () => {
       try {
         const token = (apiClient as any).accessToken || ''
-        const response = await fetch('/api/v1/comparability-analyses', {
+        const response = await fetch(`/api/v1/projects/${projectId}/comparability-scores`, {
           headers: { 'Authorization': `Bearer ${token}` },
         })
         if (response.ok) {

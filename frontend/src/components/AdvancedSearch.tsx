@@ -66,7 +66,7 @@ const AdvancedSearchComponent: React.FC = () => {
 
   // API hooks
   const { data: savedSearchesData } = useApiRequest<{ saved_searches: SavedSearch[] }>(
-    () => apiClient.request('/api/v1/search/saved', z.object({ saved_searches: z.array(z.any()) }))
+    () => apiClient.request('/search/saved', z.object({ saved_searches: z.array(z.any()) }))
   );
 
   useEffect(() => {
@@ -81,8 +81,8 @@ const AdvancedSearchComponent: React.FC = () => {
     setIsSearching(true);
     try {
       const endpoint = searchType === 'semantic' 
-        ? '/api/v1/search/semantic'
-        : '/api/v1/search/hybrid';
+        ? '/search/semantic'
+        : '/search/hybrid';
 
       const searchRequest = {
         query,
@@ -111,7 +111,7 @@ const AdvancedSearchComponent: React.FC = () => {
 
     try {
       await apiClient.request(
-        '/api/v1/search/save',
+        '/search/save',
         z.object({}),
         {
           method: 'POST',
@@ -127,7 +127,7 @@ const AdvancedSearchComponent: React.FC = () => {
 
       // Refresh saved searches
       const savedData = await apiClient.request(
-        '/api/v1/search/saved',
+        '/search/saved',
         z.object({ saved_searches: z.array(z.any()) })
       );
       setSavedSearches(savedData.saved_searches || []);
@@ -148,7 +148,7 @@ const AdvancedSearchComponent: React.FC = () => {
   const getRecommendations = async (evidenceId: string) => {
     try {
       const response = await apiClient.request(
-        `/api/v1/search/recommendations/${evidenceId}?recommendation_type=similar&limit=5`,
+        `/search/recommendations/${evidenceId}?recommendation_type=similar&limit=5`,
         z.object({ recommendations: z.array(z.any()) })
       );
 
