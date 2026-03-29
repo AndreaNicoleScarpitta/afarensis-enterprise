@@ -125,7 +125,7 @@ class ProjectService(BaseService):
                 title=title or "Untitled Project",
                 description=description or "",
                 research_intent=research_intent or "",
-                status=ProjectStatus.DRAFT,
+                status=ProjectStatus.DRAFT.value,
                 created_by=created_by_str,
                 processing_config=processing_config or {},
                 created_at=datetime.utcnow(),
@@ -277,7 +277,7 @@ class ProjectService(BaseService):
         if not project:
             raise_not_found("Project", project_id_str)
 
-        if project.status == ProjectStatus.COMPLETED:
+        if project.status == ProjectStatus.COMPLETED.value:
             raise ValidationError(
                 message="Cannot delete completed projects with regulatory significance",
                 error_code="PROJECT_DELETE_FORBIDDEN"

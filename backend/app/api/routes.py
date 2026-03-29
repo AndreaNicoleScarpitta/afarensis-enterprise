@@ -960,7 +960,7 @@ async def create_project(
         title=getattr(request, 'name', None) or getattr(request, 'title', 'Untitled'),
         description=request.description,
         research_intent=getattr(request, 'protocol_text', '') or getattr(request, 'research_intent', '') or '',
-        status=ProjectStatus.DRAFT,
+        status=ProjectStatus.DRAFT.value,
         created_by=str(current_user.id),
         organization_id=current_user.org_id,  # Multi-tenancy
         processing_config=merged_config,
@@ -1076,16 +1076,12 @@ async def list_projects(
 
         conditions = []
         if status:
-            # Accept both lowercase values ("draft") and uppercase names ("DRAFT")
-            try:
-                status_enum = ProjectStatus(status)  # Try by value first
-            except ValueError:
-                try:
-                    status_enum = ProjectStatus[status.upper()]  # Try by name
-                except KeyError:
-                    status_enum = None
-            if status_enum:
-                conditions.append(Project.status == status_enum)
+            # Normalize to lowercase value string
+            status_val = status.lower()
+            # Validate it's a known status
+            valid = {s.value for s in ProjectStatus}
+            if status_val in valid:
+                conditions.append(Project.status == status_val)
         # Multi-tenancy: filter projects by organization
         if current_user.org_id:
             conditions.append(Project.organization_id == current_user.org_id)
@@ -4364,9 +4360,9 @@ async def create_execution_event(
     return {
         "id": event.id,
         "run_id": event.run_id,
-        "event_type": event.event_type.value,
+        "event_type": event.event_type.value if hasattr(event.event_type, 'value') else str(event.event_type),
         "step_name": event.step_name,
-        "status": event.status.value,
+        "status": event.status.value if hasattr(event.status, 'value') else str(event.status),
         "timestamp": event.timestamp.isoformat() + "Z" if event.timestamp else None,
     }
 
@@ -4401,11 +4397,11 @@ async def list_execution_events(
                 "id": e.id,
                 "run_id": e.run_id,
                 "timestamp": e.timestamp.isoformat() + "Z" if e.timestamp else None,
-                "event_type": e.event_type.value if e.event_type else None,
+                "event_type": (e.event_type.value if hasattr(e.event_type, 'value') else str(e.event_type)) if e.event_type else None,
                 "step_name": e.step_name,
                 "step_index": e.step_index,
                 "total_steps": e.total_steps,
-                "status": e.status.value if e.status else None,
+                "status": (e.status.value if hasattr(e.status, 'value') else str(e.status)) if e.status else None,
                 "summary": e.summary,
                 "details": e.details or {},
                 "inputs": e.inputs or [],
@@ -4456,11 +4452,12 @@ async def list_execution_runs(
             }
         run = runs[rid]
         run["event_count"] += 1
-        if e.status and e.status.value == "completed":
+        status_str = (e.status.value if hasattr(e.status, 'value') else str(e.status)) if e.status else None
+        if status_str == "completed":
             run["completed"] += 1
-        elif e.status and e.status.value == "failed":
+        elif status_str == "failed":
             run["failed"] += 1
-        elif e.status and e.status.value == "warning":
+        elif status_str == "warning":
             run["warnings"] += 1
         if e.duration_ms:
             run["total_duration_ms"] += e.duration_ms

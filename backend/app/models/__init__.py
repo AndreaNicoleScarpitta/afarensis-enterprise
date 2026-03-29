@@ -96,7 +96,7 @@ class Project(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(500), nullable=False)
     description = Column(Text)
-    status = Column(Enum(ProjectStatus, native_enum=False), default=ProjectStatus.DRAFT)
+    status = Column(String(20), default="draft")
 
     # Multi-tenancy
     organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True)
@@ -180,7 +180,7 @@ class EvidenceRecord(Base):
     project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
 
     # Source information
-    source_type = Column(Enum(EvidenceSourceType, native_enum=False))
+    source_type = Column(String(50))
     source_id = Column(String(255))  # PMID, NCT number, etc.
     source_url = Column(String(1000))
 
@@ -260,7 +260,7 @@ class BiasAnalysis(Base):
     comparability_score_id = Column(String(36), ForeignKey("comparability_scores.id", ondelete="CASCADE"), nullable=False)
 
     # Bias detection
-    bias_type = Column(Enum(BiasType, native_enum=False))
+    bias_type = Column(String(50))
     bias_severity = Column(Float)  # 0-1 scale
     bias_description = Column(Text)
 
@@ -320,7 +320,7 @@ class User(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String(255), unique=True, nullable=False)
     full_name = Column(String(255), nullable=False)
-    role = Column(Enum(UserRole, native_enum=False), nullable=False)
+    role = Column(String(20), nullable=False)
 
     # Multi-tenancy
     organization_id = Column(String(36), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True)
@@ -361,7 +361,7 @@ class ReviewDecision(Base):
     reviewer_id = Column(String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     # Decision details
-    decision = Column(Enum(ReviewDecisionEnum, native_enum=False), nullable=False)
+    decision = Column(String(20), nullable=False)
     confidence_level = Column(Float)  # 0-1 scale
     rationale = Column(Text)
     notes = Column(Text)
@@ -1204,11 +1204,11 @@ class ExecutionEvent(Base):
     timestamp = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # Event classification
-    event_type = Column(Enum(ExecutionEventType, native_enum=False), nullable=False)
+    event_type = Column(String(30), nullable=False)
     step_name = Column(String(200), nullable=False)
     step_index = Column(Integer, nullable=True)
     total_steps = Column(Integer, nullable=True)
-    status = Column(Enum(ExecutionEventStatus, native_enum=False), nullable=False)
+    status = Column(String(20), nullable=False)
 
     # Human-readable summary
     summary = Column(Text, nullable=False)

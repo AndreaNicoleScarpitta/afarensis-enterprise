@@ -51,6 +51,18 @@ async def lifespan(app: FastAPI):
             logger.info("PostgreSQL mode: auto-creating tables via create_all()...")
 
         async with engine.begin() as conn:
+            # Drop stale native enum types that conflict with String columns
+            if not settings.is_sqlite:
+                from sqlalchemy import text as _text
+                for enum_name in [
+                    "projectstatus", "evidencesourcetype", "biastype",
+                    "userrole", "reviewdecisionenum",
+                    "executioneventtype", "executioneventstatus",
+                ]:
+                    try:
+                        await conn.execute(_text(f"DROP TYPE IF EXISTS {enum_name} CASCADE"))
+                    except Exception:
+                        pass
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Database tables created/verified")
 
