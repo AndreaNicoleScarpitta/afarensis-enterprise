@@ -390,7 +390,7 @@ function BiasSensitivityMockup() {
             <div style={{ color: '#f59e0b', fontSize: '28px', fontWeight: 700 }}>68%</div>
             <div style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>Of control patients would need reclassification to null result</div>
             <div style={{ marginTop: '8px', padding: '6px 8px', background: '#0f172a', borderRadius: '4px' }}>
-              <div style={{ color: '#34d399', fontSize: '11px' }}>✓ Result is robust</div>
+              <div style={{ color: '#34d399', fontSize: '11px' }}>Result is robust</div>
               <div style={{ color: '#94a3b8', fontSize: '10px', marginTop: '2px' }}>Threshold for concern: &lt;20%</div>
             </div>
           </div>
@@ -424,7 +424,7 @@ function RegulatoryAttackMockup() {
         </div>
         <div style={{ background: '#1e293b', borderRadius: '8px', padding: '14px', border: '1px solid #334155', marginBottom: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <span style={{ fontSize: '16px' }}>🎯</span>
+            <span style={{ color: '#ef4444', fontSize: '14px', fontWeight: 700 }}>!</span>
             <span style={{ color: '#e2e8f0', fontSize: '13px', fontWeight: 600 }}>FDA Reviewer Challenge Vectors</span>
           </div>
           {[
@@ -464,21 +464,21 @@ function RegulatoryOutputMockup() {
         </div>
         <div style={{ display: 'grid', gap: '8px' }}>
           {[
-            { name: 'Clinical Study Report — ECA Supplement', format: 'PDF', size: '2.4 MB', icon: '📄', status: 'Generated' },
-            { name: 'ADaM ADSL (Analysis Dataset)', format: 'XPT', size: '340 KB', icon: '📊', status: 'Generated' },
-            { name: 'ADaM ADTTE (Time-to-Event)', format: 'XPT', size: '180 KB', icon: '📊', status: 'Generated' },
-            { name: 'Statistical Analysis Plan', format: 'PDF', size: '890 KB', icon: '📄', status: 'Generated' },
-            { name: 'Covariate Balance Tables (TFL)', format: 'PDF', size: '1.1 MB', icon: '📈', status: 'Generated' },
-            { name: 'Kaplan-Meier Figures (TFL)', format: 'PDF', size: '520 KB', icon: '📈', status: 'Generated' },
-            { name: 'Bias Analysis Report', format: 'PDF', size: '680 KB', icon: '🔍', status: 'Generated' },
-            { name: 'Audit Trail & Provenance Log', format: 'JSON', size: '95 KB', icon: '🔒', status: 'Generated' },
+            { name: 'Clinical Study Report — ECA Supplement', format: 'PDF', size: '2.4 MB', icon: 'CSR', status: 'Generated' },
+            { name: 'ADaM ADSL (Analysis Dataset)', format: 'XPT', size: '340 KB', icon: 'XPT', status: 'Generated' },
+            { name: 'ADaM ADTTE (Time-to-Event)', format: 'XPT', size: '180 KB', icon: 'XPT', status: 'Generated' },
+            { name: 'Statistical Analysis Plan', format: 'PDF', size: '890 KB', icon: 'SAP', status: 'Generated' },
+            { name: 'Covariate Balance Tables (TFL)', format: 'PDF', size: '1.1 MB', icon: 'TFL', status: 'Generated' },
+            { name: 'Kaplan-Meier Figures (TFL)', format: 'PDF', size: '520 KB', icon: 'TFL', status: 'Generated' },
+            { name: 'Bias Analysis Report', format: 'PDF', size: '680 KB', icon: 'QBA', status: 'Generated' },
+            { name: 'Audit Trail & Provenance Log', format: 'JSON', size: '95 KB', icon: 'LOG', status: 'Generated' },
           ].map((doc, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: '12px',
               background: '#1e293b', borderRadius: '6px', padding: '10px 14px',
               border: '1px solid #334155',
             }}>
-              <span style={{ fontSize: '16px' }}>{doc.icon}</span>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#3b82f6', fontFamily: designSystem.typography.fontFamily.mono, background: '#1e40af22', padding: '2px 6px', borderRadius: '3px', letterSpacing: '0.05em' }}>{doc.icon}</span>
               <div style={{ flex: 1 }}>
                 <div style={{ color: '#e2e8f0', fontSize: '12px', fontWeight: 500 }}>{doc.name}</div>
                 <div style={{ color: '#64748b', fontSize: '10px', marginTop: '2px' }}>{doc.format} · {doc.size}</div>
@@ -530,7 +530,7 @@ function AuditTrailMockup() {
         </div>
         <div style={{ marginTop: '8px', padding: '8px 12px', background: '#1e293b', borderRadius: '6px', border: '1px solid #334155' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ color: '#22c55e' }}>🔒</span>
+            <span style={{ color: '#22c55e', fontSize: '12px', fontWeight: 700 }}>&#x2713;</span>
             <span style={{ color: '#94a3b8', fontSize: '11px' }}>All entries are cryptographically signed and immutable. SHA-256 chain verified.</span>
           </div>
         </div>
@@ -619,13 +619,94 @@ export function HowItWorksPage({ onOpenWaitlist }: HowItWorksPageProps) {
   const [showContact, setShowContact] = useState(false);
 
   usePageSEO({
-    title: 'How It Works — Afarensis Evidence Validation Engine',
-    description: 'See how Afarensis validates external control arms in 7 steps: from PICO definition to regulatory-ready evidence packages. Built for rare disease sponsors preparing FDA submissions.',
+    title: 'How It Works — External Control Arm Validation for Rare Disease FDA Submissions',
+    description: 'Afarensis validates external control arms through a 7-step evidence pipeline: PICO definition, causal framework modeling, propensity score matching, treatment effect estimation, quantitative bias analysis, regulatory stress testing, and CDISC-compliant evidence package generation. Purpose-built for rare disease sponsors preparing single-arm trial FDA submissions with externally controlled comparators.',
     canonicalPath: '/how-it-works',
-    keywords: 'external control arm validation, how it works, evidence validation engine, clinical trial platform, regulatory submission, FDA evidence package, PICO framework, covariate balance, bias analysis',
-    ogTitle: 'How Afarensis Works | Synthetic Ascension',
-    ogDescription: 'From raw comparator data to regulatory-ready evidence package — see the 7-step validation pipeline.',
+    keywords: 'external control arm, ECA validation, externally controlled trial, single-arm trial FDA submission, rare disease clinical trial, propensity score matching, IPTW, covariate balance, love plot, kaplan-meier, cox proportional hazards, e-value, tipping point analysis, quantitative bias analysis, CDISC ADaM, regulatory evidence package, ICH E10, natural history comparator, real-world evidence, CFR Part 11 audit trail, FDA complete response letter prevention, clinical study report supplement',
+    ogTitle: 'How Afarensis Validates External Control Arms | Synthetic Ascension',
+    ogDescription: 'From raw comparator data to regulatory-ready evidence package in 7 steps. Propensity score matching, bias analysis, regulatory stress testing, and CDISC-compliant exports for rare disease FDA submissions.',
   });
+
+  // Inject JSON-LD structured data for SEO
+  useEffect(() => {
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: 'How to Validate an External Control Arm for FDA Submission',
+      description: 'A 7-step evidence validation pipeline that transforms external control arm data into defensible, auditable regulatory evidence packages for rare disease FDA submissions.',
+      totalTime: 'P7D',
+      tool: {
+        '@type': 'SoftwareApplication',
+        name: 'Afarensis',
+        applicationCategory: 'Clinical Trial Software',
+        operatingSystem: 'Web-based',
+        offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD', availability: 'https://schema.org/ComingSoon' },
+      },
+      step: [
+        { '@type': 'HowToStep', position: 1, name: 'Study Definition', text: 'Define your clinical question using the PICO/PECO framework with ICH E10 regulatory cross-referencing.' },
+        { '@type': 'HowToStep', position: 2, name: 'Causal Framework', text: 'Map causal assumptions with a directed acyclic graph (DAG) to identify confounders and backdoor paths.' },
+        { '@type': 'HowToStep', position: 3, name: 'Comparability Assessment', text: 'Run propensity score matching, IPTW, and exact matching with love plots and balance diagnostics.' },
+        { '@type': 'HowToStep', position: 4, name: 'Effect Estimation', text: 'Estimate treatment effects with Cox proportional hazards, Kaplan-Meier curves, and forest plots.' },
+        { '@type': 'HowToStep', position: 5, name: 'Bias & Sensitivity Analysis', text: 'Compute E-values, tipping point analyses, and probabilistic bias analysis for unmeasured confounding.' },
+        { '@type': 'HowToStep', position: 6, name: 'Regulatory Stress Test', text: 'Simulate FDA reviewer challenge vectors derived from real complete response letters and advisory committee transcripts.' },
+        { '@type': 'HowToStep', position: 7, name: 'Evidence Package Export', text: 'Export CDISC ADaM datasets, TFLs, statistical analysis plans, and cryptographically signed audit trails.' },
+      ],
+    };
+    let script = document.querySelector('script[data-schema="how-it-works"]') as HTMLScriptElement | null;
+    if (!script) {
+      script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.setAttribute('data-schema', 'how-it-works');
+      document.head.appendChild(script);
+    }
+    script.textContent = JSON.stringify(jsonLd);
+
+    // FAQ schema
+    const faqJsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: [
+        { '@type': 'Question', name: 'What is an external control arm?', acceptedAnswer: { '@type': 'Answer', text: 'An external control arm (ECA) is a comparator group constructed from patients outside the clinical trial — typically from natural history registries, electronic health records, or prior clinical studies. ECAs are used when randomization is not feasible, particularly in rare disease trials.' } },
+        { '@type': 'Question', name: 'Why do external control arm submissions fail at the FDA?', acceptedAnswer: { '@type': 'Answer', text: 'The most common reasons include insufficient population comparability, lack of sensitivity analyses for unmeasured confounding, inadequate covariate balance documentation, and absence of a structured validation layer between raw data and regulatory claims.' } },
+        { '@type': 'Question', name: 'How does Afarensis differ from data vendors like Flatiron or Tempus?', acceptedAnswer: { '@type': 'Answer', text: 'Data vendors provide access to real-world datasets. Afarensis validates the claims you make with that data, providing evidence validation infrastructure that produces auditable, reproducible regulatory evidence packages.' } },
+        { '@type': 'Question', name: 'What statistical methods does Afarensis support?', acceptedAnswer: { '@type': 'Answer', text: 'Propensity score matching, IPTW, exact matching, Cox proportional hazards, Kaplan-Meier survival estimation, E-value computation, tipping point analysis, probabilistic bias analysis, and forest plots across pre-specified subgroups.' } },
+        { '@type': 'Question', name: 'What file formats does Afarensis export?', acceptedAnswer: { '@type': 'Answer', text: 'CDISC ADaM-compliant datasets (ADSL, ADTTE, ADAE) in XPT format, publication-quality TFLs in PDF, statistical analysis plans, quantitative bias analysis reports, and cryptographically signed audit trails for eCTD submission.' } },
+        { '@type': 'Question', name: 'Is Afarensis CFR Part 11 compliant?', acceptedAnswer: { '@type': 'Answer', text: 'Yes. Every action is logged with user attribution, timestamps, and cryptographic verification (SHA-256 chain). The platform supports electronic signature workflows and exportable audit logs for regulatory inspection.' } },
+      ],
+    };
+    let faqScript = document.querySelector('script[data-schema="faq"]') as HTMLScriptElement | null;
+    if (!faqScript) {
+      faqScript = document.createElement('script');
+      faqScript.type = 'application/ld+json';
+      faqScript.setAttribute('data-schema', 'faq');
+      document.head.appendChild(faqScript);
+    }
+    faqScript.textContent = JSON.stringify(faqJsonLd);
+
+    // Also inject Organization schema
+    const orgJsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      name: 'Synthetic Ascension',
+      url: 'https://syntheticascendancy.tech',
+      description: 'Evidence validation infrastructure for external control arm submissions in rare disease clinical trials.',
+      sameAs: [],
+    };
+    let orgScript = document.querySelector('script[data-schema="organization"]') as HTMLScriptElement | null;
+    if (!orgScript) {
+      orgScript = document.createElement('script');
+      orgScript.type = 'application/ld+json';
+      orgScript.setAttribute('data-schema', 'organization');
+      document.head.appendChild(orgScript);
+    }
+    orgScript.textContent = JSON.stringify(orgJsonLd);
+
+    return () => {
+      script?.remove();
+      faqScript?.remove();
+      orgScript?.remove();
+    };
+  }, []);
 
   // GA4 page view + engagement tracking
   useEffect(() => {
@@ -751,11 +832,19 @@ export function HowItWorksPage({ onOpenWaitlist }: HowItWorksPageProps) {
             </h1>
             <p style={{
               fontSize: '19px', lineHeight: 1.7, color: designSystem.colors.neutral.gray600,
-              maxWidth: '640px', margin: '0 auto 40px',
+              maxWidth: '640px', margin: '0 auto 24px',
             }}>
-              Afarensis implements a 12-layer validation pipeline that systematically transforms
+              Afarensis implements a systematic validation pipeline that transforms
               external control arm data into defensible, auditable evidence — before your
               submission reaches a reviewer.
+            </p>
+            <p style={{
+              fontSize: '15px', lineHeight: 1.7, color: designSystem.colors.neutral.gray500,
+              maxWidth: '640px', margin: '0 auto 40px',
+            }}>
+              Purpose-built for rare disease sponsors conducting single-arm trials with
+              natural history or real-world data comparators. Aligned with ICH E10, FDA draft
+              guidance on externally controlled trials, and 21st Century Cures Act frameworks.
             </p>
           </div>
 
@@ -765,14 +854,14 @@ export function HowItWorksPage({ onOpenWaitlist }: HowItWorksPageProps) {
               display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px',
             }}>
               {[
-                { num: '1', label: 'Define', icon: '📋' },
-                { num: '2', label: 'Model', icon: '🔗' },
-                { num: '3', label: 'Balance', icon: '⚖️' },
-                { num: '4', label: 'Estimate', icon: '📊' },
-                { num: '5', label: 'Stress-Test', icon: '🔍' },
-                { num: '6', label: 'Attack', icon: '🎯' },
-                { num: '7', label: 'Export', icon: '📦' },
-                { num: '∞', label: 'Audit', icon: '🔒' },
+                { num: '1', label: 'Define' },
+                { num: '2', label: 'Model' },
+                { num: '3', label: 'Balance' },
+                { num: '4', label: 'Estimate' },
+                { num: '5', label: 'Stress-Test' },
+                { num: '6', label: 'Attack' },
+                { num: '7', label: 'Export' },
+                { num: '\u221E', label: 'Audit' },
               ].map((step, i) => (
                 <div key={i} style={{
                   background: designSystem.colors.neutral.white,
@@ -781,7 +870,13 @@ export function HowItWorksPage({ onOpenWaitlist }: HowItWorksPageProps) {
                   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
                   textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: '24px', marginBottom: '6px' }}>{step.icon}</div>
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: '32px', height: '32px', borderRadius: '8px',
+                    background: designSystem.colors.primary, color: '#fff',
+                    fontSize: '14px', fontWeight: 700, marginBottom: '6px',
+                    fontFamily: designSystem.typography.fontFamily.heading,
+                  }}>{step.num}</div>
                   <div style={{
                     fontSize: '11px', fontWeight: 700, color: designSystem.colors.primary,
                     marginBottom: '2px',
@@ -1068,6 +1163,79 @@ export function HowItWorksPage({ onOpenWaitlist }: HowItWorksPageProps) {
                 Read the Founding Memo →
               </Link>
             </div>
+          </div>
+        </section>
+
+        {/* ===== FAQ SECTION (SEO) ===== */}
+        <section style={{
+          padding: '80px 32px',
+          background: designSystem.colors.neutral.gray50,
+        }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+            <h2 style={{
+              fontSize: '32px', fontWeight: 700, color: designSystem.colors.neutral.gray900,
+              fontFamily: designSystem.typography.fontFamily.heading,
+              lineHeight: 1.2, marginBottom: '40px', textAlign: 'center',
+            }}>
+              Frequently Asked Questions
+            </h2>
+            {[
+              {
+                q: 'What is an external control arm?',
+                a: 'An external control arm (ECA) is a comparator group constructed from patients outside the clinical trial — typically from natural history registries, electronic health records, or prior clinical studies. ECAs are used when randomization is not feasible, particularly in rare disease trials where patient populations are too small for traditional randomized controlled trial designs.',
+              },
+              {
+                q: 'Why do external control arm submissions fail at the FDA?',
+                a: 'The most common reasons include insufficient population comparability, lack of sensitivity analyses for unmeasured confounding, inadequate covariate balance documentation, and absence of a structured validation layer between raw data and regulatory claims. The FDA expects sponsors to pre-address these concerns with quantitative evidence — not qualitative arguments.',
+              },
+              {
+                q: 'How does Afarensis differ from data vendors like Flatiron or Tempus?',
+                a: 'Data vendors provide access to real-world datasets. Afarensis does not sell data — it validates the claims you make with that data. Afarensis sits between your data source and the FDA, providing the evidence validation infrastructure that produces auditable, reproducible regulatory evidence packages.',
+              },
+              {
+                q: 'What statistical methods does Afarensis support?',
+                a: 'Afarensis supports propensity score matching, inverse probability of treatment weighting (IPTW), exact matching, Cox proportional hazards models, Kaplan-Meier survival estimation, E-value computation, tipping point analysis, probabilistic bias analysis, and forest plots across pre-specified subgroups.',
+              },
+              {
+                q: 'What file formats does Afarensis export?',
+                a: 'Afarensis exports CDISC ADaM-compliant datasets (ADSL, ADTTE, ADAE) in XPT format, publication-quality tables/figures/listings (TFLs) in PDF, statistical analysis plans, quantitative bias analysis reports, and cryptographically signed audit trails — all structured for CSR supplements and eCTD submission.',
+              },
+              {
+                q: 'Is Afarensis CFR Part 11 compliant?',
+                a: 'Yes. Every action in Afarensis is logged with user attribution, timestamps, and cryptographic verification (SHA-256 chain). The platform supports electronic signature workflows, version-controlled evidence packages, and exportable audit logs designed for regulatory inspection.',
+              },
+            ].map((faq, i) => (
+              <details key={i} style={{
+                marginBottom: '12px',
+                background: designSystem.colors.neutral.white,
+                borderRadius: '8px',
+                border: `1px solid ${designSystem.colors.neutral.gray200}`,
+                overflow: 'hidden',
+              }}>
+                <summary style={{
+                  padding: '18px 24px',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  color: designSystem.colors.neutral.gray800,
+                  cursor: 'pointer',
+                  listStyle: 'none',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}>
+                  {faq.q}
+                  <span style={{ color: designSystem.colors.neutral.gray400, fontSize: '20px', fontWeight: 300 }}>+</span>
+                </summary>
+                <div style={{
+                  padding: '0 24px 18px',
+                  fontSize: '15px',
+                  lineHeight: 1.7,
+                  color: designSystem.colors.neutral.gray600,
+                }}>
+                  {faq.a}
+                </div>
+              </details>
+            ))}
           </div>
         </section>
 
