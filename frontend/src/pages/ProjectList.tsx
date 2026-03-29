@@ -16,6 +16,7 @@ import {
 // CRITICAL FIX: Use new API hooks and types
 import { useProjects, useProjectMutations } from '../services/hooks'
 import { ProjectStatus } from '../services/apiClient'
+import { logger } from '../services/logger'
 
 const ProjectList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -38,7 +39,7 @@ const ProjectList: React.FC = () => {
         await deleteProject(projectId);
         refetch(); // Refresh the list
       } catch (error) {
-        console.error('Failed to delete project:', error);
+        logger.error('Failed to delete project:', error);
       }
     }
   };

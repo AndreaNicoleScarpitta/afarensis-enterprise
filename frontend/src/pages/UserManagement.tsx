@@ -7,6 +7,7 @@ import {
   Eye, BarChart3, Copy, Check, X
 } from 'lucide-react'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import { z } from 'zod'
 
 // ---------------------------------------------------------------------------
@@ -179,7 +180,7 @@ const UserManagement: React.FC = () => {
         prev.map(u => (u.id === userId ? { ...u, role: newRole } : u))
       )
     } catch (err: any) {
-      console.error('Failed to change role', err)
+      logger.error('Failed to change role', err)
     } finally {
       setActionLoading(prev => ({ ...prev, [userId]: false }))
     }
@@ -200,7 +201,7 @@ const UserManagement: React.FC = () => {
         )
       )
     } catch (err: any) {
-      console.error(`Failed to ${action} user`, err)
+      logger.error(`Failed to ${action} user`, err)
     } finally {
       setActionLoading(prev => ({ ...prev, [user.id]: false }))
     }

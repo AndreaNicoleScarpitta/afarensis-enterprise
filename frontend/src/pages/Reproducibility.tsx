@@ -7,6 +7,7 @@ import { useStalenessCheck } from '../hooks/useStalenessCheck'
 import StalenessBanner from '../components/ui/StalenessBanner'
 import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import { z } from 'zod'
 
 interface Props {
@@ -118,7 +119,7 @@ export default function Reproducibility({ selectedStudy, protocolLocked, reviewe
         has_provenance: true,
       })
     } catch (err) {
-      console.error('[Provenance] Run failed:', err)
+      logger.error('[Provenance] Run failed:', err)
     } finally {
       setRunningProvenance(false)
     }

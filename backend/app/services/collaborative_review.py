@@ -500,19 +500,66 @@ class CollaborativeReviewService(BaseService):
         await self._broadcast_presence_update(evidence_id)
 
     async def get_workflow_progress(self, workflow_id: str) -> WorkflowProgress:
-        """Get progress of a review workflow"""
+        """Get progress of a review workflow by querying actual workflow state."""
+        from sqlalchemy import text as _sa_text
 
-        # This would query workflow steps and calculate progress
-        # For now, return a placeholder implementation
+        # Query the actual workflow record
+        result = await self.db.execute(
+            _sa_text(
+                "SELECT evidence_id, status, config FROM review_workflows "
+                "WHERE id = :wid LIMIT 1"
+            ),
+            {"wid": workflow_id},
+        )
+        row = result.fetchone()
+
+        if not row:
+            # No workflow found — return empty progress instead of fake data
+            return WorkflowProgress(
+                workflow_id=workflow_id,
+                evidence_id="",
+                current_step="not_started",
+                completed_steps=[],
+                pending_steps=[],
+                overall_progress=0.0,
+                estimated_completion=None,
+            )
+
+        evidence_id = row[0] or ""
+        status = row[1] or "pending"
+        config = row[2] if row[2] else {}
+        if isinstance(config, str):
+            import json
+            config = json.loads(config)
+
+        # Derive progress from status
+        all_steps = ["initial_review", "peer_review", "senior_review", "final_approval"]
+        step_order = {s: i for i, s in enumerate(all_steps)}
+
+        if status == "completed":
+            return WorkflowProgress(
+                workflow_id=workflow_id,
+                evidence_id=evidence_id,
+                current_step="completed",
+                completed_steps=all_steps,
+                pending_steps=[],
+                overall_progress=1.0,
+                estimated_completion=None,
+            )
+
+        current_idx = step_order.get(status, 0)
+        completed = all_steps[:current_idx]
+        pending = all_steps[current_idx + 1:]
+        progress = current_idx / len(all_steps) if all_steps else 0.0
 
         return WorkflowProgress(
             workflow_id=workflow_id,
-            evidence_id="",
-            current_step="peer_review",
-            completed_steps=["initial_review"],
-            pending_steps=["senior_review", "final_approval"],
-            overall_progress=0.4,
-            estimated_completion=datetime.utcnow() + timedelta(days=5)
+            evidence_id=evidence_id,
+            current_step=status,
+            completed_steps=completed,
+            pending_steps=pending,
+            overall_progress=progress,
+            estimated_completion=datetime.utcnow() + timedelta(days=max(1, len(pending) * 2)),
         )
 
     # Helper methods

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { useStudyData } from '../services/hooks'
+import { logger } from '../services/logger'
 
 // ---------------------------------------------------------------------------
 // Props
@@ -228,7 +229,7 @@ export default function RegulatoryAttack({ selectedStudy, protocolLocked, review
       await runComputation('regulatory-attack/run')
       await refetch()
     } catch (err) {
-      console.error('Adversarial review failed:', err)
+      logger.error('Adversarial review failed:', err)
     } finally {
       setRunning(false)
     }

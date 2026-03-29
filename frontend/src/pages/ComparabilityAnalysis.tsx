@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useState, useEffect } from 'react'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import {
   BarChart3,
   Target,
@@ -54,7 +55,7 @@ const ComparabilityAnalysis: React.FC = () => {
           setResults(Array.isArray(data) ? data : data.analyses || [])
         }
       } catch (err) {
-        console.error('Failed to fetch comparability analyses:', err)
+        logger.error('Failed to fetch comparability analyses:', err)
       } finally {
         setLoading(false)
       }

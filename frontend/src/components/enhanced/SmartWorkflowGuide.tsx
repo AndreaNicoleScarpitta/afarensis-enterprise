@@ -12,6 +12,7 @@ import {
   Target,
   Zap
 } from 'lucide-react'
+import { logger } from '../../services/logger'
 
 interface WorkflowStep {
   id: string
@@ -81,7 +82,7 @@ const SmartWorkflowGuide: React.FC<SmartWorkflowGuideProps> = ({
       const data = await response.json()
       setWorkflowData(data)
     } catch (error) {
-      console.error('Failed to fetch workflow guidance:', error)
+      logger.error('Failed to fetch workflow guidance:', error)
     }
     setIsLoading(false)
   }, [projectId])

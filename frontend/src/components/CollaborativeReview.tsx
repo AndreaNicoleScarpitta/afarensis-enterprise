@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useApiRequest } from '../services/hooks';
 import { apiClient } from '../services/apiClient';
+import { logger } from '../services/logger';
 import { z } from 'zod';
 
 interface ReviewAssignment {
@@ -137,7 +138,7 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
         `/api/v1/review/presence/${evidenceId}`,
         z.object({}),
         { method: 'POST', body: JSON.stringify({ activity: 'reviewing', cursor_position: null }) }
-      ).catch(console.error);
+      ).catch(logger.error);
     };
 
     updatePresence();
@@ -167,7 +168,7 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
       setNewComment('');
       refetchComments();
     } catch (error) {
-      console.error('Failed to add comment:', error);
+      logger.error('Failed to add comment:', error);
     }
   };
 
@@ -194,7 +195,7 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
       setSelectedAssignment(null);
       refetchAssignments();
     } catch (error) {
-      console.error('Failed to submit decision:', error);
+      logger.error('Failed to submit decision:', error);
     }
   };
 
@@ -216,7 +217,7 @@ const CollaborativeReviewComponent: React.FC<{ evidenceId: string }> = ({ eviden
       setShowConflictResolution(false);
       refetchAssignments();
     } catch (error) {
-      console.error('Failed to resolve conflicts:', error);
+      logger.error('Failed to resolve conflicts:', error);
     }
   };
 

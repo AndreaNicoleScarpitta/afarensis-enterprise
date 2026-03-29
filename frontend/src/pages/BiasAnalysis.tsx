@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useState, useEffect } from 'react'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import {
   AlertTriangle,
   Shield,
@@ -46,7 +47,7 @@ const BiasAnalysis: React.FC = () => {
           setAssessments(Array.isArray(data) ? data : data.assessments || [])
         }
       } catch (err) {
-        console.error('Failed to fetch bias assessments:', err)
+        logger.error('Failed to fetch bias assessments:', err)
       } finally {
         setLoading(false)
       }

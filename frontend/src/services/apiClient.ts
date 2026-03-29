@@ -2,6 +2,7 @@
 // Addresses runtime validation, race conditions, and WebSocket proxy issues
 
 import { z } from 'zod';
+import { logger } from './logger';
 
 // ============================================================================
 // ZOD SCHEMAS - Runtime validation prevents silent failures
@@ -298,7 +299,7 @@ class ApiClient {
     // CRITICAL: Runtime validation with detailed error logging
     const result = schema.safeParse(data);
     if (!result.success) {
-      console.error('API Response Validation Failed:', {
+      logger.error('API Response Validation Failed:', {
         url,
         errors: result.error.format(),
         receivedData: data
@@ -310,7 +311,7 @@ class ApiClient {
       }
 
       // Production: log a visible warning so operators can investigate, but don't crash the UI.
-      console.warn(`[Afarensis] API response from ${url} did not pass schema validation. Rendering unvalidated data — verify backend response shape.`);
+      logger.warn(`[Afarensis] API response from ${url} did not pass schema validation. Rendering unvalidated data — verify backend response shape.`);
       return data;
     }
     

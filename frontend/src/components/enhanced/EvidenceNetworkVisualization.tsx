@@ -11,6 +11,7 @@ import {
   ZoomOut,
   RotateCcw
 } from 'lucide-react'
+import { logger } from '../../services/logger'
 
 interface EvidenceNode extends d3.SimulationNodeDatum {
   id: string
@@ -106,7 +107,7 @@ const EvidenceNetworkVisualization: React.FC<EvidenceNetworkVisualizationProps> 
       const networkData = await response.json()
       setData(networkData)
     } catch (error) {
-      console.error('Failed to fetch evidence network:', error)
+      logger.error('Failed to fetch evidence network:', error)
     }
     setIsLoading(false)
   }, [projectId])

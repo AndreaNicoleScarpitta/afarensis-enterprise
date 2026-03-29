@@ -63,8 +63,8 @@ async def seed_database(session: AsyncSession):
         (reviewer2_id, "reviewer2@afarensis.com", "Dr. Michael Torres, Epidemiologist", "REVIEWER", hash_pw("reviewer123"), 1, "Afarensis Inc.", "Epidemiology", org_afarensis_id),
         (analyst_id, "analyst@afarensis.com", "Emily Park, Research Analyst", "ANALYST", hash_pw("analyst123"), 1, "Afarensis Inc.", "Research", org_afarensis_id),
         (viewer_id, "viewer@afarensis.com", "James Liu, Regulatory Affairs", "VIEWER", hash_pw("viewer123"), 1, "Afarensis Inc.", "Regulatory Affairs", org_afarensis_id),
-        (meridian_admin_id, "meridian-admin@example.com", "Dr. Rachel Kim, VP Clinical", "ADMIN", hash_pw("meridian123"), 1, "Meridian Therapeutics", "Clinical Operations", org_meridian_id),
-        (meridian_analyst_id, "meridian-analyst@example.com", "Tom Harris, Data Analyst", "ANALYST", hash_pw("meridian123"), 1, "Meridian Therapeutics", "Biostatistics", org_meridian_id),
+        (meridian_admin_id, "rachel.kim@meridiantx.com", "Dr. Rachel Kim, VP Clinical", "ADMIN", hash_pw("meridian123"), 1, "Meridian Therapeutics", "Clinical Operations", org_meridian_id),
+        (meridian_analyst_id, "tom.harris@meridiantx.com", "Tom Harris, Data Analyst", "ANALYST", hash_pw("meridian123"), 1, "Meridian Therapeutics", "Biostatistics", org_meridian_id),
     ]
 
     for uid, email, full_name, role, hpw, active, org, dept, org_id in users:
@@ -81,23 +81,23 @@ async def seed_database(session: AsyncSession):
     project4_id = str(uuid.uuid4())
 
     projects = [
-        (project1_id, "[Sample] XY-301: Rare CNS Disorder (Pediatric)", "review",
+        (project1_id, "XY-301: Rare CNS Disorder (Pediatric)", "review",
          "Phase 3 single-arm study of XY-301 in pediatric patients with rare CNS disorder. "
          "External control arm constructed from registry data and natural history studies. "
          "Primary endpoint: change in neurological severity score at 48 weeks.",
          "Evaluate efficacy and safety of XY-301 vs external comparator using ATT estimand with propensity score methods.",
          admin_id, org_afarensis_id),
-        (project2_id, "[Sample] CLARITY-AD: Alzheimer's Disease Phase 3", "completed",
+        (project2_id, "CLARITY-AD: Alzheimer's Disease Phase 3", "completed",
          "Phase 3 randomized controlled trial evaluating monoclonal antibody therapy in early Alzheimer's disease. "
          "Co-primary endpoints: CDR-SB and ADAS-Cog14 at 76 weeks.",
          "Assess treatment effect using ITT estimand in mild cognitive impairment and mild AD dementia populations.",
          reviewer1_id, org_afarensis_id),
-        (project3_id, "[Sample] GLP1-2026: Cardiovascular Outcomes", "draft",
+        (project3_id, "GLP1-2026: Cardiovascular Outcomes", "draft",
          "Cardiovascular outcomes trial for novel GLP-1 receptor agonist. "
          "Primary endpoint: time to first MACE (cardiovascular death, MI, or stroke).",
          "Evaluate cardiovascular safety and potential benefit using ATE estimand with time-to-event analysis.",
          analyst_id, org_afarensis_id),
-        (project4_id, "[Sample] MRD-100: Autoimmune Hepatitis Phase 2", "draft",
+        (project4_id, "MRD-100: Autoimmune Hepatitis Phase 2", "draft",
          "Phase 2 dose-ranging study of MRD-100, a selective JAK1 inhibitor, in moderate-to-severe autoimmune hepatitis. "
          "Primary endpoint: biochemical response (ALT normalization) at 24 weeks.",
          "Evaluate dose-response relationship using Bayesian adaptive design with external control from IAIHG registry data.",

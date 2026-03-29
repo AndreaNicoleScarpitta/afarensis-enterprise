@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { Study } from '../components/layout/Sidebar'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import { z } from 'zod'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -129,10 +130,8 @@ export default function StudyDAG({ selectedStudy, protocolLocked }: Props) {
       )
       setDagData(data as DAGData)
     } catch (err: any) {
-      console.error('Failed to fetch DAG:', err)
-      // Provide demo data if backend not available
-      setDagData(getDemoDAGData(selectedStudy.id))
-      setError(null)
+      logger.error('Failed to fetch DAG:', err)
+      setError(err?.message || 'Failed to load study workflow. Please check your connection and try again.')
     } finally {
       setLoading(false)
     }
@@ -153,7 +152,7 @@ export default function StudyDAG({ selectedStudy, protocolLocked }: Props) {
       )
       await fetchDAG()
     } catch (err) {
-      console.error('Failed to regenerate DAG:', err)
+      logger.error('Failed to regenerate DAG:', err)
       // Silently use existing data
     } finally {
       setRegenerating(false)
@@ -183,7 +182,7 @@ export default function StudyDAG({ selectedStudy, protocolLocked }: Props) {
         { method: 'PATCH', body: JSON.stringify({ status: nextStatus }) },
       )
     } catch (err) {
-      console.error('Failed to update node status:', err)
+      logger.error('Failed to update node status:', err)
       // Revert on failure
       setDagData(prev => {
         if (!prev) return prev
@@ -550,36 +549,4 @@ export default function StudyDAG({ selectedStudy, protocolLocked }: Props) {
   )
 }
 
-// ── Demo data (used when backend endpoint is not available) ─────────────────
-
-function getDemoDAGData(projectId: string): DAGData {
-  return {
-    project_id: projectId,
-    nodes: [
-      { key: 'data_ingestion', label: 'Data Ingestion: CLARITY AD Phase 3 Dataset', category: 'data_ingestion', description: 'Import and validate source trial data', status: 'completed', order_index: 0, config: {}, page_route: `/projects/${projectId}/data-provenance` },
-      { key: 'population_definition', label: 'Population Definition: ITT & mITT Cohorts', category: 'population', description: 'Define intent-to-treat and modified ITT populations', status: 'completed', order_index: 1, config: {}, page_route: `/projects/${projectId}/cohort` },
-      { key: 'cohort_attrition', label: 'Cohort Attrition & Weighting', category: 'population', description: 'Apply inclusion/exclusion criteria and IPTW weights', status: 'in_progress', order_index: 2, config: {}, page_route: `/projects/${projectId}/cohort` },
-      { key: 'primary_endpoint', label: 'Primary Endpoint: CDR-SB Change', category: 'primary', description: 'CDR Sum-of-Boxes change from baseline at 18 months', status: 'pending', order_index: 3, config: {}, page_route: `/projects/${projectId}/effect-estimation` },
-      { key: 'secondary_cognitive', label: 'Secondary: ADAS-Cog14', category: 'secondary', description: 'Cognitive subscale assessment over treatment period', status: 'pending', order_index: 4, config: {}, page_route: `/projects/${projectId}/effect-estimation` },
-      { key: 'secondary_functional', label: 'Secondary: ADCS-iADL', category: 'secondary', description: 'Functional independence daily living score', status: 'pending', order_index: 5, config: {}, page_route: `/projects/${projectId}/effect-estimation` },
-      { key: 'subgroup_apoe4', label: 'Subgroup: ApoE4 Carrier Status', category: 'subgroup', description: 'Stratified analysis by ApoE4 genotype', status: 'pending', order_index: 6, config: {}, page_route: `/projects/${projectId}/bias-sensitivity` },
-      { key: 'sensitivity_tipping', label: 'Sensitivity: Tipping Point Analysis', category: 'sensitivity', description: 'Assess robustness under missing data assumptions', status: 'pending', order_index: 7, config: {}, page_route: `/projects/${projectId}/bias-sensitivity` },
-      { key: 'safety_aria', label: 'Safety: ARIA-E/H Monitoring', category: 'safety', description: 'Amyloid-related imaging abnormalities surveillance', status: 'pending', order_index: 8, config: {}, page_route: `/projects/${projectId}/bias-sensitivity` },
-      { key: 'regulatory_package', label: 'Evidence Package: eCTD Module 5', category: 'output', description: 'Compile regulatory submission dossier', status: 'pending', order_index: 9, config: {}, page_route: `/projects/${projectId}/regulatory-output` },
-    ],
-    edges: [
-      { from_node_key: 'data_ingestion', to_node_key: 'population_definition', edge_type: 'dependency' },
-      { from_node_key: 'population_definition', to_node_key: 'cohort_attrition', edge_type: 'dependency' },
-      { from_node_key: 'cohort_attrition', to_node_key: 'primary_endpoint', edge_type: 'dependency' },
-      { from_node_key: 'cohort_attrition', to_node_key: 'secondary_cognitive', edge_type: 'dependency' },
-      { from_node_key: 'cohort_attrition', to_node_key: 'secondary_functional', edge_type: 'dependency' },
-      { from_node_key: 'primary_endpoint', to_node_key: 'subgroup_apoe4', edge_type: 'dependency' },
-      { from_node_key: 'primary_endpoint', to_node_key: 'sensitivity_tipping', edge_type: 'dependency' },
-      { from_node_key: 'secondary_cognitive', to_node_key: 'sensitivity_tipping', edge_type: 'dependency' },
-      { from_node_key: 'subgroup_apoe4', to_node_key: 'safety_aria', edge_type: 'dependency' },
-      { from_node_key: 'sensitivity_tipping', to_node_key: 'safety_aria', edge_type: 'dependency' },
-      { from_node_key: 'safety_aria', to_node_key: 'regulatory_package', edge_type: 'dependency' },
-      { from_node_key: 'secondary_functional', to_node_key: 'regulatory_package', edge_type: 'dependency' },
-    ],
-  }
-}
+// Demo DAG data removed — all data now comes from the API

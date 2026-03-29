@@ -8,6 +8,7 @@ import { useStudyData } from '../services/hooks'
 import { useStalenessCheck } from '../hooks/useStalenessCheck'
 import StalenessBanner from '../components/ui/StalenessBanner'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 
 interface Props {
@@ -137,7 +138,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
         URL.revokeObjectURL(url)
       }
     } catch (err) {
-      console.error('SAR generation failed:', err)
+      logger.error('SAR generation failed:', err)
     } finally {
       setGenerating(false)
     }
@@ -157,7 +158,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
         URL.revokeObjectURL(url)
       }
     } catch (err) {
-      console.error('SAP generation failed:', err)
+      logger.error('SAP generation failed:', err)
     } finally {
       setSapGenerating(false)
     }
@@ -177,7 +178,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
       const result = await apiClient.runStudyComputation(selectedStudy?.id, `tfl/${type}`)
       setTflResult(result)
     } catch (err) {
-      console.error('TFL generation failed:', err)
+      logger.error('TFL generation failed:', err)
     } finally {
       setTflLoading(false)
     }
@@ -212,7 +213,7 @@ export default function RegulatoryOutput({ selectedStudy, protocolLocked, review
         setSubmissionPreview({ key, data: result })
       }
     } catch (err) {
-      console.error(`Submission doc generation failed (${key}):`, err)
+      logger.error(`Submission doc generation failed (${key}):`, err)
     } finally {
       setSubmissionLoading(prev => ({ ...prev, [key]: false }))
     }

@@ -6,6 +6,7 @@ import {
   Brain, Loader2
 } from 'lucide-react'
 import { useEvidenceList, useEvidenceMutations } from '../services/hooks'
+import { logger } from '../services/logger'
 import type { EvidenceStatus } from '../services/apiClient'
 
 const EvidenceReview: React.FC = () => {
@@ -30,7 +31,7 @@ const EvidenceReview: React.FC = () => {
       await updateEvidence(evidenceId, { status: newStatus })
       refetch()
     } catch (e) {
-      console.error('Failed to update evidence status:', e)
+      logger.error('Failed to update evidence status:', e)
     }
   }
 
@@ -39,7 +40,7 @@ const EvidenceReview: React.FC = () => {
       await generateAISummary(evidenceId)
       refetch()
     } catch (e) {
-      console.error('Failed to generate automated summary:', e)
+      logger.error('Failed to generate automated summary:', e)
     }
   }
 

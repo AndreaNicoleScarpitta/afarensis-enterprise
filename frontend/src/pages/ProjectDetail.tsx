@@ -55,39 +55,7 @@ interface ProjectDetails {
   }
 }
 
-// ─── Sample fallback data (used when API is unreachable) ───────────────────
-
-const SAMPLE_PROJECT: ProjectDetails = {
-  id: 'sample',
-  title: 'ALZHEIMER_DRUG_001_Phase3',
-  description: 'Phase 3 clinical evidence review for novel Alzheimer therapeutic targeting amyloid beta aggregation with advanced biomarker analysis',
-  status: 'active',
-  created_at: '2024-02-15T10:30:00Z',
-  updated_at: '2024-03-12T14:20:00Z',
-  owner_name: 'Dr. Sarah Chen',
-  owner_id: 'user_001',
-  evidence_count: 47,
-  completion_percentage: 73,
-  regulatory_path: 'FDA_BLA_505b2',
-  priority: 'high',
-  team_members: [
-    { id: '1', name: 'Dr. Sarah Chen', role: 'Principal Investigator' },
-    { id: '2', name: 'Dr. Michael Rodriguez', role: 'Biostatistician' },
-    { id: '3', name: 'Lisa Zhang', role: 'Regulatory Affairs' },
-    { id: '4', name: 'James Wilson', role: 'Clinical Data Manager' }
-  ],
-  recent_activity: [
-    { id: '1', type: 'evidence_added', description: 'Added Phase 3 efficacy data from CLARITY-AD study', timestamp: '2024-03-12T14:20:00Z', user: 'Dr. Sarah Chen' },
-    { id: '2', type: 'bias_analysis', description: 'Completed selection bias analysis for patient cohorts', timestamp: '2024-03-12T11:30:00Z', user: 'Dr. Michael Rodriguez' },
-    { id: '3', type: 'review_completed', description: 'Approved comparability analysis for primary endpoints', timestamp: '2024-03-11T16:45:00Z', user: 'Lisa Zhang' }
-  ],
-  key_metrics: {
-    evidence_quality_score: 87,
-    bias_risk_level: 'low',
-    regulatory_confidence: 92,
-    estimated_approval_timeline: 'Q2 2025'
-  }
-}
+// No demo fallback — always show real data or an error state
 
 const ProjectDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -96,8 +64,7 @@ const ProjectDetail: React.FC = () => {
   // ─── Real API call via useProject hook ─────────────────────────────
   const { data: apiProject, loading: apiLoading, error: apiError } = useProject(id || null)
 
-  // Map API response → local ProjectDetails shape, fall back to sample if API unavailable
-  const isUsingDemoData = !apiProject || !!apiError
+  // Map API response → local ProjectDetails shape, show error if unavailable
   const loading = apiLoading
 
   const project: ProjectDetails | null = useMemo(() => {
@@ -129,9 +96,9 @@ const ProjectDetail: React.FC = () => {
       }
     }
 
-    // API unavailable → use sample data
-    return { ...SAMPLE_PROJECT, id: id || 'sample' }
-  }, [apiProject, apiLoading, apiError, id])
+    // API unavailable — return null to trigger error UI
+    return null
+  }, [apiProject, apiLoading, apiError])
 
   const getStatusBadge = (status: string) => {
     const baseClasses = "px-3 py-1 rounded-full text-sm font-medium"
@@ -203,20 +170,17 @@ const ProjectDetail: React.FC = () => {
 
   return (
     <div className="p-6">
-      {/* Sample data banner — only shown when using fallback data */}
-      {isUsingDemoData && (
-        <div className="mb-6 border-2 border-dashed border-amber-400 rounded-xl p-4 bg-amber-50/80">
+      {/* API error banner — shown when project data could not be fully loaded */}
+      {apiError && (
+        <div className="mb-6 border border-amber-300 rounded-xl p-4 bg-amber-50/80">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-bold text-amber-800 uppercase tracking-wide">
-                Demo Data — Not Real Project Metrics
+              <p className="text-sm font-bold text-amber-800">
+                Some data may be incomplete
               </p>
               <p className="text-sm text-amber-700 mt-1">
-                {apiError
-                  ? 'Could not reach the project API. All data below is illustrative and does not reflect any real study.'
-                  : 'This page displays fabricated sample data. Connect to the project API for live metrics.'
-                }
+                Could not fully load project data from the API. Some sections may show partial information.
               </p>
             </div>
           </div>
@@ -325,7 +289,7 @@ const ProjectDetail: React.FC = () => {
               </div>
 
               {/* Key Metrics Grid */}
-              <div className={`grid grid-cols-2 gap-4 mt-6 ${isUsingDemoData ? 'opacity-50' : ''}`}>
+              <div className={`grid grid-cols-2 gap-4 mt-6 ${''}`}>
                 <div className="text-center p-4 bg-blue-50 rounded-lg">
                   <div className="text-2xl font-bold text-blue-600">
                     {project.key_metrics.evidence_quality_score}%

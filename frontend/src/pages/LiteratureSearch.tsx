@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import PaperViewer from '../components/ui/PaperViewer'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Source = 'pubmed' | 'clinicaltrials' | 'openalex' | 'semanticscholar'
@@ -151,7 +152,7 @@ async function fetchSource(source: Source, query: string, maxResults = 20): Prom
     raw = data?.papers ?? data?.results ?? (Array.isArray(data) ? data : [])
     // If backend returned an error string, treat as empty
     if (data?.error) {
-      console.warn('Semantic Scholar error:', data.error)
+      logger.warn('Semantic Scholar error:', data.error)
       raw = []
     }
   }

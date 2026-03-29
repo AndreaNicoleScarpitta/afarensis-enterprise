@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useApiRequest } from '../services/hooks';
 import { apiClient } from '../services/apiClient';
+import { logger } from '../services/logger';
 import { z } from 'zod';
 
 interface SearchResult {
@@ -98,7 +99,7 @@ const AdvancedSearchComponent: React.FC = () => {
 
       setResults(response.results || []);
     } catch (error) {
-      console.error('Search failed:', error);
+      logger.error('Search failed:', error);
       setResults([]);
     } finally {
       setIsSearching(false);
@@ -134,7 +135,7 @@ const AdvancedSearchComponent: React.FC = () => {
       setShowSaveDialog(false);
       setSaveSearchName('');
     } catch (error) {
-      console.error('Failed to save search:', error);
+      logger.error('Failed to save search:', error);
     }
   };
 
@@ -153,7 +154,7 @@ const AdvancedSearchComponent: React.FC = () => {
 
       setRecommendations(response.recommendations || []);
     } catch (error) {
-      console.error('Failed to get recommendations:', error);
+      logger.error('Failed to get recommendations:', error);
     }
   };
 

@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import {
   Settings, Save, Shield, Database, Bell, Globe,
   CheckCircle, Loader2,
@@ -91,7 +92,7 @@ const SystemSettings: React.FC = () => {
         window.setTimeout(() => setSaved(false), 3000)
       }
     } catch (err) {
-      console.error('Failed to save settings:', err)
+      logger.error('Failed to save settings:', err)
     } finally {
       setSaving(false)
     }

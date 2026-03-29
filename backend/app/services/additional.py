@@ -982,7 +982,7 @@ class AuditService(BaseService):
             try:
                 await self.db.rollback()
             except Exception:
-                pass
+                pass  # Rollback of failed audit log — nothing more to do
 
     async def get_audit_logs(
         self,

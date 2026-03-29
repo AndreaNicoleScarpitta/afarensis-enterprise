@@ -106,8 +106,8 @@ def create_rate_limiter():
     if hasattr(settings, 'REDIS_URL') and settings.REDIS_URL and not settings.is_sqlite:
         try:
             return RedisRateLimiter(settings.REDIS_URL)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Redis rate limiter unavailable, falling back to in-memory: %s", exc)
     return InMemoryRateLimiter()
 
 

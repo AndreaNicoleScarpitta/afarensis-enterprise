@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import {
   PackageCheck, Lock, Eye, CheckCircle2, AlertTriangle, Download,
   FileSpreadsheet, FileText, FileCode, FolderTree, Shield,
@@ -197,7 +198,7 @@ export default function TracePackExport({ selectedStudy, protocolLocked, reviewe
         setGenerated(true)
       }
     } catch (err) {
-      console.error('Failed to generate trace pack:', err)
+      logger.error('Failed to generate trace pack:', err)
     } finally {
       setGenerating(false)
     }

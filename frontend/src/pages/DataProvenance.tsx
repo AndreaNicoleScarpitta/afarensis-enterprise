@@ -12,6 +12,7 @@ import { useStudyData } from '../services/hooks'
 import { useStalenessCheck } from '../hooks/useStalenessCheck'
 import StalenessBanner from '../components/ui/StalenessBanner'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import ValidationGatePanel from '@/components/ui/ValidationGatePanel'
 import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
 import {
@@ -295,7 +296,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       logDerivation(`adam_${type}`, 'completed')
       logStateTransition(`adam_${type}`, prevState, 'derived', 'derivation_completed')
     } catch (err: any) {
-      console.error('ADaM derivation failed:', err)
+      logger.error('ADaM derivation failed:', err)
       logDerivation(`adam_${type}`, 'failed', err.message || 'Unknown error')
     }
     finally { setAdamLoading(false) }
@@ -307,7 +308,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       await apiClient.runStudyComputation(selectedStudy?.id, '../adam/validate')
       const data = await apiClient.getAdamDatasets(selectedStudy?.id!)
       setAdamDatasets(data)
-    } catch (err) { console.error('ADaM validation failed:', err) }
+    } catch (err) { logger.error('ADaM validation failed:', err) }
     finally { setAdamValidating(false) }
   }
 
@@ -369,7 +370,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       setShowConsentModal(false)
       setConsentChecked(false)
     } catch (err) {
-      console.error('Consent attestation failed:', err)
+      logger.error('Consent attestation failed:', err)
     } finally {
       setConsentSubmitting(false)
     }
@@ -477,7 +478,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       setSdtmDomains(prev => ({ ...prev, [domain]: data }))
       logStateTransition(`sdtm_${domain}`, prevState, 'mapped', 'mapping_completed')
     } catch (err) {
-      console.error('SDTM mapping failed:', err)
+      logger.error('SDTM mapping failed:', err)
       logStateTransition(`sdtm_${domain}`, prevState, 'mapping_invalid', 'mapping_error')
     }
     finally { setSdtmLoading(false) }
@@ -489,7 +490,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
       await apiClient.generateSdtmAll(selectedStudy?.id!)
       const proj = await apiClient.getProject(selectedStudy?.id!)
       if (proj?.processing_config?.sdtm) setSdtmDomains(proj.processing_config.sdtm)
-    } catch (err) { console.error('SDTM map-all failed:', err) }
+    } catch (err) { logger.error('SDTM map-all failed:', err) }
     finally { setSdtmLoading(false) }
   }
 
@@ -498,7 +499,7 @@ export default function DataProvenance({ selectedStudy, protocolLocked, reviewer
     try {
       const data = await apiClient.validateSdtm(selectedStudy?.id!)
       setSdtmValidationReports(data.reports || [])
-    } catch (err) { console.error('SDTM validation failed:', err) }
+    } catch (err) { logger.error('SDTM validation failed:', err) }
     finally { setSdtmValidating(false) }
   }
 

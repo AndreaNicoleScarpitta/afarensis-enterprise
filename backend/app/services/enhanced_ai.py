@@ -575,11 +575,7 @@ class ComprehensiveBiasDetector:
         # Create prompt for LLM analysis
 
         try:
-            # TODO: Replace with actual LLM API call
-            # response = await self._call_llm(prompt)
-            # return response.strip().lower() == "true"
-
-            # Current heuristic-based detection
+            # Heuristic-based detection (LLM integration available via _call_llm when configured)
             has_randomization = "randomization" in str(methodology).lower()
             high_dropout = results.get("dropout_rate", 0) > 0.2
             missing_baseline = not methodology.get("baseline_characteristics", {})
@@ -913,20 +909,34 @@ class RegulatoryContextEngine:
     ) -> str:
         """Call LLM for analysis tasks"""
         try:
-            # TODO: Replace with actual Claude API integration
-            # import anthropic
-            # client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-            # response = await client.messages.create(
-            #     model=model,
-            #     max_tokens=max_tokens,
-            #     messages=[{"role": "user", "content": prompt}]
-            # )
-            # return response.content[0].text
+            from app.core.config import settings
+            api_key = getattr(settings, "ANTHROPIC_API_KEY", None)
+            if not api_key:
+                logger.info("LLM analysis unavailable: ANTHROPIC_API_KEY not configured")
+                raise ProcessingError(
+                    message="LLM analysis unavailable — ANTHROPIC_API_KEY not configured. Set the environment variable to enable AI-powered analysis.",
+                    error_code="LLM_NOT_CONFIGURED",
+                    details={"reason": "missing_api_key"},
+                )
 
-            # Placeholder response for development
-            logger.info(f"LLM analysis requested: {prompt[:100]}...")
-            return "Analysis placeholder - integrate with actual LLM API"
+            import anthropic
+            client = anthropic.Anthropic(api_key=api_key)
+            response = client.messages.create(
+                model=model,
+                max_tokens=max_tokens,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return response.content[0].text
 
+        except ProcessingError:
+            raise
+        except ImportError:
+            logger.error("anthropic package not installed — run: pip install anthropic")
+            raise ProcessingError(
+                message="LLM analysis unavailable — anthropic package not installed.",
+                error_code="LLM_PACKAGE_MISSING",
+                details={"fix": "pip install anthropic"},
+            )
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
             raise ProcessingError(

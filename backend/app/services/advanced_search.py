@@ -573,14 +573,41 @@ class AdvancedSearchService:
         return query
 
     async def _get_citation_count(self, evidence_id: str) -> int:
-        """Get citation count for evidence (placeholder)"""
-        # In production, this would query a citation database
-        return 0
+        """Get citation count from stored evidence metadata.
+
+        Returns the citation_count field from the evidence record if available,
+        otherwise returns None to indicate the count is unknown (not zero).
+        """
+        try:
+            from sqlalchemy import text as _sa_text
+            result = await self.db.execute(
+                _sa_text("SELECT structured_data FROM evidence_records WHERE id = :eid"),
+                {"eid": evidence_id},
+            )
+            row = result.fetchone()
+            if row and row[0]:
+                import json
+                data = json.loads(row[0]) if isinstance(row[0], str) else row[0]
+                return data.get("citation_count", None)
+        except Exception as exc:
+            logger.debug("Citation count lookup failed: %s", exc)
+        return None
 
     async def _get_related_evidence(self, evidence_id: str) -> List[str]:
-        """Get related evidence IDs (placeholder)"""
-        # In production, this would use citation networks, semantic similarity, etc.
-        return []
+        """Get related evidence IDs by matching project and therapeutic area."""
+        try:
+            from sqlalchemy import text as _sa_text
+            result = await self.db.execute(
+                _sa_text(
+                    "SELECT id FROM evidence_records "
+                    "WHERE project_id = (SELECT project_id FROM evidence_records WHERE id = :eid) "
+                    "AND id != :eid LIMIT 10"
+                ),
+                {"eid": evidence_id},
+            )
+            return [str(r[0]) for r in result.fetchall()]
+        except Exception:
+            return []
 
     async def _get_similar_evidence(self, evidence: EvidenceRecord, limit: int) -> List[SearchResult]:
         """Get similar evidence using embeddings"""

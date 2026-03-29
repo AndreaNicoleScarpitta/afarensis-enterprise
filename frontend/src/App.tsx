@@ -17,6 +17,7 @@ import {
 import { useSessionTimeout } from './hooks/useSessionTimeout'
 import { useAuth } from './services/hooks'
 import { apiClient } from './services/apiClient'
+import { logger } from './services/logger'
 import { z } from 'zod'
 
 // shadcn UI
@@ -970,7 +971,7 @@ function App() {
           // Don't auto-select — user picks from dashboard
         }
       })
-      .catch(err => console.warn('Failed to load projects, using defaults:', err))
+      .catch(err => logger.warn('Failed to load projects, using defaults:', err))
   }, [user])
 
   // Sync lock state when study changes
@@ -1018,7 +1019,7 @@ function App() {
       setProtocolLocked(true)
       setShowLockModal(false)
     } catch (err) {
-      console.error('Failed to lock protocol:', err)
+      logger.error('Failed to lock protocol:', err)
       setLockError('Failed to lock protocol. Please try again.')
     } finally {
       setLocking(false)

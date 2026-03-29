@@ -129,8 +129,8 @@ class RedisCache:
             return
         try:
             await r.delete(self._prefix + key)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Redis cache delete failed: %s", exc)
 
     async def delete_pattern(self, pattern: str) -> int:
         r = await self._get_redis()
@@ -166,8 +166,8 @@ def _create_cache():
     if hasattr(settings, 'REDIS_URL') and settings.REDIS_URL and not settings.is_sqlite:
         try:
             return RedisCache(settings.REDIS_URL, prefix=settings.REDIS_KEY_PREFIX + "cache:")
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Redis cache unavailable, falling back to in-memory: %s", exc)
     return InMemoryCache(max_size=2000)
 
 

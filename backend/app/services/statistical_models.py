@@ -1937,7 +1937,7 @@ class StatisticalAnalysisService:
                     if smd_val >= max_smd:
                         n_extreme += 1
                 except Exception:
-                    pass
+                    continue  # Skip non-numeric covariate in SMD check
         smd_check["n_extreme_imbalance"] = n_extreme
         smd_check["pass"] = n_extreme <= len(cov_names) * 0.5  # fail if >50% of covariates are extreme
         if not smd_check["pass"]:

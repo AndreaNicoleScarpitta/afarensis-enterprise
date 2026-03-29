@@ -117,8 +117,8 @@ class EmailService:
                     f,
                     indent=2,
                 )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Email file write failed: %s", exc)
         return True
 
     # ── Template Methods ─────────────────────────────────────────────────

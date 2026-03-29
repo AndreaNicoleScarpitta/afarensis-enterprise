@@ -76,5 +76,5 @@ async def write_audit_log(
         try:
             await db.rollback()
         except Exception:
-            pass
+            pass  # Rollback of failed audit log — nothing more to do
         return None

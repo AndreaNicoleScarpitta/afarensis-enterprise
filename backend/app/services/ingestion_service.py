@@ -9,7 +9,10 @@ implausible value detection.
 
 import json
 import hashlib
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class IngestionService:
@@ -532,8 +535,8 @@ class IngestionService:
                         "detail": f"Column '{col}' has {len(future_dates)} records with year > {future_cutoff_year} (tolerance: {max_future_years} year(s)).",
                         "action": "Verify these records are within the enrollment window."
                     })
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Temporal check on column skipped: %s", exc)
 
         if not temporal_issues:
             findings.append({

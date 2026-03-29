@@ -364,8 +364,8 @@ class InProcessTaskQueue(TaskQueueProtocol):
                         "last_checkpoint": None,
                         "checkpoints": row.checkpoints or {},
                     }
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Task status lookup failed: %s", exc)
         return None
 
     def get_result(self, task_id: str) -> Any:

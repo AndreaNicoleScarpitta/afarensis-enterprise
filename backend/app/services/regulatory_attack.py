@@ -1117,8 +1117,8 @@ class RegulatoryAttackService:
                     "ci_upper": float(cox_trim.get("ci_upper", 1.0)),
                 }
                 perturbation_results.append(trim_summary)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Perturbation trim analysis failed: %s", exc)
 
         # ── Step 4: Stability envelope ────────────────────────────────
         stability_envelope = self.compute_stability_envelope(

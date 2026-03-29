@@ -525,16 +525,18 @@ export const ZeroTrustSecurityMonitor: React.FC<ZeroTrustSecurityMonitorProps> =
             {activeTab === 'events' && renderEvents()}
             {activeTab === 'policies' && (
               <div className="text-center py-12">
-                <Settings className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <Settings className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Policy Management</h3>
-                <p className="text-gray-600">Security policy configuration coming soon</p>
+                <p className="text-sm text-gray-500">Security policies are managed via environment configuration and the admin API.</p>
+                <p className="text-xs text-gray-400 mt-2">See the deployment guide for RBAC and access control settings.</p>
               </div>
             )}
             {activeTab === 'users' && (
               <div className="text-center py-12">
-                <User className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">User Risk Profiles</h3>
-                <p className="text-gray-600">Detailed user risk analysis coming soon</p>
+                <p className="text-sm text-gray-500">User activity and risk scores are computed from the audit trail.</p>
+                <p className="text-xs text-gray-400 mt-2">View user activity in the Audit Trail page for detailed session logs.</p>
               </div>
             )}
           </motion.div>

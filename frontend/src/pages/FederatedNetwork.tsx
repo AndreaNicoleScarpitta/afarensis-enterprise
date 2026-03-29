@@ -1,6 +1,7 @@
 import type React from 'react'
 import { useState } from 'react'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import {
   Network, Globe, Share2, CheckCircle, Clock, AlertTriangle,
   Plus, Settings, Shield, Lock, Wifi, WifiOff, BarChart3,
@@ -91,7 +92,7 @@ const FederatedNetwork: React.FC = () => {
         headers: { 'Authorization': `Bearer ${token}` },
       })
     } catch (err) {
-      console.error('Failed to sync node:', err)
+      logger.error('Failed to sync node:', err)
     } finally {
       setSyncing(null)
     }

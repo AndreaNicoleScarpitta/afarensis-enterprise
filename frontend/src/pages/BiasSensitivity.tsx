@@ -7,6 +7,7 @@ import { useStudyData } from '../services/hooks'
 import { useStalenessCheck } from '../hooks/useStalenessCheck'
 import StalenessBanner from '../components/ui/StalenessBanner'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 import LiteratureEvidence from '@/components/ui/LiteratureEvidence'
 import ShowYourWork from '@/components/ui/ShowYourWork'
 import DownstreamImpactDialog, { computeDownstreamImpacts } from '../components/ui/DownstreamImpactDialog'
@@ -149,7 +150,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
     try {
       const result = await apiClient.getStudySection(selectedStudy.id, 'missing-data/summary')
       setMissingData(result)
-    } catch (err) { console.error('Failed to fetch missing data summary:', err) }
+    } catch (err) { logger.error('Failed to fetch missing data summary:', err) }
     finally { setMdLoading(false) }
   }
 
@@ -158,7 +159,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
     try {
       const result = await apiClient.runStudyComputation(selectedStudy?.id, 'missing-data/multiple-imputation')
       setMiResult(result)
-    } catch (err) { console.error('MI failed:', err) }
+    } catch (err) { logger.error('MI failed:', err) }
     finally { setMiLoading(false) }
   }
 
@@ -167,7 +168,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
     try {
       const result = await apiClient.runStudyComputation(selectedStudy?.id, 'missing-data/tipping-point')
       setTippingResult(result)
-    } catch (err) { console.error('Tipping point failed:', err) }
+    } catch (err) { logger.error('Tipping point failed:', err) }
     finally { setTippingLoading(false) }
   }
 
@@ -176,7 +177,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
     try {
       const result = await apiClient.runStudyComputation(selectedStudy?.id, 'missing-data/mmrm')
       setMmrmResult(result)
-    } catch (err) { console.error('MMRM failed:', err) }
+    } catch (err) { logger.error('MMRM failed:', err) }
     finally { setMmrmLoading(false) }
   }
 
@@ -186,7 +187,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
       const result = await apiClient.runStudyComputation(selectedStudy?.id, 'bayesian/analyze')
       setBayesianResult(result)
       if (result?.prior) setPriorResult(result.prior)
-    } catch (err) { console.error('Bayesian analysis failed:', err) }
+    } catch (err) { logger.error('Bayesian analysis failed:', err) }
     finally { setBayesianLoading(false) }
   }
 
@@ -198,7 +199,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
         `interim/boundaries?n_looks=${interimLooks}&method=${interimMethod}&alpha=0.05`
       )
       setBoundaryResult(result)
-    } catch (err) { console.error('Boundary computation failed:', err) }
+    } catch (err) { logger.error('Boundary computation failed:', err) }
     finally { setBoundaryLoading(false) }
   }
 
@@ -207,7 +208,7 @@ export default function BiasSensitivity({ selectedStudy, protocolLocked, reviewe
     try {
       const result = await apiClient.runStudyComputation(selectedStudy?.id, 'interim/dsmb-report')
       setDsmbResult(result)
-    } catch (err) { console.error('DSMB report failed:', err) }
+    } catch (err) { logger.error('DSMB report failed:', err) }
     finally { setDsmbLoading(false) }
   }
 

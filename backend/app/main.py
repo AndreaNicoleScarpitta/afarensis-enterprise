@@ -194,8 +194,8 @@ def create_application() -> FastAPI:
             "version": "2.0.0",
             "dependencies": {
                 "database": db_status,
-                "redis": "healthy",  # TODO: Add Redis health check
-                "openai": "healthy",  # TODO: Add OpenAI health check
+                "redis": "not_configured",
+                "llm": "not_configured",
             }
         }
 

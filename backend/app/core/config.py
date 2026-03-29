@@ -40,7 +40,13 @@ class Settings(BaseSettings):
     @property
     def allowed_origins_list(self) -> List[str]:
         if not self.ALLOWED_ORIGINS or self.ALLOWED_ORIGINS.strip() == "":
-            return ["*"]
+            # Refuse to default to wildcard — require explicit configuration
+            import logging
+            logging.getLogger(__name__).warning(
+                "ALLOWED_ORIGINS not set — defaulting to localhost only. "
+                "Set ALLOWED_ORIGINS env var for production domains."
+            )
+            return ["http://localhost:3000", "http://localhost:5174"]
         return [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
 
     @property

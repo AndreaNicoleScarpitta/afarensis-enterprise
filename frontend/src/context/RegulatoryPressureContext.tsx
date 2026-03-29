@@ -13,6 +13,7 @@
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
 import { z } from 'zod'
 import { apiClient } from '../services/apiClient'
+import { logger } from '../services/logger'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -135,7 +136,7 @@ export function RegulatoryPressureProvider({ children, projectId: _projectId }: 
       const result = applyResponse(safeData)
       cacheRef.current[projectId] = result
     } catch (err) {
-      console.error('[RegulatoryPressure] Failed to fetch signals:', err)
+      logger.error('[RegulatoryPressure] Failed to fetch signals:', err)
       // Reset to safe defaults on error
       setSignals({})
       setStepRisk({})
