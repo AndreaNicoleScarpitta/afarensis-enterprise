@@ -1005,6 +1005,52 @@ async def create_project(
         "updated_at": project.updated_at.isoformat() if project.updated_at else None,
     }
 
+@api_router.get("/debug/projects-error")
+async def debug_projects_error(
+    current_user=Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Temporary debug endpoint to surface the actual projects query error."""
+    import traceback
+    from sqlalchemy import select as sa_select, text as sa_text
+    errors = []
+
+    # 1. Can we query the projects table at all?
+    try:
+        result = await db.execute(sa_text("SELECT count(*) FROM projects"))
+        count = result.scalar()
+        errors.append(f"projects table exists, {count} rows")
+    except Exception as e:
+        errors.append(f"projects table query failed: {traceback.format_exc()}")
+
+    # 2. Can we query evidence_records?
+    try:
+        result = await db.execute(sa_text("SELECT count(*) FROM evidence_records"))
+        count = result.scalar()
+        errors.append(f"evidence_records table exists, {count} rows")
+    except Exception as e:
+        errors.append(f"evidence_records query failed: {traceback.format_exc()}")
+
+    # 3. Try the full list_projects query
+    try:
+        from app.models import EvidenceRecord
+        from sqlalchemy import func as sa_func
+        query = sa_select(Project).order_by(Project.created_at.desc())
+        from app.core.pagination import PaginationParams
+        params = PaginationParams(page=1, page_size=5)
+        from app.core.pagination import paginate_query
+        result = await paginate_query(query, params, db, serializer=lambda p: {
+            "id": str(p.id),
+            "title": p.title,
+            "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
+        })
+        errors.append(f"paginate_query succeeded: {json.dumps(result, default=str)[:500]}")
+    except Exception as e:
+        errors.append(f"paginate_query failed: {traceback.format_exc()}")
+
+    return {"diagnostics": errors}
+
+
 @api_router.get("/projects")
 async def list_projects(
     status: Optional[str] = None,
@@ -1013,70 +1059,75 @@ async def list_projects(
     db: AsyncSession = Depends(get_db)
 ):
     """List evidence review projects"""
-    from app.core.cache import cache
-    from sqlalchemy import select as sa_select, and_
+    import traceback as _tb
+    try:
+        from app.core.cache import cache
+        from sqlalchemy import select as sa_select, and_
 
-    # Check cache first (30s TTL)
-    org_id = current_user.org_id if hasattr(current_user, 'org_id') else "global"
-    cache_key = f"projects:list:{org_id}:{status}:{pagination.page}:{pagination.page_size}"
-    cached_result = await cache.get(cache_key)
-    if cached_result is not None:
-        return cached_result
+        # Check cache first (30s TTL)
+        org_id = current_user.org_id if hasattr(current_user, 'org_id') else "global"
+        cache_key = f"projects:list:{org_id}:{status}:{pagination.page}:{pagination.page_size}"
+        cached_result = await cache.get(cache_key)
+        if cached_result is not None:
+            return cached_result
 
-    # Build base query without limit/offset
-    query = sa_select(Project).order_by(Project.created_at.desc())
+        # Build base query without limit/offset
+        query = sa_select(Project).order_by(Project.created_at.desc())
 
-    conditions = []
-    if status:
-        # Accept both lowercase values ("draft") and uppercase names ("DRAFT")
-        try:
-            status_enum = ProjectStatus(status)  # Try by value first
-        except ValueError:
+        conditions = []
+        if status:
+            # Accept both lowercase values ("draft") and uppercase names ("DRAFT")
             try:
-                status_enum = ProjectStatus[status.upper()]  # Try by name
-            except KeyError:
-                status_enum = None
-        if status_enum:
-            conditions.append(Project.status == status_enum)
-    # Multi-tenancy: filter projects by organization
-    if current_user.org_id:
-        conditions.append(Project.organization_id == current_user.org_id)
-    if conditions:
-        query = query.where(and_(*conditions))
+                status_enum = ProjectStatus(status)  # Try by value first
+            except ValueError:
+                try:
+                    status_enum = ProjectStatus[status.upper()]  # Try by name
+                except KeyError:
+                    status_enum = None
+            if status_enum:
+                conditions.append(Project.status == status_enum)
+        # Multi-tenancy: filter projects by organization
+        if current_user.org_id:
+            conditions.append(Project.organization_id == current_user.org_id)
+        if conditions:
+            query = query.where(and_(*conditions))
 
-    # Pre-fetch evidence counts for all projects in one query
-    from app.models import EvidenceRecord
-    from sqlalchemy import func as sa_func
-    ev_counts_q = sa_select(
-        EvidenceRecord.project_id,
-        sa_func.count(EvidenceRecord.id).label("cnt")
-    ).group_by(EvidenceRecord.project_id)
-    ev_counts_result = await db.execute(ev_counts_q)
-    ev_counts_map = {str(row[0]): row[1] for row in ev_counts_result.all()}
+        # Pre-fetch evidence counts for all projects in one query
+        from app.models import EvidenceRecord
+        from sqlalchemy import func as sa_func
+        ev_counts_q = sa_select(
+            EvidenceRecord.project_id,
+            sa_func.count(EvidenceRecord.id).label("cnt")
+        ).group_by(EvidenceRecord.project_id)
+        ev_counts_result = await db.execute(ev_counts_q)
+        ev_counts_map = {str(row[0]): row[1] for row in ev_counts_result.all()}
 
-    # Pre-fetch distinct source types per project
-    ev_sources_q = sa_select(
-        EvidenceRecord.project_id,
-        sa_func.count(sa_func.distinct(EvidenceRecord.source_type)).label("src_cnt")
-    ).group_by(EvidenceRecord.project_id)
-    ev_sources_result = await db.execute(ev_sources_q)
-    ev_sources_map = {str(row[0]): row[1] for row in ev_sources_result.all()}
+        # Pre-fetch distinct source types per project
+        ev_sources_q = sa_select(
+            EvidenceRecord.project_id,
+            sa_func.count(sa_func.distinct(EvidenceRecord.source_type)).label("src_cnt")
+        ).group_by(EvidenceRecord.project_id)
+        ev_sources_result = await db.execute(ev_sources_q)
+        ev_sources_map = {str(row[0]): row[1] for row in ev_sources_result.all()}
 
-    result = await paginate_query(query, pagination, db, serializer=lambda p: {
-        "id": p.id,
-        "title": p.title,
-        "description": p.description,
-        "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
-        "research_intent": p.research_intent,
-        "created_by": p.created_by,
-        "created_at": p.created_at.isoformat() if p.created_at else None,
-        "updated_at": p.updated_at.isoformat() if p.updated_at else None,
-        "evidence_count": ev_counts_map.get(str(p.id), 0),
-        "source_count": ev_sources_map.get(str(p.id), 0),
-    })
+        result = await paginate_query(query, pagination, db, serializer=lambda p: {
+            "id": p.id,
+            "title": p.title,
+            "description": p.description,
+            "status": p.status.value if hasattr(p.status, 'value') else str(p.status),
+            "research_intent": p.research_intent,
+            "created_by": p.created_by,
+            "created_at": p.created_at.isoformat() if p.created_at else None,
+            "updated_at": p.updated_at.isoformat() if p.updated_at else None,
+            "evidence_count": ev_counts_map.get(str(p.id), 0),
+            "source_count": ev_sources_map.get(str(p.id), 0),
+        })
 
-    await cache.set(cache_key, result, ttl=30)
-    return result
+        await cache.set(cache_key, result, ttl=30)
+        return result
+    except Exception as exc:
+        logger.error("list_projects failed: %s", _tb.format_exc())
+        raise HTTPException(status_code=500, detail=f"Projects query failed: {str(exc)}")
 
 @api_router.get("/projects/{project_id}")
 async def get_project(
