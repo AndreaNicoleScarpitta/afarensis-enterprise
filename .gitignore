@@ -30,7 +30,8 @@ Thumbs.db
 *.swp
 *.swo
 
-# Build artifacts (keep frontend/dist for deployment)
+# Build artifacts (frontend/dist built in Docker multi-stage)
+frontend/dist/
 backend/artifacts/
 backend/uploads/
 
