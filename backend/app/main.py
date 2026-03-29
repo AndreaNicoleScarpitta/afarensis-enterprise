@@ -42,23 +42,23 @@ async def lifespan(app: FastAPI):
     #   - Production (PostgreSQL): use Alembic migrations (alembic upgrade head)
     #   - Development (SQLite):    auto-create tables for zero-setup experience
     if settings.AUTO_CREATE_TABLES:
+        import app.models  # noqa - ensure models are registered
+        from app.models import Base
+
         if settings.is_sqlite:
             logger.info("SQLite mode: auto-creating tables via create_all()...")
-            import app.models  # noqa - ensure models are registered
-            from app.models import Base
-            async with engine.begin() as conn:
-                await conn.run_sync(Base.metadata.create_all)
-            logger.info("Database tables created/verified")
-
-            # Seed database with demo data (dev only)
-            from app.seed_data import seed_database
-            async with AsyncSessionLocal() as session:
-                await seed_database(session)
-                await session.commit()
         else:
-            logger.info("PostgreSQL mode: skipping create_all() — use 'alembic upgrade head' for migrations")
-            # Still verify models are importable so any import errors surface early
-            import app.models  # noqa
+            logger.info("PostgreSQL mode: auto-creating tables via create_all()...")
+
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables created/verified")
+
+        # Seed database with initial data
+        from app.seed_data import seed_database
+        async with AsyncSessionLocal() as session:
+            await seed_database(session)
+            await session.commit()
 
     # Verify database connectivity
     try:
