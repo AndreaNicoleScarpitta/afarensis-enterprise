@@ -68,12 +68,12 @@ function WaitlistModal({ isOpen, onClose, leadSource = 'landing_page' }: Waitlis
           name: formData.name,
           email: formData.email,
           organization: formData.organization,
-          company_size: formData.companySize,
-          use_cases: formData.useCases,
+          companySize: formData.companySize,
+          useCases: formData.useCases,
           requirements: formData.requirements,
           timeline: formData.timeline,
-          design_partner: formData.designPartner,
-          lead_source: leadSource,
+          designPartner: formData.designPartner,
+          leadSource: leadSource,
         }),
       });
       if (!res.ok) throw new Error('Submission failed');

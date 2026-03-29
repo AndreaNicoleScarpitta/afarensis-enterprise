@@ -85,7 +85,7 @@ export function SampleOutputModal({ isOpen, onClose, leadsource = 'landing_page'
       if (!res.ok) throw new Error('Submission failed');
 
       const data = await res.json();
-      setDownloadUrl(data.download_url || '/sample-report.pdf');
+      setDownloadUrl(data.download_token ? `/api/sample-download/file?token=${data.download_token}` : '/sample-report.pdf');
 
       if (window.gtag) {
         window.gtag('event', 'form_submit', {

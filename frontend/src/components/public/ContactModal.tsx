@@ -69,10 +69,8 @@ export function ContactModal({
           name: formData.name,
           email: formData.email,
           subject: formData.subject,
-          message: formData.message,
+          message: `[${formData.subject}] ${formData.message}`,
           lead_source: leadSource,
-          lead_persona: leadPersona,
-          lead_intent: leadIntent,
         }),
       });
       if (!res.ok) throw new Error('Submission failed');

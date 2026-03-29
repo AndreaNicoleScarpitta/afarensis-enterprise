@@ -115,6 +115,14 @@ except Exception as exc:
 def _send_notification(subject: str, body: str) -> None:
     """Send an email notification if SMTP env vars are configured.
 
+    Uses Zoho Mail SMTP (or any SMTP provider). Env vars:
+      SMTP_HOST       — e.g. smtp.zoho.com
+      SMTP_PORT       — e.g. 587
+      SMTP_USER       — e.g. admin@syntheticascendancy.tech
+      SMTP_PASSWORD   — Zoho app password
+      FROM_EMAIL      — sender address (falls back to SMTP_USER)
+      NOTIFICATION_EMAIL — where lead notifications are delivered
+
     All exceptions are caught and logged so that a missing or misconfigured
     mail server never causes an API request to fail.
     """
@@ -123,11 +131,15 @@ def _send_notification(subject: str, body: str) -> None:
         port = int(os.environ.get("SMTP_PORT", "587"))
         user = os.environ.get("SMTP_USER")
         password = os.environ.get("SMTP_PASSWORD")
-        from_email = os.environ.get("SMTP_FROM_EMAIL")
+        from_email = os.environ.get("FROM_EMAIL") or os.environ.get("SMTP_FROM_EMAIL") or user
         to_email = os.environ.get("NOTIFICATION_EMAIL")
 
         if not all([host, user, password, from_email, to_email]):
-            return  # SMTP not configured — silently skip
+            logger.warning(
+                "SMTP not fully configured — skipping notification. "
+                "Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD, FROM_EMAIL, NOTIFICATION_EMAIL."
+            )
+            return
 
         msg = MIMEText(body, "plain")
         msg["Subject"] = subject
