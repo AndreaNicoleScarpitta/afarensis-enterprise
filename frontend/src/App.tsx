@@ -65,6 +65,7 @@ import AIUsePolicy from './pages/AIUsePolicy'
 // Public-facing pages (pre-auth)
 import LandingPage from './pages/public/LandingPage'
 import PublicMemoPage from './pages/public/MemoPage'
+import HowItWorksPage from './pages/public/HowItWorksPage'
 
 // Dashboard
 import EnhancedDashboard from './pages/EnhancedDashboard'
@@ -1141,7 +1142,7 @@ function App() {
   // ── PUBLIC ROUTES (pre-auth, no login required) ──────────────────────
   // On the marketing domain: ALL routes show public pages (landing/memo/waitlist).
   // On the app domain: only specific public paths get public pages.
-  const PUBLIC_PATHS = ['/', '/memo', '/waitlist']
+  const PUBLIC_PATHS = ['/', '/memo', '/waitlist', '/how-it-works']
   const isPublicRoute = PUBLIC_PATHS.includes(location.pathname)
 
   if (isMarketingSite) {
@@ -1149,6 +1150,9 @@ function App() {
     // /privacy and /terms still serve their legal pages (handled by Routes below if needed).
     if (location.pathname === '/memo') {
       return <PublicMemoPage />
+    }
+    if (location.pathname === '/how-it-works') {
+      return <HowItWorksPage />
     }
     if (location.pathname === '/privacy') {
       // Fall through to the authenticated app's Routes for /privacy (it exists there)
@@ -1166,6 +1170,9 @@ function App() {
     // On the app subdomain, specific public paths still show public pages
     if (location.pathname === '/memo') {
       return <PublicMemoPage />
+    }
+    if (location.pathname === '/how-it-works') {
+      return <HowItWorksPage />
     }
     return <LandingPage />
   }

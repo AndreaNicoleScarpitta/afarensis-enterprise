@@ -94,17 +94,35 @@ export function MemoPage({ onOpenContact }: MemoPageProps) {
           justifyContent: 'space-between',
           alignItems: 'center',
         }}>
-          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/logo.png" alt="Synthetic Ascension" style={{ height: '32px', width: '32px' }} />
-            <span style={{
-              fontSize: '18px',
-              fontWeight: 700,
-              color: designSystem.colors.primary,
-              fontFamily: '"Montserrat", "Inter", sans-serif',
-            }}>
-              Synthetic Ascension
-            </span>
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img src="/logo.png" alt="Synthetic Ascension" style={{ height: '32px', width: '32px' }} />
+              <span style={{
+                fontSize: '18px',
+                fontWeight: 700,
+                color: designSystem.colors.primary,
+                fontFamily: '"Montserrat", "Inter", sans-serif',
+              }}>
+                Synthetic Ascension
+              </span>
+            </Link>
+            <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+              <Link to="/how-it-works" style={{
+                textDecoration: 'none', fontSize: '14px', fontWeight: 500,
+                color: designSystem.colors.neutral.gray600,
+              }}>
+                How It Works
+              </Link>
+              <Link to="/memo" style={{
+                textDecoration: 'none', fontSize: '14px', fontWeight: 600,
+                color: designSystem.colors.primary,
+                borderBottom: `2px solid ${designSystem.colors.primary}`,
+                paddingBottom: '2px',
+              }}>
+                Founding Memo
+              </Link>
+            </nav>
+          </div>
           <button
             onClick={handleOpenWaitlist}
             style={{

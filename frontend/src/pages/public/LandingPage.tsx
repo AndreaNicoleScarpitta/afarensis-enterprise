@@ -145,15 +145,31 @@ export default function LandingPage() {
           borderBottom: '1px solid #e5e7eb', padding: '12px 32px',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
-          <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <img src="/logo.png" alt="Synthetic Ascension" style={{ height: '36px', width: '36px' }} />
-            <span style={{
-              fontSize: '20px', fontWeight: 700, color: '#6366f1',
-              fontFamily: designSystem.typography.fontFamily.heading,
-            }}>
-              Synthetic Ascension
-            </span>
-          </Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <img src="/logo.png" alt="Synthetic Ascension" style={{ height: '36px', width: '36px' }} />
+              <span style={{
+                fontSize: '20px', fontWeight: 700, color: '#6366f1',
+                fontFamily: designSystem.typography.fontFamily.heading,
+              }}>
+                Synthetic Ascension
+              </span>
+            </Link>
+            <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+              <Link to="/how-it-works" style={{
+                textDecoration: 'none', fontSize: '14px', fontWeight: 500,
+                color: designSystem.colors.neutral.gray600,
+              }}>
+                How It Works
+              </Link>
+              <Link to="/memo" style={{
+                textDecoration: 'none', fontSize: '14px', fontWeight: 500,
+                color: designSystem.colors.neutral.gray600,
+              }}>
+                Founding Memo
+              </Link>
+            </nav>
+          </div>
           <button
             onClick={() => setShowWaitlist(true)}
             style={{
