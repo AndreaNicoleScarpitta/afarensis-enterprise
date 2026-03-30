@@ -157,6 +157,46 @@ def _send_notification(subject: str, body: str) -> None:
     except Exception as exc:
         logger.warning("Failed to send notification email (%s): %s", subject, exc)
 
+@router.get("/smtp-test")
+async def smtp_test():
+    """Temporary diagnostic — remove after confirming SMTP works."""
+    host = os.environ.get("SMTP_HOST")
+    port = int(os.environ.get("SMTP_PORT", "587"))
+    user = os.environ.get("SMTP_USER")
+    password = os.environ.get("SMTP_PASSWORD")
+    from_email = os.environ.get("FROM_EMAIL") or os.environ.get("SMTP_FROM_EMAIL") or user
+    to_email = os.environ.get("NOTIFICATION_EMAIL")
+
+    config = {
+        "SMTP_HOST": host,
+        "SMTP_PORT": port,
+        "SMTP_USER": user,
+        "SMTP_PASSWORD": "***SET***" if password else "***MISSING***",
+        "FROM_EMAIL": from_email,
+        "NOTIFICATION_EMAIL": to_email,
+    }
+
+    if not all([host, user, password, from_email, to_email]):
+        return {"status": "error", "message": "SMTP not fully configured", "config": config}
+
+    try:
+        msg = MIMEText("This is a test email from Afarensis SMTP diagnostics.", "plain")
+        msg["Subject"] = "Afarensis SMTP Test"
+        msg["From"] = from_email
+        msg["To"] = to_email
+
+        with smtplib.SMTP(host, port, timeout=15) as server:
+            server.set_debuglevel(0)
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(user, password)
+            server.sendmail(from_email, [to_email], msg.as_string())
+
+        return {"status": "success", "message": f"Email sent to {to_email}", "config": config}
+    except Exception as exc:
+        return {"status": "error", "message": str(exc), "error_type": type(exc).__name__, "config": config}
+
 # ---------------------------------------------------------------------------
 # Pydantic models
 # ---------------------------------------------------------------------------
