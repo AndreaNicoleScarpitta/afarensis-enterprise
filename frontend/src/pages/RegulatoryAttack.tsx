@@ -203,7 +203,7 @@ const TABS: Array<{ key: TabKey; label: string; icon: React.ReactNode }> = [
 
 export default function RegulatoryAttack({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const locked = protocolLocked
-  const { data: attackData, loading, error, refetch, runComputation } = useStudyData<AttackData>(selectedStudy?.id, 'regulatory_attack')
+  const { data: attackData, loading, error, refetch, runComputation } = useStudyData<AttackData>(selectedStudy?.id, 'regulatory-attack')
 
   const [activeTab, setActiveTab] = useState<TabKey>('summary')
   const [running, setRunning] = useState(false)

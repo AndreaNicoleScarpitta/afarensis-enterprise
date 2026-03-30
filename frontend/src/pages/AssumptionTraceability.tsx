@@ -124,7 +124,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
 export default function AssumptionTraceability({ selectedStudy, protocolLocked, reviewerMode }: Props) {
   const locked = protocolLocked
   const { data: traceData, loading, error, refetch, runComputation } =
-    useStudyData<TraceabilityData>(selectedStudy?.id, 'assumption_traceability')
+    useStudyData<TraceabilityData>(selectedStudy?.id, 'assumption-traceability')
 
   const [activeTab, setActiveTab] = useState<TabKey>('registry')
   const [computing, setComputing] = useState(false)

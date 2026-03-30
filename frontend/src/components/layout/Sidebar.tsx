@@ -60,8 +60,8 @@ const STEPS = [
 // Map step number to section key for staleness lookup
 const STEP_SECTION_MAP: Record<number, string> = {
   1: 'definition', 2: 'covariates', 3: 'data_sources', 4: 'cohort',
-  5: 'balance', 6: 'effect_estimation', 7: 'bias', 8: 'regulatory_attack',
-  9: 'assumption_traceability', 10: 'reproducibility', 11: 'audit', 12: 'regulatory',
+  5: 'balance', 6: 'effect_estimation', 7: 'bias', 8: 'regulatory-attack',
+  9: 'assumption-traceability', 10: 'reproducibility', 11: 'audit', 12: 'regulatory',
 }
 
 /** Build a project-scoped path */
