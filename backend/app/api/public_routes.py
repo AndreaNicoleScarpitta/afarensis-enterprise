@@ -16,12 +16,13 @@ import logging
 import os
 import re
 import sqlite3
-import smtplib
 import uuid
 from datetime import datetime, timezone
-from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Optional
+import urllib.request
+import urllib.error
+import json as _json
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse
@@ -113,87 +114,99 @@ except Exception as exc:
 # ---------------------------------------------------------------------------
 
 def _send_notification(subject: str, body: str) -> None:
-    """Send an email notification if SMTP env vars are configured.
+    """Send an email notification via SendGrid HTTP API.
 
-    Uses Zoho Mail SMTP (or any SMTP provider). Env vars:
-      SMTP_HOST       — e.g. smtp.zoho.com
-      SMTP_PORT       — e.g. 587
-      SMTP_USER       — e.g. admin@syntheticascendancy.tech
-      SMTP_PASSWORD   — Zoho app password
-      FROM_EMAIL      — sender address (falls back to SMTP_USER)
-      NOTIFICATION_EMAIL — where lead notifications are delivered
+    Env vars:
+      SENDGRID_API_KEY    — SendGrid API key (starts with SG.)
+      FROM_EMAIL          — verified sender address
+      NOTIFICATION_EMAIL  — where lead notifications are delivered
+
+    Falls back to SMTP_PASSWORD if SENDGRID_API_KEY is not set (for
+    backwards compatibility — the SMTP_PASSWORD field holds the SG key).
 
     All exceptions are caught and logged so that a missing or misconfigured
-    mail server never causes an API request to fail.
+    mail service never causes an API request to fail.
     """
     try:
-        host = os.environ.get("SMTP_HOST")
-        port = int(os.environ.get("SMTP_PORT", "587"))
-        user = os.environ.get("SMTP_USER")
-        password = os.environ.get("SMTP_PASSWORD")
-        from_email = os.environ.get("FROM_EMAIL") or os.environ.get("SMTP_FROM_EMAIL") or user
+        api_key = os.environ.get("SENDGRID_API_KEY") or os.environ.get("SMTP_PASSWORD")
+        from_email = os.environ.get("FROM_EMAIL")
         to_email = os.environ.get("NOTIFICATION_EMAIL")
 
-        if not all([host, user, password, from_email, to_email]):
+        if not all([api_key, from_email, to_email]):
             logger.warning(
-                "SMTP not fully configured — skipping notification. "
-                "Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD, FROM_EMAIL, NOTIFICATION_EMAIL."
+                "SendGrid not configured — skipping notification. "
+                "Set SENDGRID_API_KEY (or SMTP_PASSWORD), FROM_EMAIL, NOTIFICATION_EMAIL."
             )
             return
 
-        msg = MIMEText(body, "plain")
-        msg["Subject"] = subject
-        msg["From"] = from_email
-        msg["To"] = to_email
+        payload = _json.dumps({
+            "personalizations": [{"to": [{"email": to_email}]}],
+            "from": {"email": from_email},
+            "subject": subject,
+            "content": [{"type": "text/plain", "value": body}],
+        }).encode("utf-8")
 
-        with smtplib.SMTP(host, port, timeout=10) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(user, password)
-            server.sendmail(from_email, [to_email], msg.as_string())
+        req = urllib.request.Request(
+            "https://api.sendgrid.com/v3/mail/send",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
 
-        logger.info("Notification email sent: %s", subject)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            status = resp.status
+            logger.info("SendGrid notification sent (%d): %s", status, subject)
+
+    except urllib.error.HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        logger.warning("SendGrid HTTP error (%d) for '%s': %s", exc.code, subject, error_body)
     except Exception as exc:
-        logger.warning("Failed to send notification email (%s): %s", subject, exc)
+        logger.warning("Failed to send notification (%s): %s", subject, exc)
+
 
 @router.get("/smtp-test")
 async def smtp_test():
-    """Temporary diagnostic — remove after confirming SMTP works."""
-    host = os.environ.get("SMTP_HOST")
-    port = int(os.environ.get("SMTP_PORT", "587"))
-    user = os.environ.get("SMTP_USER")
-    password = os.environ.get("SMTP_PASSWORD")
-    from_email = os.environ.get("FROM_EMAIL") or os.environ.get("SMTP_FROM_EMAIL") or user
+    """Temporary diagnostic — remove after confirming email works."""
+    api_key = os.environ.get("SENDGRID_API_KEY") or os.environ.get("SMTP_PASSWORD")
+    from_email = os.environ.get("FROM_EMAIL")
     to_email = os.environ.get("NOTIFICATION_EMAIL")
 
     config = {
-        "SMTP_HOST": host,
-        "SMTP_PORT": port,
-        "SMTP_USER": user,
-        "SMTP_PASSWORD": "***SET***" if password else "***MISSING***",
+        "SENDGRID_API_KEY": "***SET***" if api_key else "***MISSING***",
         "FROM_EMAIL": from_email,
         "NOTIFICATION_EMAIL": to_email,
     }
 
-    if not all([host, user, password, from_email, to_email]):
-        return {"status": "error", "message": "SMTP not fully configured", "config": config}
+    if not all([api_key, from_email, to_email]):
+        return {"status": "error", "message": "SendGrid not configured", "config": config}
 
     try:
-        msg = MIMEText("This is a test email from Afarensis SMTP diagnostics.", "plain")
-        msg["Subject"] = "Afarensis SMTP Test"
-        msg["From"] = from_email
-        msg["To"] = to_email
+        payload = _json.dumps({
+            "personalizations": [{"to": [{"email": to_email}]}],
+            "from": {"email": from_email},
+            "subject": "Afarensis Email Test",
+            "content": [{"type": "text/plain", "value": "This is a test email from Afarensis diagnostics. If you received this, email delivery is working."}],
+        }).encode("utf-8")
 
-        with smtplib.SMTP(host, port, timeout=15) as server:
-            server.set_debuglevel(0)
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(user, password)
-            server.sendmail(from_email, [to_email], msg.as_string())
+        req = urllib.request.Request(
+            "https://api.sendgrid.com/v3/mail/send",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
 
-        return {"status": "success", "message": f"Email sent to {to_email}", "config": config}
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return {"status": "success", "message": f"Email sent to {to_email} (HTTP {resp.status})", "config": config}
+
+    except urllib.error.HTTPError as exc:
+        error_body = exc.read().decode("utf-8", errors="replace")
+        return {"status": "error", "http_code": exc.code, "message": error_body, "config": config}
     except Exception as exc:
         return {"status": "error", "message": str(exc), "error_type": type(exc).__name__, "config": config}
 
