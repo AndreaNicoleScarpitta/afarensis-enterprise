@@ -214,11 +214,12 @@ class SecurityHeaders(BaseHTTPMiddleware):
         # Content Security Policy
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; "
+            "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-            "img-src 'self' data: https:; "
+            "img-src 'self' data: https: www.google-analytics.com www.googletagmanager.com; "
             "font-src 'self' https://fonts.gstatic.com; "
-            "connect-src 'self' wss: https://www.google-analytics.com https://www.googletagmanager.com "
+            "connect-src 'self' wss: https://*.google-analytics.com https://*.analytics.google.com "
+            "https://www.googletagmanager.com https://stats.g.doubleclick.net "
             "https://api.anthropic.com https://api.openai.com https://api.sendgrid.com; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
