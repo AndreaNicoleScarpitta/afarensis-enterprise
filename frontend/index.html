@@ -250,13 +250,24 @@
     </style>
   </head>
   <body>
-    <!-- Loading Screen -->
+    <!-- Loading Screen (app subdomain only — hidden on marketing domain) -->
     <div id="loading-screen">
       <div class="loading-logo">Afarensis</div>
       <div class="loading-subtitle">Enterprise Clinical Evidence Platform</div>
       <div class="loading-spinner"></div>
       <div class="loading-progress">Initializing regulatory compliance systems...</div>
     </div>
+    <script>
+      // Hide loading screen immediately on the marketing domain
+      (function() {
+        var h = window.location.hostname;
+        var isApp = h.indexOf('app.') === 0 || h === 'localhost' || h === '127.0.0.1';
+        if (!isApp) {
+          var ls = document.getElementById('loading-screen');
+          if (ls) ls.style.display = 'none';
+        }
+      })();
+    </script>
 
     <!-- React App Mount Point -->
     <div id="root"></div>
@@ -264,13 +275,12 @@
     <!-- Remove loading screen once React loads -->
     <script>
       window.addEventListener('DOMContentLoaded', function() {
-        // Remove loading screen after React mounts (max 5 seconds)
         setTimeout(function() {
-          const loadingScreen = document.getElementById('loading-screen');
+          var loadingScreen = document.getElementById('loading-screen');
           if (loadingScreen) {
             loadingScreen.style.opacity = '0';
             loadingScreen.style.transition = 'opacity 0.5s ease-out';
-            setTimeout(() => loadingScreen.remove(), 500);
+            setTimeout(function() { loadingScreen.remove(); }, 500);
           }
         }, 100);
       });
