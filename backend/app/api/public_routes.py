@@ -24,11 +24,68 @@ import urllib.request
 import urllib.error
 import json as _json
 
-from fastapi import APIRouter, HTTPException, Query
+import time
+from collections import defaultdict
+from threading import Lock
+
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, field_validator
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Rate limiter — IP-based, in-memory
+# ---------------------------------------------------------------------------
+
+class _RateLimiter:
+    """Simple IP-based rate limiter for public endpoints.
+
+    Tracks request timestamps per IP and rejects requests exceeding the
+    configured rate.  Stale entries are cleaned up periodically.
+    """
+
+    def __init__(self, max_requests: int = 10, window_seconds: int = 60):
+        self.max_requests = max_requests
+        self.window = window_seconds
+        self._hits: dict[str, list[float]] = defaultdict(list)
+        self._lock = Lock()
+        self._last_cleanup = time.monotonic()
+
+    def _cleanup(self) -> None:
+        """Remove entries older than the window.  Runs at most every 60s."""
+        now = time.monotonic()
+        if now - self._last_cleanup < 60:
+            return
+        cutoff = now - self.window
+        stale_keys = [k for k, v in self._hits.items() if not v or v[-1] < cutoff]
+        for k in stale_keys:
+            del self._hits[k]
+        self._last_cleanup = now
+
+    def check(self, ip: str) -> bool:
+        """Return True if the request is allowed, False if rate-limited."""
+        now = time.monotonic()
+        with self._lock:
+            self._cleanup()
+            cutoff = now - self.window
+            self._hits[ip] = [t for t in self._hits[ip] if t > cutoff]
+            if len(self._hits[ip]) >= self.max_requests:
+                return False
+            self._hits[ip].append(now)
+            return True
+
+
+# 10 form submissions per minute per IP
+_public_limiter = _RateLimiter(max_requests=10, window_seconds=60)
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract client IP, respecting X-Forwarded-For from Cloudflare/Railway."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
 
 # ---------------------------------------------------------------------------
 # Router
@@ -268,11 +325,13 @@ class SampleDownloadRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 @router.post("/v2/leads")
-async def waitlist_signup(payload: LeadRequest):
+async def waitlist_signup(payload: LeadRequest, request: Request):
     """Register a new lead / waitlist signup.
 
     If the email already exists the record is updated with the new data.
     """
+    if not _public_limiter.check(_get_client_ip(request)):
+        raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
     try:
         conn = _get_conn()
         try:
@@ -335,8 +394,10 @@ async def waitlist_signup(payload: LeadRequest):
 
 
 @router.post("/contact/submit")
-async def contact_submit(payload: ContactRequest):
+async def contact_submit(payload: ContactRequest, request: Request):
     """Handle a contact-form submission from the public website."""
+    if not _public_limiter.check(_get_client_ip(request)):
+        raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
     try:
         conn = _get_conn()
         try:
@@ -369,11 +430,13 @@ async def contact_submit(payload: ContactRequest):
 
 
 @router.post("/sample-download")
-async def sample_download_request(payload: SampleDownloadRequest):
+async def sample_download_request(payload: SampleDownloadRequest, request: Request):
     """Request access to a sample validation report.
 
     Returns a unique download token that can be exchanged for the PDF.
     """
+    if not _public_limiter.check(_get_client_ip(request)):
+        raise HTTPException(status_code=429, detail="Too many requests. Please try again later.")
     download_token = str(uuid.uuid4())
 
     try:

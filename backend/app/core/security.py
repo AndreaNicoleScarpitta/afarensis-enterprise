@@ -211,21 +211,19 @@ class SecurityHeaders(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
 
-        # Content Security Policy — uses nonce-less hashes for inline styles
-        # (Vite/React injects style tags that need 'unsafe-inline' for styles only;
-        #  scripts use 'strict-dynamic' with the bundled entry point)
-        if settings.is_production:
-            response.headers["Content-Security-Policy"] = (
-                "default-src 'self'; "
-                "script-src 'self'; "
-                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
-                "img-src 'self' data: https:; "
-                "font-src 'self' https://fonts.gstatic.com; "
-                "connect-src 'self' wss: https://api.anthropic.com https://api.openai.com; "
-                "frame-ancestors 'none'; "
-                "base-uri 'self'; "
-                "form-action 'self'"
-            )
+        # Content Security Policy
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "connect-src 'self' wss: https://www.google-analytics.com https://www.googletagmanager.com "
+            "https://api.anthropic.com https://api.openai.com https://api.sendgrid.com; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'"
+        )
 
         return response
 
