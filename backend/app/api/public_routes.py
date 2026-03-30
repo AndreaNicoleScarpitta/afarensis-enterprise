@@ -167,49 +167,6 @@ def _send_notification(subject: str, body: str) -> None:
         logger.warning("Failed to send notification (%s): %s", subject, exc)
 
 
-@router.get("/smtp-test")
-async def smtp_test():
-    """Temporary diagnostic — remove after confirming email works."""
-    api_key = os.environ.get("SENDGRID_API_KEY") or os.environ.get("SMTP_PASSWORD")
-    from_email = os.environ.get("FROM_EMAIL")
-    to_email = os.environ.get("NOTIFICATION_EMAIL")
-
-    config = {
-        "SENDGRID_API_KEY": "***SET***" if api_key else "***MISSING***",
-        "FROM_EMAIL": from_email,
-        "NOTIFICATION_EMAIL": to_email,
-    }
-
-    if not all([api_key, from_email, to_email]):
-        return {"status": "error", "message": "SendGrid not configured", "config": config}
-
-    try:
-        payload = _json.dumps({
-            "personalizations": [{"to": [{"email": to_email}]}],
-            "from": {"email": from_email},
-            "subject": "Afarensis Email Test",
-            "content": [{"type": "text/plain", "value": "This is a test email from Afarensis diagnostics. If you received this, email delivery is working."}],
-        }).encode("utf-8")
-
-        req = urllib.request.Request(
-            "https://api.sendgrid.com/v3/mail/send",
-            data=payload,
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json",
-            },
-            method="POST",
-        )
-
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            return {"status": "success", "message": f"Email sent to {to_email} (HTTP {resp.status})", "config": config}
-
-    except urllib.error.HTTPError as exc:
-        error_body = exc.read().decode("utf-8", errors="replace")
-        return {"status": "error", "http_code": exc.code, "message": error_body, "config": config}
-    except Exception as exc:
-        return {"status": "error", "message": str(exc), "error_type": type(exc).__name__, "config": config}
-
 # ---------------------------------------------------------------------------
 # Pydantic models
 # ---------------------------------------------------------------------------
