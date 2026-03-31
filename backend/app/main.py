@@ -90,6 +90,28 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"Stale task cleanup on startup failed: {e}")
 
+    # Ensure demo user exists (idempotent — skips if already present)
+    try:
+        async with AsyncSessionLocal() as session:
+            from sqlalchemy import text as _txt
+            row = await session.execute(_txt("SELECT id FROM users WHERE email = 'demo'"))
+            if row.scalar() is None:
+                import bcrypt, uuid as _uuid
+                hpw = bcrypt.hashpw(b"password123", bcrypt.gensalt(rounds=12)).decode()
+                # Find the first organization to attach to
+                org_row = await session.execute(_txt("SELECT id FROM organizations LIMIT 1"))
+                org_id = org_row.scalar()
+                await session.execute(_txt(
+                    "INSERT INTO users (id, email, full_name, role, hashed_password, is_active, email_verified, organization, department, organization_id, created_at, updated_at) "
+                    "VALUES (:id, 'demo', 'Demo User', 'ADMIN', :hpw, 1, 1, 'Afarensis Inc.', 'Demo', :org_id, :now, :now)"
+                ), {"id": str(_uuid.uuid4()), "hpw": hpw, "org_id": org_id, "now": datetime.utcnow().isoformat()})
+                await session.commit()
+                logger.info("Demo user created (demo / password123)")
+            else:
+                logger.info("Demo user already exists")
+    except Exception as e:
+        logger.warning(f"Demo user creation failed: {e}")
+
     logger.info("Afarensis Enterprise ready for regulatory evidence review")
 
     # Schedule periodic cleanup of expired session tokens

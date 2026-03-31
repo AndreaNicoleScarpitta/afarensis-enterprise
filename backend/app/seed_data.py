@@ -57,8 +57,11 @@ async def seed_database(session: AsyncSession):
     meridian_admin_id = str(uuid.uuid4())
     meridian_analyst_id = str(uuid.uuid4())
 
+    demo_id = str(uuid.uuid4())
+
     users = [
         (admin_id, "admin@afarensis.com", "Platform Administrator", "ADMIN", hash_pw("admin123"), 1, "Afarensis Inc.", "Administration", org_afarensis_id),
+        (demo_id, "demo", "Demo User", "ADMIN", hash_pw("password123"), 1, "Afarensis Inc.", "Demo", org_afarensis_id),
         (reviewer1_id, "reviewer1@afarensis.com", "Dr. Sarah Chen, Biostatistician", "REVIEWER", hash_pw("reviewer123"), 1, "Afarensis Inc.", "Biostatistics", org_afarensis_id),
         (reviewer2_id, "reviewer2@afarensis.com", "Dr. Michael Torres, Epidemiologist", "REVIEWER", hash_pw("reviewer123"), 1, "Afarensis Inc.", "Epidemiology", org_afarensis_id),
         (analyst_id, "analyst@afarensis.com", "Emily Park, Research Analyst", "ANALYST", hash_pw("analyst123"), 1, "Afarensis Inc.", "Research", org_afarensis_id),
