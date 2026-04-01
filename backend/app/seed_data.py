@@ -1,5 +1,5 @@
 """
-Afarensis Enterprise — Database Seed Data
+Afarensis by Synthetic Ascendancy — Database Seed Data
 Populates development database with realistic clinical study data.
 """
 import uuid
@@ -34,11 +34,11 @@ async def seed_database(session: AsyncSession):
     now = datetime.utcnow().isoformat()
 
     # ---------- Organizations ----------
-    org_afarensis_id = str(uuid.uuid4())
+    org_sa_id = str(uuid.uuid4())
     org_meridian_id = str(uuid.uuid4())
 
     orgs = [
-        (org_afarensis_id, "Afarensis Inc.", "afarensis", 1),
+        (org_sa_id, "Synthetic Ascendancy", "synthetic-ascendancy", 1),
         (org_meridian_id, "Meridian Therapeutics", "meridian", 1),
     ]
 
@@ -60,12 +60,12 @@ async def seed_database(session: AsyncSession):
     demo_id = str(uuid.uuid4())
 
     users = [
-        (admin_id, "admin@afarensis.com", "Platform Administrator", "ADMIN", hash_pw("admin123"), 1, "Afarensis Inc.", "Administration", org_afarensis_id),
-        (demo_id, "demo", "Demo User", "ADMIN", hash_pw("password123"), 1, "Afarensis Inc.", "Demo", org_afarensis_id),
-        (reviewer1_id, "reviewer1@afarensis.com", "Dr. Sarah Chen, Biostatistician", "REVIEWER", hash_pw("reviewer123"), 1, "Afarensis Inc.", "Biostatistics", org_afarensis_id),
-        (reviewer2_id, "reviewer2@afarensis.com", "Dr. Michael Torres, Epidemiologist", "REVIEWER", hash_pw("reviewer123"), 1, "Afarensis Inc.", "Epidemiology", org_afarensis_id),
-        (analyst_id, "analyst@afarensis.com", "Emily Park, Research Analyst", "ANALYST", hash_pw("analyst123"), 1, "Afarensis Inc.", "Research", org_afarensis_id),
-        (viewer_id, "viewer@afarensis.com", "James Liu, Regulatory Affairs", "VIEWER", hash_pw("viewer123"), 1, "Afarensis Inc.", "Regulatory Affairs", org_afarensis_id),
+        (admin_id, "admin@syntheticascendancy.tech", "Platform Administrator", "ADMIN", hash_pw("admin123"), 1, "Synthetic Ascendancy", "Administration", org_sa_id),
+        (demo_id, "demo", "Demo User", "ADMIN", hash_pw("password123"), 1, "Synthetic Ascendancy", "Demo", org_sa_id),
+        (reviewer1_id, "reviewer1@syntheticascendancy.tech", "Dr. Sarah Chen, Biostatistician", "REVIEWER", hash_pw("reviewer123"), 1, "Synthetic Ascendancy", "Biostatistics", org_sa_id),
+        (reviewer2_id, "reviewer2@syntheticascendancy.tech", "Dr. Michael Torres, Epidemiologist", "REVIEWER", hash_pw("reviewer123"), 1, "Synthetic Ascendancy", "Epidemiology", org_sa_id),
+        (analyst_id, "analyst@syntheticascendancy.tech", "Emily Park, Research Analyst", "ANALYST", hash_pw("analyst123"), 1, "Synthetic Ascendancy", "Research", org_sa_id),
+        (viewer_id, "viewer@syntheticascendancy.tech", "James Liu, Regulatory Affairs", "VIEWER", hash_pw("viewer123"), 1, "Synthetic Ascendancy", "Regulatory Affairs", org_sa_id),
         (meridian_admin_id, "rachel.kim@meridiantx.com", "Dr. Rachel Kim, VP Clinical", "ADMIN", hash_pw("meridian123"), 1, "Meridian Therapeutics", "Clinical Operations", org_meridian_id),
         (meridian_analyst_id, "tom.harris@meridiantx.com", "Tom Harris, Data Analyst", "ANALYST", hash_pw("meridian123"), 1, "Meridian Therapeutics", "Biostatistics", org_meridian_id),
     ]
@@ -84,22 +84,26 @@ async def seed_database(session: AsyncSession):
     project4_id = str(uuid.uuid4())
 
     projects = [
-        (project1_id, "XY-301: Rare CNS Disorder (Pediatric)", "review",
-         "Phase 3 single-arm study of XY-301 in pediatric patients with rare CNS disorder. "
-         "External control arm constructed from registry data and natural history studies. "
-         "Primary endpoint: change in neurological severity score at 48 weeks.",
-         "Evaluate efficacy and safety of XY-301 vs external comparator using ATT estimand with propensity score methods.",
-         admin_id, org_afarensis_id),
+        (project1_id, "XY-301: CLN2 Disease (Late-Infantile Batten)", "review",
+         "Phase 3 single-arm study of XY-301 (ICV enzyme replacement) in pediatric patients with CLN2 disease "
+         "(Neuronal Ceroid Lipofuscinosis Type 2). External control arm constructed from DEM-CHILD natural history "
+         "registry (n=74) and Weill Cornell LINCL database (n=66). Primary endpoint: rate of decline on "
+         "CLN2 Clinical Rating Scale motor-language (ML) domain score (0-6) at 48 weeks vs matched historical controls. "
+         "Regulatory path: FDA Rare Pediatric Disease designation, EMA PRIME eligibility.",
+         "Evaluate efficacy and safety of XY-301 vs DEM-CHILD/WCMC external comparator using ATT estimand "
+         "with propensity score IPW methods. Sensitivity analyses include E-value for unmeasured confounding "
+         "and tipping-point analysis for missing data.",
+         admin_id, org_sa_id),
         (project2_id, "CLARITY-AD: Alzheimer's Disease Phase 3", "completed",
          "Phase 3 randomized controlled trial evaluating monoclonal antibody therapy in early Alzheimer's disease. "
          "Co-primary endpoints: CDR-SB and ADAS-Cog14 at 76 weeks.",
          "Assess treatment effect using ITT estimand in mild cognitive impairment and mild AD dementia populations.",
-         reviewer1_id, org_afarensis_id),
+         reviewer1_id, org_sa_id),
         (project3_id, "GLP1-2026: Cardiovascular Outcomes", "draft",
          "Cardiovascular outcomes trial for novel GLP-1 receptor agonist. "
          "Primary endpoint: time to first MACE (cardiovascular death, MI, or stroke).",
          "Evaluate cardiovascular safety and potential benefit using ATE estimand with time-to-event analysis.",
-         analyst_id, org_afarensis_id),
+         analyst_id, org_sa_id),
         (project4_id, "MRD-100: Autoimmune Hepatitis Phase 2", "draft",
          "Phase 2 dose-ranging study of MRD-100, a selective JAK1 inhibitor, in moderate-to-severe autoimmune hepatitis. "
          "Primary endpoint: biochemical response (ALT normalization) at 24 weeks.",
@@ -113,66 +117,78 @@ async def seed_database(session: AsyncSession):
     xy301_processing_config = json.dumps({
         "analysis_results": {
             "cox_ph": {
-                "hazard_ratio": 0.38,
-                "ci_lower": 0.22,
-                "ci_upper": 0.65,
-                "p_value": 0.0004,
-                "concordance": 0.74,
+                "hazard_ratio": 0.14,
+                "ci_lower": 0.06,
+                "ci_upper": 0.33,
+                "p_value": 0.0001,
+                "concordance": 0.82,
+                "note": "HR for unreversed 2-point ML decline or score of 0, calibrated to Schulz et al. Lancet Neurol 2024 extension data",
                 "covariates": {
-                    "age_at_baseline": {"hr": 1.02, "p": 0.45},
-                    "sex_male": {"hr": 0.91, "p": 0.62},
-                    "baseline_motor_language_score": {"hr": 0.78, "p": 0.003},
-                    "genotype_severity": {"hr": 1.34, "p": 0.018},
-                    "seizure_history": {"hr": 1.21, "p": 0.11},
+                    "age_at_onset_months": {"hr": 1.03, "p": 0.38, "note": "Median onset 35 months per Nickel et al. 2018"},
+                    "sex_male": {"hr": 0.93, "p": 0.58},
+                    "baseline_ml_score": {"hr": 0.72, "p": 0.002, "note": "CLN2 ML scale 0-6, motor + language domains"},
+                    "genotype_severity": {"hr": 1.41, "p": 0.012, "note": "TPP1 mutation severity classification"},
+                    "age_at_first_seizure_months": {"hr": 0.98, "p": 0.22, "note": "Median first seizure 37 months per DEM-CHILD"},
+                    "time_symptom_to_diagnosis_months": {"hr": 1.08, "p": 0.045, "note": "Diagnostic delay, median 19 months"},
                 },
             },
             "propensity_score": {
                 "method": "IPW-ATT",
-                "ate": -1.53,
-                "ate_ci_lower": -2.10,
-                "ate_ci_upper": -0.96,
-                "att": -1.67,
-                "att_ci_lower": -2.28,
-                "att_ci_upper": -1.06,
+                "ate": -1.85,
+                "ate_ci_lower": -2.40,
+                "ate_ci_upper": -1.20,
+                "att": -1.42,
+                "att_ci_lower": -2.10,
+                "att_ci_upper": -0.74,
+                "att_note": "ML score decline difference per 48 weeks: 0.46 (treated) vs 1.88 (controls), per Schulz et al. Front Neurol 2025",
                 "ess_treatment": 24,
-                "ess_control": 18.3,
+                "ess_control": 21,
                 "balance_achieved": True,
-                "max_smd_after": 0.07,
-                "covariates_balanced": ["age_at_baseline", "sex", "baseline_motor_language_score", "genotype_severity", "age_at_symptom_onset", "seizure_history"],
+                "max_smd_after": 0.06,
+                "covariates_balanced": ["age_at_onset", "sex", "baseline_ml_score", "genotype_severity", "age_at_first_seizure", "time_to_diagnosis"],
             },
             "kaplan_meier": {
+                "endpoint": "Time to unreversed 2-point ML decline or score of 0",
                 "treatment_median_weeks": None,
-                "control_median_weeks": 72.4,
+                "control_median_weeks": 49.3,
+                "control_median_note": "Median time to 2-point decline 345 days (49.3 weeks) in untreated per Schulz NEJM 2018",
                 "treatment_survival_48w": 0.92,
-                "control_survival_48w": 0.45,
+                "control_survival_48w": 0.38,
                 "log_rank_p": 0.0001,
                 "time_points": [0, 12, 24, 36, 48, 60, 72, 84, 96],
-                "treatment_survival": [1.0, 0.99, 0.97, 0.95, 0.92, 0.89, 0.86, 0.83, 0.80],
-                "control_survival": [1.0, 0.92, 0.82, 0.68, 0.45, 0.33, 0.22, 0.15, 0.10],
+                "treatment_survival": [1.0, 0.99, 0.97, 0.95, 0.92, 0.89, 0.87, 0.84, 0.82],
+                "control_survival": [1.0, 0.88, 0.72, 0.55, 0.38, 0.25, 0.16, 0.10, 0.06],
+                "treatment_decline_rate_per_48w": 0.27,
+                "control_decline_rate_per_48w": 2.12,
             },
             "e_value": {
-                "point_estimate": 4.68,
-                "ci_bound": 2.41,
-                "interpretation": "An unmeasured confounder would need to be associated with both treatment and outcome by a risk ratio of at least 4.68 to explain away the observed effect.",
+                "point_estimate": 13.72,
+                "ci_bound": 5.53,
+                "interpretation": "An unmeasured confounder would need to be associated with both treatment assignment and ML score decline by a risk ratio of at least 13.72 to explain away the observed HR of 0.14. The CI bound E-value of 5.53 substantially exceeds the recommended threshold of 2.0 (VanderWeele & Ding, Ann Intern Med 2017, PMID 28693043).",
             },
             "forest_plot": {
-                "overall": {"hr": 0.38, "ci_lower": 0.22, "ci_upper": 0.65},
+                "overall": {"hr": 0.14, "ci_lower": 0.06, "ci_upper": 0.33},
                 "subgroups": [
-                    {"label": "Age 2-5y", "hr": 0.32, "ci_lower": 0.14, "ci_upper": 0.73, "n": 14},
-                    {"label": "Age 6-10y", "hr": 0.41, "ci_lower": 0.18, "ci_upper": 0.92, "n": 8},
-                    {"label": "Age 11-16y", "hr": 0.52, "ci_lower": 0.15, "ci_upper": 1.78, "n": 8},
-                    {"label": "Male", "hr": 0.35, "ci_lower": 0.16, "ci_upper": 0.77, "n": 16},
-                    {"label": "Female", "hr": 0.43, "ci_lower": 0.19, "ci_upper": 0.98, "n": 14},
-                    {"label": "Severe genotype", "hr": 0.30, "ci_lower": 0.12, "ci_upper": 0.74, "n": 12},
-                    {"label": "Moderate genotype", "hr": 0.48, "ci_lower": 0.23, "ci_upper": 1.01, "n": 18},
+                    {"label": "Age 2-5y (pre-school)", "hr": 0.10, "ci_lower": 0.03, "ci_upper": 0.34, "n": 14},
+                    {"label": "Age 6-10y", "hr": 0.18, "ci_lower": 0.05, "ci_upper": 0.62, "n": 8},
+                    {"label": "Age 11-16y", "hr": 0.28, "ci_lower": 0.06, "ci_upper": 1.32, "n": 5},
+                    {"label": "Male", "hr": 0.12, "ci_lower": 0.04, "ci_upper": 0.38, "n": 13},
+                    {"label": "Female", "hr": 0.17, "ci_lower": 0.05, "ci_upper": 0.56, "n": 14},
+                    {"label": "Baseline ML >= 4", "hr": 0.08, "ci_lower": 0.02, "ci_upper": 0.30, "n": 16},
+                    {"label": "Baseline ML 3", "hr": 0.24, "ci_lower": 0.07, "ci_upper": 0.82, "n": 11},
+                    {"label": "Severe TPP1 genotype", "hr": 0.11, "ci_lower": 0.03, "ci_upper": 0.42, "n": 10},
+                    {"label": "Moderate TPP1 genotype", "hr": 0.19, "ci_lower": 0.06, "ci_upper": 0.58, "n": 17},
                 ],
             },
         },
         "pre_analysis_validation": {
             "sample_size_adequate": True,
-            "covariate_overlap": 0.89,
+            "treatment_n": 24,
+            "external_control_n": 42,
+            "control_source": "DEM-CHILD Registry (n=74 total, 42 matched) + WCMC Database (n=66)",
+            "covariate_overlap": 0.91,
             "positivity_violations": 0,
-            "missing_data_pct": 3.2,
+            "missing_data_pct": 2.8,
             "status": "PASSED",
         },
     })
@@ -268,16 +284,16 @@ async def seed_database(session: AsyncSession):
         ":ss, :statplan, :covariates, :assumptions, :now, :model, :conf)"
     ), {
         "id": spec_id, "pid": project1_id,
-        "indication": "Rare Pediatric CNS Disorder (Neuronal Ceroid Lipofuscinosis Type 2)",
-        "pop": "Pediatric patients aged 2-16 years with confirmed CLN2 diagnosis and baseline motor-language score >= 3",
-        "primary": "Change from baseline in CLN2 Clinical Rating Scale motor-language score at Week 48",
-        "secondary": '["Time to 2-point decline in motor-language score", "Seizure frequency reduction", "MRI volumetric change", "Caregiver-reported outcomes (PedsQL)"]',
-        "incl": '["Age 2-16 years", "Genetically confirmed CLN2 disease", "Baseline motor-language score >= 3", "Informed consent from parent/guardian"]',
-        "excl": '["Prior enzyme replacement therapy", "Concurrent CNS-active investigational therapy", "Severe hepatic or renal impairment", "Contraindication to intracerebroventricular delivery"]',
-        "followup": "48 weeks (primary), 96 weeks (extension)",
-        "ss": 24, "statplan": "Mixed-effects model for repeated measures (MMRM) with treatment-policy estimand. Propensity score methods for external control comparison using ATT.",
-        "covariates": '["age_at_baseline", "sex", "baseline_motor_language_score", "genotype_severity", "age_at_symptom_onset", "seizure_history"]',
-        "assumptions": '["Missing data assumed MAR", "Proportional hazards for time-to-event endpoints", "External control population exchangeability after PS adjustment"]',
+        "indication": "CLN2 Disease (Neuronal Ceroid Lipofuscinosis Type 2, Late-Infantile Batten Disease)",
+        "pop": "Pediatric patients aged 2-16 years with genetically confirmed biallelic TPP1 mutations, baseline CLN2 Clinical Rating Scale motor-language (ML) score >= 3 (scale 0-6, Hamburg scale adapted per Wyrwich et al. 2018)",
+        "primary": "Rate of decline in CLN2 Clinical Rating Scale ML score at Week 48 vs matched historical controls from DEM-CHILD registry (Nickel et al. Lancet Child Adolesc Health 2018, PMID 30119717)",
+        "secondary": '["Time to unreversed 2-point decline in ML score", "Time to ML score of 0 (complete loss of motor and language function)", "Seizure frequency change from baseline", "Brain MRI volumetric change (cortical gray matter, per Dyke et al. AJNR 2016, PMID 26822727)", "Caregiver-reported QoL (PedsQL)"]',
+        "incl": '["Age 2-16 years", "Genetically confirmed biallelic TPP1 mutations (CLN2 disease)", "Baseline ML score >= 3 on CLN2 Clinical Rating Scale", "Surgically implanted ICV access device in place", "Informed consent from parent/guardian (with age-appropriate assent)"]',
+        "excl": '["Prior ICV enzyme replacement therapy (cerliponase alfa/Brineura)", "Prior CNS-directed gene therapy", "Concurrent CNS-active investigational therapy", "Active CNS infection or device-related infection within 6 months", "Contraindication to intracerebroventricular delivery", "Severe hepatic impairment (ALT/AST > 5x ULN)"]',
+        "followup": "48 weeks (primary analysis), 96 weeks (extension), with biannual MRI assessments",
+        "ss": 24, "statplan": "Primary: Rate of ML score decline per 48 weeks in treated vs DEM-CHILD/WCMC external controls, using MMRM with treatment-policy estimand. External control comparison via propensity score IPW-ATT (Stuart EA, Stat Sci 2010, PMID 20871802). Sensitivity: E-value analysis for unmeasured confounding (VanderWeele & Ding, Ann Intern Med 2017, PMID 28693043), tipping-point analysis for MNAR, Rosenbaum bounds.",
+        "covariates": '["age_at_symptom_onset", "sex", "baseline_ml_score", "tpp1_genotype_severity", "age_at_first_seizure", "time_from_onset_to_diagnosis", "baseline_brain_mri_volume"]',
+        "assumptions": '["Missing data assumed MAR (sensitivity: tipping-point for MNAR)", "Proportional hazards for time-to-event endpoints", "External control population exchangeability after PS adjustment (DEM-CHILD registry contemporaneous patients post-2018)", "No secular trend in supportive care standards within control period"]',
         "now": now, "model": "claude-3-5-sonnet-20241022", "conf": 0.92
     })
 
@@ -305,117 +321,117 @@ async def seed_database(session: AsyncSession):
         "now": now, "model": "claude-3-5-sonnet-20241022", "conf": 0.95
     })
 
-    # ---------- Evidence Records (10 for XY-301) ----------
+    # ---------- Evidence Records (10 for XY-301) — Real PMIDs and published CLN2 research ----------
     evidence_records = [
         {
             "id": str(uuid.uuid4()), "project_id": project1_id,
-            "source_type": "PUBMED", "source_id": "38291045",
-            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38291045/",
-            "title": "Efficacy of Novel Therapeutic Agent in Pediatric CNS Disorders: A Multicenter Registry Study",
-            "abstract": "Background: Rare pediatric CNS disorders remain a significant unmet medical need. We evaluated outcomes in a multicenter registry of 156 patients treated with cerliponase alfa over 5 years. Methods: Retrospective analysis of CLN2 disease registry data from 12 centers across North America and Europe. Results: Treated patients showed significantly slower decline in motor-language scores compared to natural history (mean difference 1.8 points, 95% CI: 1.2-2.4, p<0.001). Conclusions: Registry data support treatment benefit in CLN2 disease.",
-            "authors": '["Chen S", "Martinez R", "Yamamoto K", "Peterson L", "Schmidt W"]',
+            "source_type": "PUBMED", "source_id": "29688815",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/29688815/",
+            "title": "Study of Intraventricular Cerliponase Alfa for CLN2 Disease",
+            "abstract": "Multicenter open-label study of ICV cerliponase alfa 300mg every 2 weeks in 24 children with CLN2 disease. Treated patients showed ML score decline of 0.27 +/- 0.35 points per 48 weeks vs 2.12 +/- 0.98 in 42 historical controls (P<0.001). Median time to 2-point decline not reached in treated patients vs 345 days in controls. Common AEs: convulsions, pyrexia, device-related complications.",
+            "authors": '["Schulz A", "Ajayi T", "Specchio N", "de Los Reyes E", "Gissen P", "Ballon D", "Dyke JP", "Cahan H", "Slasor P", "Jacoby D", "Kohlschutter A"]',
+            "journal": "New England Journal of Medicine",
+            "publication_year": 2018,
+            "structured_data": '{"sample_size": 24, "controls": 42, "study_type": "phase_1_2_open_label", "follow_up_weeks": 96, "primary_endpoint": "ML score decline rate per 48 weeks", "primary_result": {"treatment_rate": 0.27, "treatment_sd": 0.35, "control_rate": 2.12, "control_sd": 0.98, "p_value": 0.001, "mean_difference": 1.85}, "population_age_range": "3-16 years", "therapeutic_area": "CLN2_disease", "nct": "NCT01907087"}'
+        },
+        {
+            "id": str(uuid.uuid4()), "project_id": project1_id,
+            "source_type": "PUBMED", "source_id": "38101904",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38101904/",
+            "title": "Safety and efficacy of cerliponase alfa in children with CLN2 disease: an open-label extension study",
+            "abstract": "Open-label extension of the pivotal cerliponase alfa study (mean treatment 272.1 weeks). HR for unreversed 2-point ML decline or score of 0: 0.14 (95% CI 0.06-0.33, P<0.0001) vs historical controls. 17 of 23 patients completed the extension. 9 patients had ICV device-related infections. No deaths, no discontinuations due to AEs.",
+            "authors": '["Schulz A", "Specchio N", "de Los Reyes E", "Gissen P", "Nickel M", "Trivisano M", "Aylward SC", "Chakrapani A", "Schwering C", "Wibbeler E", "Westermann LM", "Ballon DJ", "Dyke JP", "Cherukuri A", "Bondade S", "Slasor P", "Cohen Pfeffer J"]',
             "journal": "The Lancet Neurology",
             "publication_year": 2024,
-            "structured_data": '{"sample_size": 156, "study_type": "retrospective_registry", "follow_up_months": 60, "primary_endpoint": "CLN2 motor-language score change", "primary_result": {"mean_difference": 1.8, "ci_lower": 1.2, "ci_upper": 2.4, "p_value": 0.001}, "population_age_range": "2-16 years", "therapeutic_area": "rare_pediatric_cns"}'
+            "structured_data": '{"sample_size": 23, "study_type": "open_label_extension", "follow_up_weeks": 300, "primary_endpoint": "HR for unreversed 2-point ML decline or score of 0", "primary_result": {"hazard_ratio": 0.14, "ci_lower": 0.06, "ci_upper": 0.33, "p_value": 0.0001}, "population_age_range": "3-16 years", "therapeutic_area": "CLN2_disease", "nct": "NCT02485899"}'
         },
         {
             "id": str(uuid.uuid4()), "project_id": project1_id,
-            "source_type": "PUBMED", "source_id": "37854921",
-            "source_url": "https://pubmed.ncbi.nlm.nih.gov/37854921/",
-            "title": "Natural History of Rare Pediatric CNS Conditions: A 10-Year Longitudinal Cohort",
-            "abstract": "Objective: To characterize the natural history of CLN2 disease in an untreated cohort. Methods: Prospective longitudinal study of 42 patients from the DEM-CHILD database with biannual assessments. Results: Median time to loss of ambulation was 4.8 years from symptom onset. Motor-language score declined linearly at a rate of 2.1 points per year. Brain MRI showed progressive cortical and cerebellar atrophy. Conclusions: These data establish a robust natural history benchmark for clinical trial design.",
-            "authors": '["Anderson P", "Schulz A", "Nickel M", "Kohlschutter A"]',
-            "journal": "Annals of Neurology",
-            "publication_year": 2023,
-            "structured_data": '{"sample_size": 42, "study_type": "prospective_longitudinal", "follow_up_months": 120, "primary_endpoint": "Rate of motor-language score decline", "primary_result": {"rate_per_year": 2.1, "ci_lower": 1.8, "ci_upper": 2.4}, "population_age_range": "1-12 years", "therapeutic_area": "rare_pediatric_cns"}'
+            "source_type": "PUBMED", "source_id": "30119717",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/30119717/",
+            "title": "Disease characteristics and progression in patients with late-infantile neuronal ceroid lipofuscinosis type 2 (CLN2) disease: an observational cohort study",
+            "abstract": "DEM-CHILD (n=74) and Weill Cornell (n=66) international datasets characterizing CLN2 natural history. Median symptom onset 35 months, first seizure 37 months, diagnosis 54 months. Untreated ML score decline rate 1.81 points/year (95% CI 1.50-2.12). Median time from first symptom to death 7.8 years. These data served as the historical control benchmark for cerliponase alfa approval.",
+            "authors": '["Nickel M", "Simonati A", "Jacoby D", "Lezius S", "Kilian D", "Van de Graaf B", "Pagovich OE", "Kosofsky B", "Yohay K", "Downs M", "Slasor P", "Ajayi T", "Crystal RG", "Kohlschutter A", "Sondhi D", "Schulz A"]',
+            "journal": "The Lancet Child & Adolescent Health",
+            "publication_year": 2018,
+            "structured_data": '{"sample_size": 140, "dem_child_n": 74, "wcmc_n": 66, "study_type": "prospective_observational", "follow_up_years": 10, "primary_endpoint": "Rate of ML score decline", "primary_result": {"rate_per_year": 1.81, "ci_lower": 1.50, "ci_upper": 2.12}, "median_onset_months": 35, "median_seizure_months": 37, "median_diagnosis_months": 54, "median_symptom_to_death_years": 7.8, "therapeutic_area": "CLN2_disease", "nct": "NCT04613089"}'
         },
         {
             "id": str(uuid.uuid4()), "project_id": project1_id,
-            "source_type": "PUBMED", "source_id": "38102834",
-            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38102834/",
-            "title": "Propensity Score Methods in Rare Disease: A Methodological Review",
-            "abstract": "This systematic review evaluates the application of propensity score methods in rare disease trials with external controls. We identified 87 studies from 2015-2023 using PS matching, weighting, or stratification. ATT estimation with inverse probability weighting showed the best balance in small-sample rare disease settings. Key recommendations include transparent covariate selection, sensitivity analyses for unmeasured confounding, and use of E-values.",
-            "authors": '["Liu J", "Gagne JJ", "Schneeweiss S", "Wang SV"]',
-            "journal": "Statistics in Medicine",
-            "publication_year": 2024,
-            "structured_data": '{"sample_size": 87, "study_type": "systematic_review", "follow_up_months": null, "primary_endpoint": "Methodological quality assessment", "primary_result": {"studies_reviewed": 87, "recommended_method": "IPW-ATT"}, "population_age_range": "all ages", "therapeutic_area": "methodology"}'
+            "source_type": "PUBMED", "source_id": "40162009",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/40162009/",
+            "title": "Real-world clinical outcomes of patients with CLN2 disease treated with cerliponase alfa",
+            "abstract": "DEM-CHILD real-world data: 24 ERT-treated patients outside clinical trials matched 1:1 with natural history controls. ML decline 0.46 +/- 0.43 vs 1.88 +/- 1.45 points/48 weeks (mean difference 1.42, 95% CI 0.74-2.10, P=0.0003). HR for unreversed 2-point decline: 0.08 (95% CI 0.02-0.28, P<0.0001). Most common AEs: pyrexia (50%), vomiting (33%), nausea (21%). No deaths.",
+            "authors": '["Schulz A", "Schwering C", "Wibbeler E", "Westermann LM", "Hagenah L", "Lezius S", "Jha A", "Hunt A", "Slasor P", "Reisewitz P", "Nickel M"]',
+            "journal": "Frontiers in Neurology",
+            "publication_year": 2025,
+            "structured_data": '{"sample_size": 24, "matched_controls": 21, "study_type": "real_world_evidence", "follow_up_weeks": 96, "primary_endpoint": "ML decline rate per 48 weeks", "primary_result": {"treatment_rate": 0.46, "treatment_sd": 0.43, "control_rate": 1.88, "control_sd": 1.45, "mean_difference": 1.42, "ci_lower": 0.74, "ci_upper": 2.10, "p_value": 0.0003}, "hr_2pt_decline": {"hr": 0.08, "ci_lower": 0.02, "ci_upper": 0.28, "p_value": 0.0001}, "therapeutic_area": "CLN2_disease"}'
         },
         {
             "id": str(uuid.uuid4()), "project_id": project1_id,
-            "source_type": "PUBMED", "source_id": "38456712",
-            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38456712/",
-            "title": "Regulatory Considerations for External Control Arms in Rare Pediatric Disease",
-            "abstract": "The FDA and EMA have increasingly accepted external control arms (ECAs) in rare disease drug development. This analysis reviews 23 regulatory submissions (2018-2023) using ECAs and identifies key factors associated with approval. Robust natural history data, pre-specified analysis plans, and quantified sensitivity to unmeasured confounding were associated with favorable outcomes.",
-            "authors": '["Park E", "Thorpe KE", "Freidlin B", "Korn EL"]',
-            "journal": "Clinical Pharmacology & Therapeutics",
-            "publication_year": 2024,
-            "structured_data": '{"sample_size": 23, "study_type": "regulatory_review", "follow_up_months": null, "primary_endpoint": "Regulatory approval outcomes", "primary_result": {"approval_rate": 0.74, "submissions_reviewed": 23}, "population_age_range": "pediatric", "therapeutic_area": "regulatory_science"}'
+            "source_type": "PUBMED", "source_id": "35211079",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/35211079/",
+            "title": "Natural History Studies in NCL and Their Expanding Role in Drug Development: Experiences From CLN2 Disease and Relevance for Clinical Trials",
+            "abstract": "Review of how DEM-CHILD natural history data from 140 genotype-confirmed CLN2 patients were accepted by EMA and FDA as valid historical controls for cerliponase alfa (Brineura) approval. Discusses regulatory framework for external control arms in ultra-rare diseases, data quality requirements, and lessons for future NCL drug development programs.",
+            "authors": '["Nickel M", "Schulz A"]',
+            "journal": "Frontiers in Neurology",
+            "publication_year": 2022,
+            "structured_data": '{"sample_size": 140, "study_type": "regulatory_review", "primary_endpoint": "Regulatory acceptance of natural history controls", "primary_result": {"fda_approved": true, "ema_approved": true, "approval_year_fda": 2017, "approval_year_ema": 2017}, "therapeutic_area": "CLN2_disease"}'
         },
         {
             "id": str(uuid.uuid4()), "project_id": project1_id,
-            "source_type": "PUBMED", "source_id": "37921456",
-            "source_url": "https://pubmed.ncbi.nlm.nih.gov/37921456/",
-            "title": "Intracerebroventricular Enzyme Replacement for Neuronal Ceroid Lipofuscinosis: Long-term Outcomes",
-            "abstract": "We report 3-year outcomes from the pivotal phase 1/2 study of intracerebroventricular cerliponase alfa in CLN2 disease. Of 24 enrolled patients, 22 completed 144 weeks of treatment. Mean motor-language score declined 0.27 points/48 weeks vs 2.12 points/48 weeks in the natural history comparator (p<0.0001). Safety profile was manageable with device-related AEs being most common.",
-            "authors": '["Schulz A", "Specchio N", "Gissen P", "de los Reyes E", "Chabrol B"]',
-            "journal": "New England Journal of Medicine",
-            "publication_year": 2023,
-            "structured_data": '{"sample_size": 24, "study_type": "phase_1_2_open_label", "follow_up_months": 144, "primary_endpoint": "Motor-language score change per 48 weeks", "primary_result": {"treatment_rate": 0.27, "comparator_rate": 2.12, "p_value": 0.0001}, "population_age_range": "3-8 years", "therapeutic_area": "rare_pediatric_cns"}'
-        },
-        {
-            "id": str(uuid.uuid4()), "project_id": project1_id,
-            "source_type": "CLINICALTRIALS", "source_id": "NCT04312340",
-            "source_url": "https://clinicaltrials.gov/study/NCT04312340",
-            "title": "Phase 3 Study of XY-301 in Pediatric Patients with CLN2 Disease (HORIZON)",
-            "abstract": "A single-arm, open-label Phase 3 study evaluating the efficacy and safety of XY-301 administered via intracerebroventricular infusion every 2 weeks for 48 weeks. Primary endpoint: change in CLN2 motor-language score compared to matched external controls from DEM-CHILD registry.",
-            "authors": '["XY Therapeutics"]',
+            "source_type": "CLINICALTRIALS", "source_id": "NCT01907087",
+            "source_url": "https://clinicaltrials.gov/study/NCT01907087",
+            "title": "A Multicenter, Multinational, Phase 1/2, Open-Label, Dose-Escalation Study to Evaluate the Safety, Tolerability, Pharmacokinetics, and Efficacy of Intracerebroventricular Cerliponase Alfa in Patients With CLN2 Disease",
+            "abstract": "Pivotal phase 1/2 dose-escalation study of ICV cerliponase alfa (BMN 190) in children with CLN2 disease. 24 patients enrolled across 4 sites in US, UK, Germany, Italy. 300mg every 2 weeks established as therapeutic dose. Primary outcome: rate of decline on CLN2 Clinical Rating Scale vs matched historical controls from DEM-CHILD registry.",
+            "authors": '["BioMarin Pharmaceutical"]',
             "journal": "ClinicalTrials.gov",
-            "publication_year": 2024,
-            "structured_data": '{"sample_size": 30, "study_type": "phase_3_single_arm", "follow_up_months": 48, "primary_endpoint": "CLN2 motor-language score change vs external control", "primary_result": null, "population_age_range": "2-16 years", "therapeutic_area": "rare_pediatric_cns"}'
+            "publication_year": 2013,
+            "structured_data": '{"sample_size": 24, "study_type": "phase_1_2_open_label", "follow_up_weeks": 96, "primary_endpoint": "CLN2 ML score decline rate vs historical controls", "population_age_range": "3-16 years", "therapeutic_area": "CLN2_disease", "sponsor": "BioMarin Pharmaceutical", "fda_approval": "2017-04-27"}'
         },
         {
             "id": str(uuid.uuid4()), "project_id": project1_id,
-            "source_type": "PUBMED", "source_id": "38567234",
-            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38567234/",
-            "title": "Covariate Balance Diagnostics for External Control Arms: A Practical Guide",
-            "abstract": "External control arms require rigorous covariate balance assessment. We present a practical framework using standardized mean differences, variance ratios, and overlap statistics. Application to 5 rare disease case studies demonstrates that achieving balance on prognostic covariates is critical for credible causal inference. Love plots and balance tables should be standard reporting elements.",
-            "authors": '["Stuart EA", "DuGoff E", "Fontana M", "Austin PC"]',
-            "journal": "Pharmaceutical Statistics",
-            "publication_year": 2024,
-            "structured_data": '{"sample_size": 5, "study_type": "methodological_guidance", "follow_up_months": null, "primary_endpoint": "Covariate balance metrics", "primary_result": {"case_studies": 5, "smd_threshold": 0.1}, "population_age_range": "all ages", "therapeutic_area": "methodology"}'
+            "source_type": "PUBMED", "source_id": "26822727",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/26822727/",
+            "title": "Brain Region-Specific Degeneration with Disease Progression in Late Infantile Neuronal Ceroid Lipofuscinosis (CLN2 Disease)",
+            "abstract": "52 high-resolution 3T MRI datasets from 38 CLN2 patients at Weill Cornell Medical College. FreeSurfer cortical thickness analysis demonstrated accelerated global cortical thinning correlating with clinical severity. Identified brain regions affected earliest and most severely. Quantitative MRI may serve as sensitive secondary endpoint detecting treatment effects earlier than clinical scales.",
+            "authors": '["Dyke JP", "Sondhi D", "Voss HU", "Yohay K", "Hollmann C", "Mancenido D", "Kaminsky SM", "Kosofsky BE", "Bhatt RR", "Ballon DJ", "Crystal RG"]',
+            "journal": "American Journal of Neuroradiology",
+            "publication_year": 2016,
+            "structured_data": '{"sample_size": 38, "mri_datasets": 52, "study_type": "biomarker_validation", "follow_up_months": 36, "primary_endpoint": "MRI cortical thickness vs clinical severity", "primary_result": {"modality": "3T_FreeSurfer", "correlation_with_severity": "significant"}, "population_age_range": "2-14 years", "therapeutic_area": "CLN2_disease"}'
         },
         {
             "id": str(uuid.uuid4()), "project_id": project1_id,
-            "source_type": "PUBMED", "source_id": "38123789",
-            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38123789/",
-            "title": "Brain MRI as a Surrogate Endpoint in Neuronal Ceroid Lipofuscinosis Trials",
-            "abstract": "MRI volumetric measures correlate with clinical outcomes in CLN2 disease. In a cohort of 68 patients, gray matter volume loss predicted motor-language score decline (r=0.78, p<0.001). Quantitative MRI may serve as a sensitive secondary endpoint, detecting treatment effects earlier than clinical scales.",
-            "authors": '["Dyke JP", "Sondhi D", "Kaminsky SM", "Crystal RG"]',
-            "journal": "Neuroimage: Clinical",
-            "publication_year": 2024,
-            "structured_data": '{"sample_size": 68, "study_type": "biomarker_validation", "follow_up_months": 36, "primary_endpoint": "Correlation of MRI volumetrics with clinical outcomes", "primary_result": {"correlation_r": 0.78, "p_value": 0.001}, "population_age_range": "2-14 years", "therapeutic_area": "rare_pediatric_cns"}'
+            "source_type": "PUBMED", "source_id": "28693043",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/28693043/",
+            "title": "Sensitivity Analysis in Observational Research: Introducing the E-Value",
+            "abstract": "Introduces the E-value: the minimum strength of association on the risk ratio scale that an unmeasured confounder would need to have with both the treatment and the outcome to fully explain away a specific treatment-outcome association. Proposes E-values be reported for all observational studies claiming causal evidence. Widely adopted by FDA and EMA for external control arm submissions.",
+            "authors": '["VanderWeele TJ", "Ding P"]',
+            "journal": "Annals of Internal Medicine",
+            "publication_year": 2017,
+            "structured_data": '{"study_type": "methodological_framework", "primary_endpoint": "E-value methodology", "primary_result": {"recommended_reporting": "E-value for point estimate and CI bound"}, "therapeutic_area": "methodology", "citations": "3000+"}'
         },
         {
             "id": str(uuid.uuid4()), "project_id": project1_id,
-            "source_type": "PUBMED", "source_id": "38234567",
-            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38234567/",
-            "title": "Sensitivity Analysis Frameworks for Unmeasured Confounding in Single-Arm Trials",
-            "abstract": "Single-arm trials with external controls are vulnerable to unmeasured confounding. We compare E-value, Rosenbaum bounds, and probabilistic bias analysis approaches. Using simulated and real rare disease data, we show that E-value reporting provides an accessible, interpretable metric for regulatory reviewers. A minimum E-value of 2.0 is proposed as a threshold for robust conclusions.",
-            "authors": '["VanderWeele TJ", "Ding P", "Mathur MB"]',
-            "journal": "Journal of Clinical Epidemiology",
-            "publication_year": 2024,
-            "structured_data": '{"sample_size": null, "study_type": "simulation_study", "follow_up_months": null, "primary_endpoint": "E-value threshold determination", "primary_result": {"recommended_e_value_threshold": 2.0}, "population_age_range": "all ages", "therapeutic_area": "methodology"}'
+            "source_type": "PUBMED", "source_id": "20871802",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/20871802/",
+            "title": "Matching methods for causal inference: A review and a look forward",
+            "abstract": "Landmark review of matching methods for causal inference from observational data. Covers propensity score matching, covariate matching, and related methods. Discusses ATT vs ATE estimation, balance diagnostics including standardized mean differences, and practical guidance for applied researchers. One of the most-cited papers in causal inference methodology.",
+            "authors": '["Stuart EA"]',
+            "journal": "Statistical Science",
+            "publication_year": 2010,
+            "structured_data": '{"study_type": "methodological_review", "primary_endpoint": "Propensity score and matching methods for causal inference", "primary_result": {"methods_reviewed": ["PS_matching", "covariate_matching", "IPW", "subclassification"], "recommended_diagnostics": ["SMD", "variance_ratios", "overlap_plots"]}, "therapeutic_area": "methodology", "citations": "7000+"}'
         },
         {
             "id": str(uuid.uuid4()), "project_id": project1_id,
-            "source_type": "PUBMED", "source_id": "38345678",
-            "source_url": "https://pubmed.ncbi.nlm.nih.gov/38345678/",
-            "title": "Patient-Reported Outcomes in Rare Pediatric Neurological Disorders: Psychometric Validation",
-            "abstract": "Validated PRO measures are lacking in rare pediatric CNS disorders. We conducted psychometric evaluation of PedsQL, PROMIS, and CLN2-specific QoL instruments in 93 families. The CLN2-QoL showed strong internal consistency (Cronbach's alpha=0.89) and test-retest reliability (ICC=0.91). It is recommended as a secondary endpoint in CLN2 trials.",
-            "authors": '["Varni JW", "Limbers CA", "Williams E", "Specchio N"]',
-            "journal": "Quality of Life Research",
-            "publication_year": 2024,
-            "structured_data": '{"sample_size": 93, "study_type": "psychometric_validation", "follow_up_months": 12, "primary_endpoint": "Psychometric properties of CLN2-QoL", "primary_result": {"cronbach_alpha": 0.89, "icc": 0.91}, "population_age_range": "2-18 years", "therapeutic_area": "rare_pediatric_cns"}'
+            "source_type": "PUBMED", "source_id": "33268510",
+            "source_url": "https://pubmed.ncbi.nlm.nih.gov/33268510/",
+            "title": "Slowing late infantile Batten disease by direct brain parenchymal administration of a rh.10 adeno-associated virus expressing CLN2",
+            "abstract": "Nonrandomized trial of AAVrh.10hCLN2 gene therapy delivered intraparenchymally via 6 burr holes to 12 brain sites in 8 children with mild-to-moderate CLN2 disease vs 12 untreated Weill Cornell natural history controls. Assessed over 18 months. Gene therapy approach complementary to enzyme replacement, with potential for sustained TPP1 expression from a single administration.",
+            "authors": '["Sondhi D", "Kaminsky SM", "Hackett NR", "Pagovich OE", "Rosenberg JB", "De BP", "Chen A", "Van de Graaf B", "Mezey JG", "Bhatt RR", "Kosofsky BE", "Bhatt P", "Crystal RG"]',
+            "journal": "Science Translational Medicine",
+            "publication_year": 2020,
+            "structured_data": '{"sample_size": 8, "controls": 12, "study_type": "nonrandomized_gene_therapy", "follow_up_months": 18, "primary_endpoint": "Safety and ML score stabilization", "vector": "AAVrh.10hCLN2", "route": "intraparenchymal_12_sites", "population_age_range": "2-12 years", "therapeutic_area": "CLN2_gene_therapy", "relevance": "Competitor landscape and alternative therapeutic modality"}'
         },
     ]
 
@@ -706,17 +722,28 @@ async def seed_database(session: AsyncSession):
     import random
     random.seed(42)
 
+    # Comparability scores aligned to real evidence records:
+    # 1: Schulz NEJM 2018 (pivotal trial) — highest relevance
+    # 2: Schulz Lancet Neurol 2024 (extension) — critical long-term data
+    # 3: Nickel Lancet Child 2018 (DEM-CHILD NH) — primary external control source
+    # 4: Schulz Front Neurol 2025 (real-world) — confirmatory evidence
+    # 5: Nickel & Schulz Front Neurol 2022 (regulatory review) — regulatory precedent
+    # 6: NCT01907087 (ClinicalTrials.gov) — trial protocol
+    # 7: Dyke AJNR 2016 (MRI biomarker) — secondary endpoint validation
+    # 8: VanderWeele Ann Int Med 2017 (E-value) — methodology reference
+    # 9: Stuart Stat Sci 2010 (matching methods) — methodology reference
+    # 10: Sondhi Sci Transl Med 2020 (gene therapy) — competitor landscape
     comp_scores_data = [
-        (0.88, 0.82, 0.91, 0.85, 0.87, 0.93, 0.87, 0.80),
-        (0.92, 0.78, 0.85, 0.90, 0.83, 0.95, 0.86, 0.82),
-        (0.65, 0.60, 0.88, 0.70, 0.92, 0.90, 0.77, 0.68),
-        (0.70, 0.55, 0.75, 0.68, 0.85, 0.88, 0.73, 0.65),
-        (0.95, 0.90, 0.93, 0.88, 0.91, 0.96, 0.92, 0.90),
-        (0.90, 0.85, 0.80, 0.82, 0.78, 0.85, 0.83, 0.78),
-        (0.68, 0.62, 0.90, 0.72, 0.88, 0.87, 0.78, 0.70),
-        (0.82, 0.75, 0.80, 0.78, 0.84, 0.90, 0.81, 0.76),
-        (0.60, 0.58, 0.85, 0.65, 0.90, 0.88, 0.74, 0.62),
-        (0.78, 0.70, 0.82, 0.75, 0.80, 0.86, 0.78, 0.72),
+        (0.95, 0.98, 0.93, 0.92, 0.96, 0.98, 0.95, 0.94),
+        (0.95, 0.97, 0.93, 0.95, 0.95, 0.97, 0.95, 0.93),
+        (0.92, 0.90, 0.95, 0.88, 0.94, 0.96, 0.93, 0.91),
+        (0.90, 0.88, 0.91, 0.93, 0.90, 0.94, 0.91, 0.89),
+        (0.70, 0.65, 0.75, 0.80, 0.88, 0.92, 0.78, 0.82),
+        (0.88, 0.92, 0.85, 0.90, 0.80, 0.90, 0.87, 0.85),
+        (0.78, 0.72, 0.80, 0.82, 0.90, 0.92, 0.82, 0.78),
+        (0.55, 0.60, 0.88, 0.50, 0.95, 0.95, 0.72, 0.65),
+        (0.50, 0.55, 0.90, 0.48, 0.95, 0.95, 0.70, 0.62),
+        (0.72, 0.68, 0.78, 0.75, 0.88, 0.90, 0.78, 0.70),
     ]
 
     comp_score_ids = []
@@ -736,32 +763,101 @@ async def seed_database(session: AsyncSession):
             "pop_sim": pop_sim, "ep_align": ep_align, "cov_cov": cov_cov,
             "temp_align": temp_align, "ev_qual": ev_qual, "prov": prov,
             "overall": overall, "reg_viab": reg_viab,
-            "rationale": f"Automated scoring for evidence record {i+1}. Population overlap assessed via age range and disease stage matching.",
+            "rationale": [
+                "Pivotal ICV ERT trial (PMID 29688815): Direct CLN2 population match, ML score endpoint, ICV delivery — highest relevance to XY-301 program.",
+                "Long-term extension (PMID 38101904): Same population, 5+ year follow-up with HR 0.14 — critical for sustained efficacy demonstration.",
+                "DEM-CHILD natural history (PMID 30119717): Primary external control source with 140 genotype-confirmed patients — gold standard comparator.",
+                "Real-world cerliponase alfa data (PMID 40162009): Independent DEM-CHILD confirmation of clinical trial findings — regulatory-grade evidence.",
+                "Regulatory acceptance review (PMID 35211079): Documents FDA/EMA precedent for NH controls in CLN2 — important regulatory context but not direct evidence.",
+                "ClinicalTrials.gov protocol (NCT01907087): Source trial protocol — high protocol relevance but limited population-level scoring.",
+                "MRI biomarker study (PMID 26822727): Validates quantitative MRI as secondary endpoint — moderate direct relevance, strong methodological support.",
+                "E-value methodology (PMID 28693043): Core sensitivity analysis framework for unmeasured confounding — essential methodology but not disease-specific.",
+                "Matching methods review (PMID 20871802): Foundational causal inference reference — essential methodology but not disease-specific.",
+                "AAVrh.10 gene therapy (PMID 33268510): Competitor landscape analysis — moderate relevance as alternative modality in same disease.",
+            ][i],
             "now": now, "model": "afarensis-scorer-v2", "version": "2.1.0"
         })
 
     # ---------- Bias Analyses (5 per project — using XY-301 comparability scores) ----------
+    # Bias analyses grounded in real FDA regulatory actions:
+    # - RGX-121 CRL (Feb 7, 2026): eligibility phenotyping, external control comparability, surrogate endpoint validity
+    # - Brineura FDA review (2017): Language domain incomparability, device safety, conservative stats requirement
+    # - RGX-111 clinical hold (Jan 2026): AAV vector integration / oncogenesis concern (gene therapy specific)
     bias_data = [
-        ("SELECTION_BIAS", 0.35, 0.30, 0.25,
-         "Potential selection bias in registry enrollment. Sicker patients may be underrepresented in the registry comparator arm.",
-         '["Sensitivity analysis excluding late-enrolling centers", "Propensity score trimming at 5th/95th percentile", "Comparison of baseline characteristics pre/post matching"]',
-         "Assess enrollment patterns across centers. Apply stabilized IPW with truncation at the 1st and 99th percentiles."),
-        ("CONFOUNDING", 0.45, 0.40, 0.38,
-         "Residual confounding by disease severity at baseline. Genotype severity classification differs between trial and registry.",
-         '["Adjust for genotype in propensity score model", "E-value calculation for unmeasured confounding", "Negative control outcome analysis"]',
-         "Include genotype severity as a covariate. Report E-values for the primary treatment effect estimate."),
-        ("MEASUREMENT_BIAS", 0.25, 0.20, 0.18,
-         "Motor-language scale administered by different raters across trial and registry. Inter-rater reliability not uniformly assessed.",
-         '["Calibration substudy between trial and registry raters", "Mixed-effects model with rater as random effect", "Sensitivity analysis restricting to centers with certified raters"]',
-         "Request rater certification data. Apply measurement error correction models if inter-rater variability exceeds threshold."),
-        ("TEMPORAL_BIAS", 0.30, 0.28, 0.22,
-         "Registry data collected over 10 years with evolving supportive care standards. Treatment era may confound outcomes.",
-         '["Restrict comparator to contemporary patients (enrolled after 2018)", "Include calendar year as covariate", "Test for temporal trend in natural history data"]',
-         "Limit external control to patients enrolled within 5 years of trial start. Test calendar year interaction."),
-        ("PUBLICATION_BIAS", 0.20, 0.15, 0.12,
-         "Published literature may overrepresent positive results for enzyme replacement therapy in lysosomal storage disorders.",
-         '["Funnel plot analysis for existing meta-analyses", "Search clinical trial registries for unpublished studies", "Trim-and-fill sensitivity analysis"]',
-         "Conduct comprehensive search including conference abstracts and regulatory documents to identify unpublished data."),
+        ("CONFOUNDING", 0.55, 0.50, 0.48,
+         "FDA CRL PRECEDENT (RGX-121, Feb 2026): Eligibility criteria may not adequately differentiate disease severity phenotypes. "
+         "In the RGX-121 MPS II CRL, FDA questioned whether trial enrollment criteria could reliably distinguish neuronopathic from "
+         "attenuated disease. For CLN2, analogous risk exists: the CLN2 Clinical Rating Scale ML score at baseline (>= 3 inclusion criterion) "
+         "may not adequately stratify patients by rate of future progression. Rapidly-declining vs slowly-declining CLN2 phenotypes "
+         "(driven by specific TPP1 mutation combinations) may respond differently to ICV ERT, and the external control arm may over-represent "
+         "one phenotype. The DEM-CHILD registry (PMID 30119717) uses genotype classification that does not map 1:1 to the trial protocol.",
+         '["Pre-specify genotype-stratified subgroup analyses by TPP1 mutation severity class", '
+         '"Validate that ML score >= 3 criterion selects a homogeneous prognostic population using DEM-CHILD baseline data", '
+         '"Sensitivity analysis restricting external controls to patients with matched TPP1 genotype severity", '
+         '"Quantitative bias analysis for unmeasured confounding by phenotype misclassification", '
+         '"E-value analysis (VanderWeele & Ding, PMID 28693043) — current E-value of 13.72 substantially exceeds 2.0 threshold"]',
+         "Harmonize TPP1 genotype severity classification between trial and DEM-CHILD registry. Pre-specify interaction tests for "
+         "genotype x treatment effect. Report E-values with CI bounds. This directly addresses the FDA precedent from the RGX-121 CRL."),
+        ("SELECTION_BIAS", 0.50, 0.48, 0.45,
+         "FDA CRL PRECEDENT (RGX-121, Feb 2026): External natural history control not sufficiently comparable to study population. "
+         "FDA rejected the RGX-121 BLA in part because the natural history external control was not adequately matched. For XY-301, "
+         "the DEM-CHILD registry (n=74) and WCMC database (n=66) were collected independently across 12+ centers over 2002-2022. "
+         "Key comparability gaps: (1) Trial patients required ICV device placement, selecting for surgical candidacy and specialized "
+         "center access; (2) Registry patients were assessed retrospectively in some centers vs prospectively in others; "
+         "(3) Evolving supportive care standards (anti-epileptics, nutrition, physiotherapy) over the 20-year registry window means "
+         "earlier controls may have had worse outcomes independent of ERT. FDA required BioMarin to use conservative statistical "
+         "assumptions during the Brineura review specifically because of these external control limitations.",
+         '["Restrict external control to contemporary DEM-CHILD patients enrolled after 2015 to minimize temporal confounding", '
+         '"Propensity score IPW-ATT with stabilized weights, truncated at 1st/99th percentile", '
+         '"Head-to-head comparison of trial-eligible vs ineligible registry patients on baseline covariates", '
+         '"Include calendar year of enrollment as PS model covariate", '
+         '"Use conservative statistical assumptions per FDA Brineura review precedent (BLA 761052)", '
+         '"Sensitivity analysis using only WCMC controls (single-center, more consistent assessment)"]',
+         "This is the highest regulatory risk item given the RGX-121 CRL precedent. Document comparability exhaustively with "
+         "Love plots, SMD tables, and overlap diagnostics. Pre-specify contemporaneous control restriction as primary analysis."),
+        ("MEASUREMENT_BIAS", 0.45, 0.40, 0.42,
+         "FDA BRINEURA REVIEW FINDING (BLA 761052, 2017): Language domain ratings were NOT comparable between the cerliponase alfa "
+         "clinical trial and the natural history cohort. FDA limited the approved efficacy claim to the Motor domain only, excluding "
+         "the Language domain from the composite ML score. This is a direct precedent for XY-301: if the Language domain of the CLN2 "
+         "Clinical Rating Scale cannot be shown to be reliably assessed across trial sites and DEM-CHILD registry centers using the "
+         "same adapted Wyrwich et al. (2018) scale version, FDA may again restrict the efficacy endpoint to Motor-only. Additionally, "
+         "inter-rater reliability was not uniformly assessed across the 12+ DEM-CHILD centers, and the original Steinfeld/Kohlschutter "
+         "scoring (PMID 12376936) used in older registry records differs from the adapted version used in clinical trials.",
+         '["Demonstrate Language domain comparability between trial and external control using calibration substudy", '
+         '"Video-recorded ML assessments scored independently by trial and registry raters to quantify inter-rater reliability", '
+         '"Pre-specify Motor-only sensitivity analysis in the SAP as a conservative fallback (per Brineura precedent)", '
+         '"Restrict DEM-CHILD controls to centers using the adapted Wyrwich et al. 2018 scale version", '
+         '"Report kappa statistics for inter-rater agreement on both Motor and Language domains separately"]',
+         "CRITICAL: Must demonstrate Language domain comparability or risk FDA restricting efficacy claim to Motor-only, "
+         "as happened with Brineura. Pre-specify both composite ML and Motor-only analyses in the SAP."),
+        ("TEMPORAL_BIAS", 0.40, 0.38, 0.35,
+         "FDA CRL PRECEDENT (RGX-121, Feb 2026): Surrogate endpoint may not reasonably predict clinical benefit. FDA questioned "
+         "whether CSF heparan sulfate D2S6 reduction was reasonably likely to predict neurocognitive benefit in MPS II. For CLN2, "
+         "the analogous risk is whether the ML score decline rate (the primary endpoint) is a valid surrogate for long-term functional "
+         "outcomes and survival. While the ML score has face validity, its psychometric validation is relatively recent (Wyrwich 2018), "
+         "and the correlation between short-term ML score stabilization (48 weeks) and long-term outcomes (survival, QoL, independence) "
+         "has not been formally established. MRI volumetric measures (Dyke et al. AJNR 2016, PMID 26822727) correlate with clinical "
+         "severity but are not yet validated as surrogate endpoints.",
+         '["Formal surrogate endpoint validation: correlate 48-week ML score change with 96-week and long-term functional outcomes", '
+         '"Prentice criteria analysis using cerliponase alfa extension data (PMID 38101904) as validation dataset", '
+         '"Include MRI volumetric change as pre-specified supportive secondary endpoint (not co-primary)", '
+         '"Reference real-world DEM-CHILD confirmation (PMID 40162009) showing ML decline rate predicts 2-point loss and score-of-0 endpoints", '
+         '"Document biological plausibility linking TPP1 enzyme activity to neuron preservation to ML score preservation"]',
+         "Provide formal surrogate endpoint justification per FDA accelerated approval pathway. Use Brineura extension data "
+         "and DEM-CHILD real-world data to demonstrate ML score decline rate predicts meaningful long-term clinical benefit."),
+        ("PUBLICATION_BIAS", 0.30, 0.25, 0.20,
+         "FDA CLINICAL HOLD PRECEDENT (RGX-111/RGX-121, Jan 2026): AAV vector integration and oncogenesis risk. In January 2026, "
+         "FDA placed a clinical hold on RegenXBio's RGX-111 (MPS I) and RGX-121 (MPS II) after a CNS tumor was identified in a child "
+         "treated with AAVrh.10-based gene therapy 4 years prior, with confirmed AAV vector genome integration and PLAG1 proto-oncogene "
+         "overexpression. While XY-301 is an ICV enzyme replacement (not gene therapy), this precedent establishes heightened FDA scrutiny "
+         "of all intracerebroventricular CNS interventions in pediatric populations. Long-term safety monitoring and MRI surveillance "
+         "protocols must address this concern proactively, even though the mechanism (recombinant enzyme vs viral vector) is fundamentally different.",
+         '["Differentiate XY-301 mechanism (recombinant enzyme, no genomic integration) from AAV gene therapy in regulatory briefing", '
+         '"Implement routine brain MRI surveillance at 6, 12, 24, 48, and 96 weeks per Brineura post-marketing protocol", '
+         '"Monitor for device-related complications (infection, malfunction) — 9/23 patients had ICV device infections in extension study (PMID 38101904)", '
+         '"10-year long-term follow-up commitment matching Brineura post-marketing requirement (FDA BLA 761052)"]',
+         "Low direct relevance for ERT, but proactive acknowledgment of the AAV oncogenesis concern demonstrates regulatory awareness. "
+         "Emphasize mechanistic differentiation. Commit to long-term MRI surveillance and device safety monitoring."),
     ]
 
     for i, (bias_type, severity, fragility, reg_risk, desc, strategies, adjust) in enumerate(bias_data):
@@ -783,21 +879,22 @@ async def seed_database(session: AsyncSession):
 
     # ---------- Review Decisions (5) ----------
     review_decisions = [
-        (ev_ids[0], reviewer1_id, "ACCEPTED", 0.85,
-         "Registry study provides strong real-world evidence with adequate sample size. Multicenter design enhances generalizability. "
-         "Recommend as primary external comparator source."),
-        (ev_ids[1], reviewer1_id, "ACCEPTED", 0.90,
-         "Gold-standard natural history data with prospective design and long follow-up. "
-         "Essential for constructing the external control arm."),
-        (ev_ids[2], reviewer2_id, "ACCEPTED", 0.75,
-         "Valuable methodological reference for propensity score approach selection. "
-         "ATT with IPW recommendation aligns with our statistical analysis plan."),
-        (ev_ids[3], reviewer2_id, "DEFERRED", 0.60,
-         "Regulatory review provides useful precedents but sample of submissions is small. "
-         "Defer pending additional review of individual case study details."),
-        (ev_ids[4], reviewer1_id, "ACCEPTED", 0.92,
-         "Pivotal study demonstrates clear treatment benefit vs natural history. "
-         "3-year data with strong effect size. Critical evidence for the regulatory submission."),
+        (ev_ids[0], reviewer1_id, "ACCEPTED", 0.95,
+         "Schulz et al. NEJM 2018 (PMID 29688815): Pivotal ICV cerliponase alfa trial establishing ML decline rate of 0.27 vs 2.12 points/48 weeks. "
+         "Gold-standard evidence for CLN2 ERT efficacy. Directly applicable to XY-301 external control comparison methodology."),
+        (ev_ids[1], reviewer1_id, "ACCEPTED", 0.96,
+         "Schulz et al. Lancet Neurol 2024 (PMID 38101904): 5+ year extension data with HR 0.14 for ML decline. "
+         "Critical long-term safety and durability data. Strengthens the evidence base for sustained ICV ERT benefit in CLN2."),
+        (ev_ids[2], reviewer2_id, "ACCEPTED", 0.93,
+         "Nickel et al. Lancet Child Adolesc Health 2018 (PMID 30119717): DEM-CHILD natural history with 140 patients. "
+         "This is the primary external control data source. Decline rate of 1.81 pts/year (CI 1.50-2.12) is the benchmark. "
+         "FDA and EMA accepted this as valid historical control for Brineura approval."),
+        (ev_ids[3], reviewer2_id, "ACCEPTED", 0.88,
+         "Schulz et al. Front Neurol 2025 (PMID 40162009): Independent real-world confirmation of cerliponase alfa benefit "
+         "outside clinical trial setting. ML decline 0.46 vs 1.88 pts/48w. HR 0.08 for 2-point decline. Strengthens external validity."),
+        (ev_ids[4], reviewer1_id, "DEFERRED", 0.65,
+         "Nickel & Schulz Front Neurol 2022 (PMID 35211079): Useful regulatory precedent review but primarily narrative. "
+         "Defer for further extraction of specific regulatory acceptance criteria and data quality requirements applied by FDA/EMA."),
     ]
 
     for ev_id, rev_id, decision, confidence, rationale in review_decisions:
@@ -813,10 +910,14 @@ async def seed_database(session: AsyncSession):
 
     # ---------- Regulatory Artifacts (metadata only) ----------
     artifacts = [
-        ("safety_assessment_report", "XY-301 Safety Assessment Report — Draft", "html", "FDA",
-         "Pre-BLA safety assessment for XY-301 ICV administration in pediatric CLN2 patients"),
-        ("evidence_table", "XY-301 Evidence Summary Table v1.0", "html", "FDA",
-         "Comprehensive evidence table summarizing all included external control sources"),
+        ("safety_assessment_report", "XY-301 Integrated Safety Summary — ICV ERT in Pediatric CLN2 Disease", "html", "FDA",
+         "Pre-BLA integrated safety summary for XY-301 ICV administration in pediatric CLN2 patients. "
+         "Includes AE profile benchmarked against cerliponase alfa (Brineura) pivotal data (PMID 29688815). "
+         "Covers device-related complications, CNS infections, hypersensitivity reactions, and seizure monitoring."),
+        ("evidence_table", "XY-301 External Control Evidence Summary — DEM-CHILD & WCMC Natural History Data", "html", "FDA",
+         "Comprehensive evidence table summarizing all included external control sources from DEM-CHILD registry "
+         "(PMID 30119717, n=74) and WCMC database (n=66). Includes comparability scores, bias assessments, "
+         "propensity score balance diagnostics, and E-value sensitivity analyses per VanderWeele & Ding (PMID 28693043)."),
     ]
 
     for art_type, title, fmt, agency, context in artifacts:
@@ -835,14 +936,14 @@ async def seed_database(session: AsyncSession):
     # ---------- Audit Logs (10) ----------
     audit_logs = [
         (None, admin_id, "user_login", "session", None, "Admin user logged in from 192.168.1.100"),
-        (project1_id, admin_id, "project_created", "project", project1_id, "Created XY-301 evidence review project"),
-        (project1_id, analyst_id, "evidence_discovery_started", "evidence", None, "Initiated PubMed and ClinicalTrials.gov search for XY-301"),
-        (project1_id, analyst_id, "evidence_imported", "evidence", ev_ids[0], "Imported 10 evidence records from automated discovery"),
-        (project1_id, reviewer1_id, "review_decision_submitted", "review_decision", None, "Accepted registry study evidence (PMID 38291045)"),
-        (project1_id, reviewer1_id, "review_decision_submitted", "review_decision", None, "Accepted natural history cohort evidence (PMID 37854921)"),
-        (project1_id, reviewer2_id, "review_decision_submitted", "review_decision", None, "Deferred regulatory review evidence pending additional analysis"),
-        (project1_id, admin_id, "artifact_generated", "regulatory_artifact", None, "Generated draft Safety Assessment Report for XY-301"),
-        (project2_id, reviewer1_id, "project_completed", "project", project2_id, "CLARITY-AD project marked as completed"),
+        (project1_id, admin_id, "project_created", "project", project1_id, "Created XY-301 CLN2 disease evidence review project for ICV ERT regulatory submission"),
+        (project1_id, analyst_id, "evidence_discovery_started", "evidence", None, "Initiated PubMed and ClinicalTrials.gov search: CLN2 disease, cerliponase alfa, DEM-CHILD, Batten disease enzyme replacement"),
+        (project1_id, analyst_id, "evidence_imported", "evidence", ev_ids[0], "Imported 10 evidence records: Schulz NEJM 2018 (PMID 29688815), Nickel Lancet Child 2018 (PMID 30119717), DEM-CHILD registry data, methodology references"),
+        (project1_id, reviewer1_id, "review_decision_submitted", "review_decision", None, "ACCEPTED: Schulz et al. NEJM 2018 pivotal cerliponase alfa trial (PMID 29688815) — ML decline 0.27 vs 2.12 pts/48w"),
+        (project1_id, reviewer1_id, "review_decision_submitted", "review_decision", None, "ACCEPTED: Schulz et al. Lancet Neurol 2024 extension (PMID 38101904) — HR 0.14 for 2-point ML decline, 5+ year follow-up"),
+        (project1_id, reviewer2_id, "review_decision_submitted", "review_decision", None, "DEFERRED: Nickel & Schulz Front Neurol 2022 regulatory review (PMID 35211079) — pending extraction of FDA/EMA acceptance criteria"),
+        (project1_id, admin_id, "artifact_generated", "regulatory_artifact", None, "Generated draft Integrated Safety Summary for XY-301 ICV ERT in pediatric CLN2 disease"),
+        (project2_id, reviewer1_id, "project_completed", "project", project2_id, "CLARITY-AD project marked as completed — all evidence reviewed, regulatory artifacts generated"),
         (None, admin_id, "system_config_updated", "system", None, "Updated AI model configuration to claude-3-5-sonnet-20241022"),
     ]
 
@@ -916,4 +1017,4 @@ async def seed_database(session: AsyncSession):
                 "edge_type": e.get("edge_type", "dependency"),
             })
 
-    logger.info("Database seeding completed successfully: 2 organizations, 7 users, 4 projects, 16 evidence records, 10 comparability scores, 5 bias analyses, 5 review decisions, 10 audit logs, 4 study DAGs")
+    logger.info("Database seeding completed successfully: 2 organizations, 8 users, 4 projects, 29 evidence records (10 CLN2 with real PMIDs), 10 comparability scores, 5 bias analyses, 5 review decisions, 10 audit logs, 4 study DAGs")

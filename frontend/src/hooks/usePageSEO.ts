@@ -10,7 +10,7 @@ interface PageSEOConfig {
   noindex?: boolean;
 }
 
-const SITE_NAME = 'Synthetic Ascension';
+const SITE_NAME = 'Synthetic Ascendancy';
 const BASE_URL = 'https://syntheticascendancy.tech';
 
 function setMeta(nameOrProperty: string, content: string, isProperty = false) {

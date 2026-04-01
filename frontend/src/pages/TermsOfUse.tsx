@@ -11,7 +11,7 @@ const sections = [
           By accessing or using the Afarensis platform ("Platform"), you agree to be bound by these
           Terms of Use ("Terms"). If you do not agree to these Terms, you may not access or use the
           Platform. These Terms constitute a binding agreement between you (or the organization you
-          represent) and Synthetic Ascension, Inc. ("Synthetic Ascension," "we," "us," or "our").
+          represent) and Synthetic Ascendancy, Inc. ("Synthetic Ascendancy," "we," "us," or "our").
         </p>
         <p>
           Your continued use of the Platform following any updates to these Terms constitutes
@@ -114,12 +114,12 @@ const sections = [
       <>
         <p>
           All intellectual property rights in the Platform, including its software, design,
-          documentation, and underlying technology, are owned by Synthetic Ascension and are
+          documentation, and underlying technology, are owned by Synthetic Ascendancy and are
           protected by applicable intellectual property laws.
         </p>
         <p>
           You retain full ownership of all study data, analysis outputs, reports, and derived
-          artifacts that you upload to or generate within the Platform. Synthetic Ascension claims
+          artifacts that you upload to or generate within the Platform. Synthetic Ascendancy claims
           no ownership interest in your content.
         </p>
       </>
@@ -155,13 +155,13 @@ const sections = [
           documentation, traceability, and reproducibility support.
         </p>
         <p>
-          Synthetic Ascension is not liable for regulatory outcomes, submission decisions, clinical
+          Synthetic Ascendancy is not liable for regulatory outcomes, submission decisions, clinical
           interpretations, or any consequences arising from the use of outputs generated through the
           Platform. The Platform is not a substitute for qualified biostatistical or regulatory
           judgment.
         </p>
         <p>
-          To the maximum extent permitted by applicable law, Synthetic Ascension disclaims all
+          To the maximum extent permitted by applicable law, Synthetic Ascendancy disclaims all
           warranties, express or implied, and shall not be liable for any indirect, incidental,
           special, consequential, or punitive damages arising out of or related to your use of the
           Platform.
@@ -178,7 +178,7 @@ const sections = [
         any claims, damages, losses, liabilities, and expenses (including reasonable attorneys'
         fees) arising out of or related to the indemnifying party's breach of these Terms or
         applicable law. Specific indemnification terms will be set forth in your organization's
-        master service agreement with Synthetic Ascension.
+        master service agreement with Synthetic Ascendancy.
       </p>
     ),
   },
@@ -192,7 +192,7 @@ const sections = [
           applicable service agreement.
         </p>
         <p>
-          Upon termination, Synthetic Ascension will provide a reasonable data export period during
+          Upon termination, Synthetic Ascendancy will provide a reasonable data export period during
           which you may retrieve your data. Following the export period, your data will be deleted
           in accordance with our data retention policies, except where retention is required by law
           or regulation.
@@ -249,7 +249,7 @@ export default function TermsOfUse() {
           </h1>
           <p className="text-sm text-gray-500">Last updated: March 2026</p>
           <p className="text-sm text-gray-500 mt-1">
-            Afarensis by Synthetic Ascension
+            Afarensis by Synthetic Ascendancy
           </p>
         </div>
 
@@ -272,7 +272,7 @@ export default function TermsOfUse() {
 
         {/* Footer */}
         <div className="mt-12 pt-6 border-t border-gray-200 text-center text-xs text-gray-500">
-          Synthetic Ascension, Inc. All rights reserved.
+          Synthetic Ascendancy, Inc. All rights reserved.
         </div>
       </div>
     </div>

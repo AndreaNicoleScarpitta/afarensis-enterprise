@@ -30,11 +30,11 @@ export function MemoPage({ onOpenContact }: MemoPageProps) {
 
   usePageSEO({
     title: 'Founding Memo — Why External Control Arm Validation Infrastructure Must Exist',
-    description: 'The founding thesis behind Synthetic Ascension: why externally controlled trials fail at the validation layer and what infrastructure is needed to fix it for rare disease sponsors.',
+    description: 'The founding thesis behind Synthetic Ascendancy: why externally controlled trials fail at the validation layer and what infrastructure is needed to fix it for rare disease sponsors.',
     canonicalPath: '/memo',
     keywords: 'external control arm, rare disease, clinical trial validation, founding memo, externally controlled trial, regulatory infrastructure, FDA submission, natural history comparator',
-    ogTitle: 'Founding Memo | Synthetic Ascension',
-    ogDescription: 'Why external control arm validation infrastructure must exist — the founding thesis behind Synthetic Ascension.',
+    ogTitle: 'Founding Memo | Synthetic Ascendancy',
+    ogDescription: 'Why external control arm validation infrastructure must exist — the founding thesis behind Synthetic Ascendancy.',
   });
 
   useEffect(() => {
@@ -96,14 +96,14 @@ export function MemoPage({ onOpenContact }: MemoPageProps) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <img src="/logo.png" alt="Synthetic Ascension" style={{ height: '32px', width: '32px' }} />
+              <img src="/logo.png" alt="Synthetic Ascendancy" style={{ height: '32px', width: '32px' }} />
               <span style={{
                 fontSize: '18px',
                 fontWeight: 700,
                 color: designSystem.colors.primary,
                 fontFamily: '"Montserrat", "Inter", sans-serif',
               }}>
-                Synthetic Ascension
+                Synthetic Ascendancy
               </span>
             </Link>
             <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
@@ -277,7 +277,7 @@ export function MemoPage({ onOpenContact }: MemoPageProps) {
           {/* WHAT SYNTHETIC ASCENSION BUILDS */}
           <h2 style={sectionHeadingStyle}>WHAT SYNTHETIC ASCENSION BUILDS</h2>
           <p style={bodyStyle}>
-            Synthetic Ascension builds <span style={emphasisStyle}>Afarensis</span>: the evidence validation
+            Synthetic Ascendancy builds <span style={emphasisStyle}>Afarensis</span>: the evidence validation
             engine for external control arms.
           </p>
           <p style={bodyStyle}>
@@ -354,7 +354,7 @@ export function MemoPage({ onOpenContact }: MemoPageProps) {
             <span style={emphasisStyle}>We are building those tools.</span>
           </p>
           <p style={{ ...bodyStyle, marginTop: '48px', fontStyle: 'italic', color: designSystem.colors.neutral.gray500 }}>
-            &mdash; The Synthetic Ascension Team
+            &mdash; The Synthetic Ascendancy Team
           </p>
         </main>
 
@@ -366,7 +366,7 @@ export function MemoPage({ onOpenContact }: MemoPageProps) {
           background: designSystem.colors.neutral.gray50,
         }}>
           <p style={{ fontSize: '14px', color: designSystem.colors.neutral.gray500, marginBottom: '16px' }}>
-            &copy; {new Date().getFullYear()} Synthetic Ascension. All rights reserved.
+            &copy; {new Date().getFullYear()} Synthetic Ascendancy. All rights reserved.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <button

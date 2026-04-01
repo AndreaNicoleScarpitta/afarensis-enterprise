@@ -9,7 +9,7 @@ interface AfarensisLogoProps {
 }
 
 /**
- * Synthetic Ascension — Afarensis product logo
+ * Synthetic Ascendancy — Afarensis product logo
  * DNA double helix with an upward-trending arrow, symbolising genomic data growth.
  */
 const AfarensisLogo: React.FC<AfarensisLogoProps> = ({

@@ -178,7 +178,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <AfarensisLogo size={30} color="#1A1A1B" />
               <div>
                 <p className="text-gray-900 font-bold text-sm leading-tight tracking-tight">Afarensis</p>
-                <p className="text-gray-500 text-[10px]">by Synthetic Ascension</p>
+                <p className="text-gray-500 text-[10px]">by Synthetic Ascendancy</p>
               </div>
             </div>
             <button onClick={onToggle} className="text-gray-500 hover:text-gray-900 p-1 rounded transition-colors" title="Collapse sidebar">

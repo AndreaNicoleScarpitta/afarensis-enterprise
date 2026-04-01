@@ -103,7 +103,7 @@ async def lifespan(app: FastAPI):
                 org_id = org_row.scalar()
                 await session.execute(_txt(
                     "INSERT INTO users (id, email, full_name, role, hashed_password, is_active, email_verified, organization, department, organization_id, created_at, updated_at) "
-                    "VALUES (:id, 'demo', 'Demo User', 'ADMIN', :hpw, 1, 1, 'Afarensis Inc.', 'Demo', :org_id, :now, :now)"
+                    "VALUES (:id, 'demo', 'Demo User', 'ADMIN', :hpw, 1, 1, 'Synthetic Ascendancy', 'Demo', :org_id, :now, :now)"
                 ), {"id": str(_uuid.uuid4()), "hpw": hpw, "org_id": org_id, "now": datetime.utcnow().isoformat()})
                 await session.commit()
                 logger.info("Demo user created (demo / password123)")

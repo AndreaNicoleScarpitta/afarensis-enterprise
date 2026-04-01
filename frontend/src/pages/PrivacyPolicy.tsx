@@ -8,7 +8,7 @@ const sections = [
     content: (
       <>
         <p>
-          This Privacy Policy describes how Synthetic Ascension, Inc. ("Synthetic Ascension," "we,"
+          This Privacy Policy describes how Synthetic Ascendancy, Inc. ("Synthetic Ascendancy," "we,"
           "us," or "our") collects, uses, and protects information in connection with the Afarensis
           platform ("Platform").
         </p>
@@ -85,7 +85,7 @@ const sections = [
     title: 'Learning from Usage',
     content: (
       <p>
-        Synthetic Ascension may use de-identified, aggregated platform telemetry to improve platform
+        Synthetic Ascendancy may use de-identified, aggregated platform telemetry to improve platform
         performance, reliability, and feature design. This never includes protected health
         information, patient-level data, or identifiable study content. Telemetry data is
         aggregated in a manner that prevents identification of individual users, organizations, or
@@ -119,7 +119,7 @@ const sections = [
       <>
         <p>
           Customer data is retained in accordance with the terms of your organization's service
-          agreement with Synthetic Ascension.
+          agreement with Synthetic Ascendancy.
         </p>
         <p>
           Audit trail records are retained in accordance with applicable regulatory requirements and
@@ -138,7 +138,7 @@ const sections = [
     title: 'De-identification',
     content: (
       <p>
-        Where de-identification is applied, Synthetic Ascension follows methods consistent with the
+        Where de-identification is applied, Synthetic Ascendancy follows methods consistent with the
         HIPAA Safe Harbor standard. Where linkage is required for traceability purposes, linkage
         tokens are used to maintain referential integrity without exposing direct identifiers.
       </p>
@@ -243,7 +243,7 @@ export default function PrivacyPolicy() {
           </h1>
           <p className="text-sm text-gray-500">Last updated: March 2026</p>
           <p className="text-sm text-gray-500 mt-1">
-            Afarensis by Synthetic Ascension
+            Afarensis by Synthetic Ascendancy
           </p>
         </div>
 
@@ -266,7 +266,7 @@ export default function PrivacyPolicy() {
 
         {/* Footer */}
         <div className="mt-12 pt-6 border-t border-gray-200 text-center text-xs text-gray-500">
-          Synthetic Ascension, Inc. All rights reserved.
+          Synthetic Ascendancy, Inc. All rights reserved.
         </div>
       </div>
     </div>

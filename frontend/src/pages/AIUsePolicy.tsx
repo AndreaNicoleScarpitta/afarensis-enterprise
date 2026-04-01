@@ -132,7 +132,7 @@ const sections = [
     content: (
       <>
         <p>
-          Synthetic Ascension maintains an internal review process for all automated capabilities
+          Synthetic Ascendancy maintains an internal review process for all automated capabilities
           within the Platform:
         </p>
         <ul>
@@ -211,7 +211,7 @@ export default function AIUsePolicy() {
           </h1>
           <p className="text-sm text-gray-500">Last updated: March 2026</p>
           <p className="text-sm text-gray-500 mt-1">
-            Afarensis by Synthetic Ascension
+            Afarensis by Synthetic Ascendancy
           </p>
         </div>
 
@@ -234,7 +234,7 @@ export default function AIUsePolicy() {
 
         {/* Footer */}
         <div className="mt-12 pt-6 border-t border-gray-200 text-center text-xs text-gray-500">
-          Synthetic Ascension, Inc. All rights reserved.
+          Synthetic Ascendancy, Inc. All rights reserved.
         </div>
       </div>
     </div>

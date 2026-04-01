@@ -97,7 +97,7 @@ export default function LandingPage() {
 
   usePageSEO({
     title: 'External Control Arm Validation Infrastructure for Rare Disease Sponsors',
-    description: 'Synthetic Ascension builds validation infrastructure for externally controlled trials. Statistically defensible, regulatorily auditable evidence for rare disease sponsors — before your submission reaches a reviewer.',
+    description: 'Synthetic Ascendancy builds validation infrastructure for externally controlled trials. Statistically defensible, regulatorily auditable evidence for rare disease sponsors — before your submission reaches a reviewer.',
     canonicalPath: '/',
     keywords: 'external control arm, externally controlled trial, rare disease clinical trials, regulatory validation, FDA submission, PICO validation, clinical evidence infrastructure, synthetic control arm, natural history comparator, quantitative bias analysis, ECA validation, comparability assessment, orphan drug development, accelerated approval, single-arm trial design, real-world evidence, biostatistics infrastructure',
   });
@@ -158,12 +158,12 @@ export default function LandingPage() {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <img src="/logo.png" alt="Synthetic Ascension" style={{ height: '36px', width: '36px' }} />
+              <img src="/logo.png" alt="Synthetic Ascendancy" style={{ height: '36px', width: '36px' }} />
               <span style={{
                 fontSize: '20px', fontWeight: 700, color: '#6366f1',
                 fontFamily: designSystem.typography.fontFamily.heading,
               }}>
-                Synthetic Ascension
+                Synthetic Ascendancy
               </span>
             </Link>
             <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
@@ -650,9 +650,9 @@ export default function LandingPage() {
               {/* Company */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                  <img src="/logo.png" alt="Synthetic Ascension" style={{ height: '28px', width: '28px', filter: 'brightness(2)' }} />
+                  <img src="/logo.png" alt="Synthetic Ascendancy" style={{ height: '28px', width: '28px', filter: 'brightness(2)' }} />
                   <span style={{ fontSize: '16px', fontWeight: 700, color: '#fff' }}>
-                    Synthetic Ascension
+                    Synthetic Ascendancy
                   </span>
                 </div>
                 <p style={{ fontSize: '14px', color: designSystem.colors.neutral.gray400, lineHeight: 1.6 }}>
@@ -737,7 +737,7 @@ export default function LandingPage() {
               flexWrap: 'wrap', gap: '12px',
             }}>
               <p style={{ fontSize: '13px', color: designSystem.colors.neutral.gray500, margin: 0 }}>
-                &copy; {new Date().getFullYear()} Synthetic Ascension. All rights reserved.
+                &copy; {new Date().getFullYear()} Synthetic Ascendancy. All rights reserved.
               </p>
               <div style={{ display: 'flex', gap: '24px' }}>
                 <Link to="/privacy" style={{ fontSize: '13px', color: designSystem.colors.neutral.gray500, textDecoration: 'none' }}>

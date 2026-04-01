@@ -184,7 +184,7 @@ function WaitlistModal({ isOpen, onClose, leadSource = 'landing_page' }: Waitlis
               Join the Waitlist
             </h2>
             <p style={{ fontSize: '14px', color: '#6b7280', margin: '4px 0 0' }}>
-              Get early access to Synthetic Ascension
+              Get early access to Synthetic Ascendancy
             </p>
           </div>
           <button
@@ -278,7 +278,7 @@ function WaitlistModal({ isOpen, onClose, leadSource = 'landing_page' }: Waitlis
             <label style={labelStyle}>
               Primary Use Cases
               <span
-                title="Describe how you plan to use Synthetic Ascension"
+                title="Describe how you plan to use Synthetic Ascendancy"
                 style={{ marginLeft: '6px', cursor: 'help', color: '#9ca3af' }}
               >
                 &#9432;

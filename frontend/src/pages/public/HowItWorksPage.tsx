@@ -623,7 +623,7 @@ export function HowItWorksPage({ onOpenWaitlist }: HowItWorksPageProps) {
     description: 'Afarensis validates external control arms through a 7-step evidence pipeline: PICO definition, causal framework modeling, propensity score matching, treatment effect estimation, quantitative bias analysis, regulatory stress testing, and CDISC-compliant evidence package generation. Purpose-built for rare disease sponsors preparing single-arm trial FDA submissions with externally controlled comparators.',
     canonicalPath: '/how-it-works',
     keywords: 'external control arm, ECA validation, externally controlled trial, single-arm trial FDA submission, rare disease clinical trial, propensity score matching, IPTW, covariate balance, love plot, kaplan-meier, cox proportional hazards, e-value, tipping point analysis, quantitative bias analysis, CDISC ADaM, regulatory evidence package, ICH E10, natural history comparator, real-world evidence, CFR Part 11 audit trail, FDA complete response letter prevention, clinical study report supplement',
-    ogTitle: 'How Afarensis Validates External Control Arms | Synthetic Ascension',
+    ogTitle: 'How Afarensis Validates External Control Arms | Synthetic Ascendancy',
     ogDescription: 'From raw comparator data to regulatory-ready evidence package in 7 steps. Propensity score matching, bias analysis, regulatory stress testing, and CDISC-compliant exports for rare disease FDA submissions.',
   });
 
@@ -687,7 +687,7 @@ export function HowItWorksPage({ onOpenWaitlist }: HowItWorksPageProps) {
     const orgJsonLd = {
       '@context': 'https://schema.org',
       '@type': 'Organization',
-      name: 'Synthetic Ascension',
+      name: 'Synthetic Ascendancy',
       url: 'https://syntheticascendancy.tech',
       description: 'Evidence validation infrastructure for external control arm submissions in rare disease clinical trials.',
       sameAs: [],
@@ -774,12 +774,12 @@ export function HowItWorksPage({ onOpenWaitlist }: HowItWorksPageProps) {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <img src="/logo.png" alt="Synthetic Ascension" style={{ height: '36px', width: '36px' }} />
+              <img src="/logo.png" alt="Synthetic Ascendancy" style={{ height: '36px', width: '36px' }} />
               <span style={{
                 fontSize: '20px', fontWeight: 700, color: '#6366f1',
                 fontFamily: designSystem.typography.fontFamily.heading,
               }}>
-                Synthetic Ascension
+                Synthetic Ascendancy
               </span>
             </Link>
             <nav style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
@@ -1247,7 +1247,7 @@ export function HowItWorksPage({ onOpenWaitlist }: HowItWorksPageProps) {
           background: designSystem.colors.neutral.gray50,
         }}>
           <p style={{ fontSize: '14px', color: designSystem.colors.neutral.gray500, marginBottom: '16px' }}>
-            &copy; {new Date().getFullYear()} Synthetic Ascension. All rights reserved.
+            &copy; {new Date().getFullYear()} Synthetic Ascendancy. All rights reserved.
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
             <Link to="/" style={{ fontSize: '14px', color: designSystem.colors.neutral.gray500, textDecoration: 'none' }}>Home</Link>

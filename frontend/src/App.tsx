@@ -830,7 +830,7 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
           <AfarensisLogo size={40} color="#1A1A1B" />
           <div>
             <h1 className="text-gray-900 font-semibold text-base tracking-tight leading-tight">Afarensis</h1>
-            <p className="text-gray-500 text-xs font-medium">by Synthetic Ascension</p>
+            <p className="text-gray-500 text-xs font-medium">by Synthetic Ascendancy</p>
           </div>
         </div>
         <div className="space-y-8">
@@ -868,7 +868,7 @@ const LoginPage = ({ onLogin }: { onLogin: (email: string, password: string) => 
             <AfarensisLogo size={36} color="#1A1A1B" />
             <div>
               <h1 className="text-gray-900 font-semibold text-base leading-tight">Afarensis</h1>
-              <p className="text-gray-500 text-xs font-medium lg:hidden">by Synthetic Ascension</p>
+              <p className="text-gray-500 text-xs font-medium lg:hidden">by Synthetic Ascendancy</p>
             </div>
           </div>
           {renderForm()}
