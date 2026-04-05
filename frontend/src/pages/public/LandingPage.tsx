@@ -85,6 +85,9 @@ const pulseKeyframes = `
   .landing-who-grid {
     grid-template-columns: 1fr !important;
   }
+  .landing-demo-sidebar {
+    display: none !important;
+  }
 }
 `;
 
@@ -275,6 +278,121 @@ export default function LandingPage() {
                 Read the Founding Memo &rarr;
               </Link>
             </div>
+          </div>
+        </section>
+
+        {/* ===== PRODUCT DEMO ===== */}
+        <section style={sectionStyle(designSystem.colors.neutral.gray50)}>
+          <div className="landing-section-padding" style={{ ...containerStyle, textAlign: 'center' }}>
+            <p style={{
+              fontSize: '14px', fontWeight: 700, color: designSystem.colors.primary,
+              textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '12px',
+            }}>
+              SEE IT IN ACTION
+            </p>
+            <h2 style={{ ...headingStyle, fontSize: '32px', marginBottom: '16px' }}>
+              Watch Afarensis validate an external control arm in 3 minutes
+            </h2>
+            <p style={{ ...bodyTextStyle, maxWidth: '600px', margin: '0 auto 40px' }}>
+              From raw comparator definition to regulatory-grade evidence package &mdash; see exactly
+              how the platform surfaces validation gaps before your submission.
+            </p>
+
+            {/* Video embed container */}
+            <div style={{
+              position: 'relative', maxWidth: '800px', margin: '0 auto',
+              borderRadius: '16px', overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #e5e7eb',
+              background: '#000',
+            }}>
+              {/* 16:9 aspect ratio container */}
+              <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+                {/* Replace this URL with your actual Loom/YouTube embed URL */}
+                <div style={{
+                  position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)',
+                  cursor: 'pointer',
+                }}
+                  onClick={() => {
+                    // When you have a real video URL, replace this with:
+                    // window.open('https://www.loom.com/share/YOUR_VIDEO_ID', '_blank');
+                    if ((window as any).gtag) {
+                      (window as any).gtag('event', 'demo_video_click', {
+                        event_category: 'engagement',
+                        event_label: 'product_demo_video',
+                        page: '/',
+                      });
+                    }
+                    setShowSampleOutput(true);
+                  }}
+                >
+                  {/* Fake UI mockup background elements */}
+                  <div style={{
+                    position: 'absolute', top: '24px', left: '24px', right: '24px', bottom: '24px',
+                    border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px',
+                    display: 'flex', overflow: 'hidden',
+                  }}>
+                    {/* Sidebar mockup */}
+                    <div style={{
+                      width: '200px', borderRight: '1px solid rgba(255,255,255,0.08)',
+                      padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px',
+                    }}>
+                      <div style={{ height: '10px', width: '60%', background: 'rgba(99,102,241,0.4)', borderRadius: '4px' }} />
+                      <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '4px 0' }} />
+                      {[80, 70, 90, 60, 75, 85, 65, 70, 80].map((w, i) => (
+                        <div key={i} style={{
+                          height: '8px', width: `${w}%`,
+                          background: i === 2 ? 'rgba(99,102,241,0.3)' : 'rgba(255,255,255,0.06)',
+                          borderRadius: '3px',
+                        }} />
+                      ))}
+                    </div>
+                    {/* Main content mockup */}
+                    <div style={{ flex: 1, padding: '16px' }}>
+                      <div style={{ height: '12px', width: '40%', background: 'rgba(255,255,255,0.1)', borderRadius: '4px', marginBottom: '16px' }} />
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                        <div style={{ height: '80px', background: 'rgba(99,102,241,0.08)', borderRadius: '8px', border: '1px solid rgba(99,102,241,0.15)' }} />
+                        <div style={{ height: '80px', background: 'rgba(5,150,105,0.08)', borderRadius: '8px', border: '1px solid rgba(5,150,105,0.15)' }} />
+                      </div>
+                      <div style={{ height: '8px', width: '90%', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', marginBottom: '6px' }} />
+                      <div style={{ height: '8px', width: '75%', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', marginBottom: '6px' }} />
+                      <div style={{ height: '8px', width: '60%', background: 'rgba(255,255,255,0.05)', borderRadius: '3px' }} />
+                    </div>
+                  </div>
+
+                  {/* Play button overlay */}
+                  <div style={{
+                    position: 'relative', zIndex: 2,
+                    width: '80px', height: '80px', borderRadius: '50%',
+                    background: 'rgba(99,102,241,0.9)', backdropFilter: 'blur(8px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 0 40px rgba(99,102,241,0.4)',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                  }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="white" style={{ marginLeft: '4px' }}>
+                      <polygon points="5,3 19,12 5,21" />
+                    </svg>
+                  </div>
+                  <p style={{
+                    position: 'relative', zIndex: 2,
+                    color: 'rgba(255,255,255,0.7)', fontSize: '14px', fontWeight: 500,
+                    marginTop: '16px',
+                  }}>
+                    3 min product walkthrough
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Trust signal below video */}
+            <p style={{
+              fontSize: '13px', color: designSystem.colors.neutral.gray400,
+              marginTop: '20px', fontStyle: 'italic',
+            }}>
+              Walkthrough uses the CLN2 / Batten disease sample project with real published trial data
+            </p>
           </div>
         </section>
 
@@ -587,6 +705,59 @@ export default function LandingPage() {
                   </div>
                   <p style={{ fontSize: '16px', color: designSystem.colors.neutral.gray600, margin: 0, lineHeight: 1.6 }}>
                     {event.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ===== WHY NOT JUST ===== */}
+        <section style={sectionStyle()}>
+          <div className="landing-section-padding" style={containerStyle}>
+            <h2 style={{ ...headingStyle, fontSize: '36px', marginBottom: '16px' }}>
+              &ldquo;Why not just...&rdquo;
+            </h2>
+            <p style={{ ...bodyTextStyle, maxWidth: '700px', marginBottom: '48px' }}>
+              Every sponsor we talk to has tried some version of the alternative. Here&apos;s why
+              they end up needing purpose-built validation infrastructure.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '800px' }}>
+              {[
+                {
+                  objection: '...do it in R or SAS?',
+                  answer: 'You can run propensity scores in R. You cannot build an auditable, version-controlled validation chain that traces every assumption from data source to regulatory claim. The FDA doesn\'t reject your statistics — they reject your inability to prove you tested every assumption those statistics rest on.',
+                },
+                {
+                  objection: '...hire a CRO?',
+                  answer: 'CROs build your external control arm. We validate it. These are different functions. A CRO delivers a matched cohort and a statistical analysis plan. We stress-test that cohort against every failure mode the FDA has cited in recent CRLs — population comparability, endpoint alignment, unmeasured confounding sensitivity — and produce the evidence package that proves you did.',
+                },
+                {
+                  objection: '...use Flatiron, Medidata, or TriNetX?',
+                  answer: 'Real-world data platforms provide the data. We provide the validation layer that sits on top. Having access to EHR or claims data does not prove your comparator is valid. Afarensis is not a data source — it is the infrastructure that validates whatever data source you choose, against the specific regulatory expectations for your submission.',
+                },
+                {
+                  objection: '...have our biostatistics team do it?',
+                  answer: 'Your biostatisticians are building the analysis. They are not building the systematic validation infrastructure that documents every covariate balance check, every sensitivity analysis, every assumption test — in a format that maps to FDA reviewer expectations. Afarensis gives your team the framework so their work is captured, reproducible, and audit-ready.',
+                },
+              ].map((item, i) => (
+                <div key={i} style={{
+                  background: designSystem.colors.neutral.gray50,
+                  borderRadius: '16px', padding: '32px',
+                  border: '1px solid #e5e7eb',
+                }}>
+                  <h3 style={{
+                    ...headingStyle, fontSize: '20px', marginBottom: '12px',
+                    color: designSystem.colors.primary,
+                  }}>
+                    {item.objection}
+                  </h3>
+                  <p style={{
+                    fontSize: '15px', color: designSystem.colors.neutral.gray600,
+                    lineHeight: 1.7, margin: 0,
+                  }}>
+                    {item.answer}
                   </p>
                 </div>
               ))}
